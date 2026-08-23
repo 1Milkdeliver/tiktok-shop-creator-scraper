@@ -648,6 +648,14 @@ https://www.tiktok.com/@makeup.lover'></textarea>
       <span class="sel-all" id="fieldsAll" data-i18n="step4.fieldsAll">全选</span> <span class="sel-all" id="fieldsNone" data-i18n="step4.fieldsNone">清空</span>
       <div class="field-grid" id="fields" style="margin-top:8px"></div>
     </div>
+
+    <!-- 历史输出（从抓取页移入导出中心） -->
+    <div class="card" id="history" style="margin-top:16px;border:1px solid var(--border)">
+      <h2><span class="step-num">5</span> <span data-i18n="step5.title">历史输出</span> <span class="sel-all" id="histRefresh" data-i18n="step5.refresh">刷新</span></h2>
+      <div id="historyBox" style="max-height:260px;overflow-y:auto">
+        <div style="color:var(--sub);font-size:13px;padding:10px" data-i18n="step5.empty">暂无历史记录</div>
+      </div>
+    </div>
   </div>
 
   </div>
@@ -665,12 +673,6 @@ https://www.tiktok.com/@makeup.lover'></textarea>
     <div id="log" style="margin-top:14px"></div>
   </div>
 
-  <div class="card" id="history">
-    <h2><span class="step-num">5</span> <span data-i18n="step5.title">历史输出</span> <span class="sel-all" id="histRefresh" data-i18n="step5.refresh">刷新</span></h2>
-    <div id="historyBox" style="max-height:220px;overflow-y:auto">
-      <div style="color:var(--sub);font-size:13px;padding:10px" data-i18n="step5.empty">暂无历史记录</div>
-    </div>
-  </div>
   </div>
   </div>
 
@@ -1699,6 +1701,9 @@ let libraryUpdateStartedAt = 0;
 const hiddenCreatorColumns = new Set();
 const CREATOR_SORTABLE = { handle:'handle', nickname:'nickname', creator_oecuid:'creator_id', selection_region:'region', follower_cnt:'follower_count', med_gmv_revenue:'total_gmv', units_sold:'units_sold', '合作邮箱':'contact_email', last_publish_time:'last_publish_at', activity_status:'activity_status', last_refreshed_at:'last_refreshed_at' };
 const creatorSort = { key:'last_refreshed_at', direction:'desc' };
+// Columns that are images / object-shaped and don't render well in the table.
+// They stay in CSV/Excel exports (if selected), just not in the library table.
+const LIBRARY_SKIP = new Set(['avatar', 'ec_video_gpm', 'ec_live_gpm', 'top_follower_gender']);
 
 function showPage(page) {
   const allowed = ['overview', 'tasks', 'creators', 'exports'];
@@ -1714,7 +1719,7 @@ function showPage(page) {
     targeting: activePage === 'tasks',
     exports: activePage === 'exports',
     runCard: activePage === 'tasks',
-    history: activePage === 'tasks',
+    history: activePage === 'exports', // history moved to the Export Center
   };
   Object.entries(visibility).forEach(([id, visible]) => {
     const el = document.getElementById(id);
@@ -1764,7 +1769,7 @@ function appendCreatorCell(row, value, className, field, creator) {
 function renderCreatorHead() {
   const head = document.getElementById('creatorHeadRow');
   head.innerHTML = '';
-  [...FIELDS, { k: 'last_refreshed_at', n: '最近更新', e: 'Last updated' }].forEach(field => {
+  [...FIELDS, { k: 'last_refreshed_at', n: '最近更新', e: 'Last updated' }].filter(f => !LIBRARY_SKIP.has(f.k)).forEach(field => {
     const th = document.createElement('th');
     th.dataset.field = field.k;
     th.hidden = hiddenCreatorColumns.has(field.k);
@@ -1783,7 +1788,7 @@ function renderCreatorHead() {
 
 function renderCreatorColumns() {
   const grid = document.getElementById('creatorColumnGrid');
-  const columns = [...FIELDS, { k:'last_refreshed_at', n:'最近更新', e:'Last updated' }];
+  const columns = [...FIELDS, { k:'last_refreshed_at', n:'最近更新', e:'Last updated' }].filter(f => !LIBRARY_SKIP.has(f.k));
   grid.innerHTML = '';
   columns.forEach((field, index) => {
     const label = document.createElement('label');
@@ -1797,7 +1802,7 @@ function renderCreatorColumns() {
 async function loadCreators() {
   const body = document.getElementById('creatorRows');
   renderCreatorHead();
-  const columnCount = FIELDS.length + 1;
+  const columnCount = FIELDS.filter(f => !LIBRARY_SKIP.has(f.k)).length + 1;
   body.innerHTML = `<tr><td colspan="${columnCount}" class="creator-empty">${uiLang === 'zh' ? '正在读取本地达人库…' : 'Loading creator library…'}</td></tr>`;
   const filters = {
     search: document.getElementById('creatorSearch').value.trim(),
@@ -1823,7 +1828,7 @@ async function loadCreators() {
   } else {
     result.rows.forEach(creator => {
       const row = document.createElement('tr');
-      FIELDS.forEach(field => {
+      FIELDS.filter(f => !LIBRARY_SKIP.has(f.k)).forEach(field => {
         let value = creator[field.k];
         if (field.k === 'creator_oecuid') value = value || creator.creator_id;
         if (field.k === 'selection_region') value = value || creator.region;
