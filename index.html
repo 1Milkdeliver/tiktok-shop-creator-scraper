@@ -997,7 +997,10 @@ document.getElementById('btnStop').onclick = async () => {
   setStatus(uiLang === 'zh' ? '⏹ 正在结束并导出…' : '⏹ Finishing & exporting…', '');
   document.getElementById('statusDetail').textContent = uiLang === 'zh' ? '正在完成当前请求并保存导出…' : 'Finishing current request and saving…';
 };
-document.getElementById('btnExit').onclick = async () => { if (confirm(I18N['exit.confirm'][uiLang])) await window.api.exit(); };
+document.getElementById('btnExit').onclick = async () => {
+  // ask main to run the same save-or-quit confirm (it knows if a scrape is active)
+  await window.api.exit(); // main.js handles the busy-check + save dialog
+};
 
 // ═══════════ 测试连接 ═══════════
 document.getElementById('btnTest').onclick = async () => {

@@ -340,6 +340,42 @@ function createWindow() {
   mainWindow.webContents.on('will-navigate', (e, url) => {
     if (!url.startsWith('file://')) { e.preventDefault(); if (/^https?:/i.test(url)) shell.openExternal(url); }
   });
+  // ── confirm before closing while a scrape is active / data unsaved ──
+  // Clicking the window X (or quitting from OS) normally discards in-memory
+  // scraped data. Intercept 'close', ask the user, and if they choose "save",
+  // run the normal stop→export flow and only quit after it completes.
+  let allowClose = false;
+  mainWindow.on('close', (e) => {
+    if (allowClose) return;
+    const busy = !!(runner && runner.running);
+    if (!busy) return; // nothing in progress → close freely
+    e.preventDefault();
+    dialog.showMessageBox(mainWindow, {
+      type: 'warning',
+      title: '抓取进行中',
+      message: '正在抓取，有未导出的数据',
+      detail: busy
+        ? '退出前可以选择保存已抓取的数据（结束抓取并立即导出），或直接退出丢弃本次数据。'
+        : '',
+      buttons: ['💾 保存并退出', '直接退出（丢弃本次数据）', '取消'],
+      defaultId: 0,
+      cancelId: 2,
+      icon: path.join(__dirname, 'icon-256.png'),
+    }).then(async ({ response }) => {
+      if (response === 2) return; // cancel → stay open
+      if (response === 0) {
+        // save: trigger stop→export, wait for it to finish, then really quit
+        try { runner.stop(); } catch (e) { }
+        // poll until the runner is no longer running (or a hard cap)
+        const deadline = Date.now() + 180000; // 3 min max for the export
+        while (runner.running && Date.now() < deadline) {
+          await new Promise(r => setTimeout(r, 1000));
+        }
+      }
+      allowClose = true;
+      mainWindow.close();
+    });
+  });
   mainWindow.on('closed', () => { mainWindow = null; });
 }
 
@@ -724,7 +760,13 @@ ipcMain.handle('resume-scrape', () => { runner.resume(); return { ok: true }; })
 ipcMain.handle('stop-scrape', () => { runner.stop(); return { ok: true }; });
 
 // IPC: exit app
-ipcMain.handle('exit-app', () => { app.quit(); return { ok: true }; });
+ipcMain.handle('exit-app', () => {
+  // Route through the window close flow so the save-or-quit confirm applies
+  // to the Exit button exactly like the window X.
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.close();
+  else app.quit();
+  return { ok: true };
+});
 
 // Single instance: only one copy of the app may run at a time
 const gotLock = app.requestSingleInstanceLock();
