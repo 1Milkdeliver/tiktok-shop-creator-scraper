@@ -7,19 +7,35 @@ const path = require('path');
 const os = require('os');
 const fs = require('fs');
 const { MultiRunner } = require('./lib/multirunner');
+const { CreatorDatabase } = require('./lib/database');
 
 let mainWindow = null;
+let creatorDb = null;
 const runner = new MultiRunner();
 runner.onFileLog = (line) => writeLog(line);
+runner.onDataReady = async (rows, config) => {
+  if (!creatorDb) return { saved: 0, disabled: true };
+  return creatorDb.upsertCreators(rows, {
+    region: config.shopRegion || 'US',
+    jobId: config.databaseJobId || null,
+    updateFields: config.updateFields || null,
+  });
+};
 // record history immediately when a run finishes (reliable, no polling)
 runner.onDone = (result) => {
   try {
+    const jobId = runner._currentJobId || null;
+    if (jobId) result.jobId = jobId;
+    if (creatorDb && jobId) {
+      creatorDb.finishScrapeJob(jobId, result).catch(e => writeLog('任务状态写入数据库失败: ' + e.message));
+    }
     if (result && result.ok && !result.testMode) {
       runner._historyRecorded = true;
       // attach the run config so history entries can continue/refresh
       if (runner._lastConfig) result.config = runner._lastConfig;
       recordHistory(result);
     }
+    runner._currentJobId = null;
   } catch (e) { }
 };
 
@@ -161,6 +177,26 @@ function recordHistory(entry) {
 // IPC: remembered cookies + history + default out dir
 ipcMain.handle('get-app-data', () => ({ cookies: appData.cookies || [], history: appData.history || [], defaultOutDir: appData.outDir || OUT_DIR }));
 ipcMain.handle('clear-cookies', () => { appData.cookies = []; saveAppData(); return { ok: true }; });
+ipcMain.handle('creator-db-stats', async () => {
+  if (!creatorDb) return { error: '本地达人库未初始化' };
+  try { return { ok: true, ...(await creatorDb.getStats()) }; }
+  catch (e) { return { error: e.message }; }
+});
+ipcMain.handle('creator-db-list', async (event, filters) => {
+  if (!creatorDb) return { error: '本地达人库未初始化', rows: [], total: 0 };
+  try { return { ok: true, ...(await creatorDb.listCreators(filters || {})) }; }
+  catch (e) { return { error: e.message, rows: [], total: 0 }; }
+});
+ipcMain.handle('creator-db-ids', async (event, filters) => {
+  if (!creatorDb) return { error: '本地达人库未初始化', ids: [] };
+  try { return { ok: true, ids: await creatorDb.listCreatorIds(filters || {}) }; }
+  catch (e) { return { error: e.message, ids: [] }; }
+});
+ipcMain.handle('creator-db-jobs', async (event, filters) => {
+  if (!creatorDb) return { error: '本地达人库未初始化', rows: [], total: 0 };
+  try { return { ok: true, ...(await creatorDb.listScrapeJobs(filters || {})) }; }
+  catch (e) { return { error: e.message, rows: [], total: 0 }; }
+});
 
 // Read creator IDs from an existing CSV/XLSX export (for "继续抓取" dedupe)
 function readExistingIds(filePath) {
@@ -711,7 +747,16 @@ ipcMain.handle('start-scrape', async (event, config) => {
       creatorInput: Array.isArray(config.creatorInput) ? config.creatorInput : null,
       keywords: config.keywords && config.keywords.length ? config.keywords : require('./lib/exporter').DEFAULT_KEYWORDS,
       fields: config.fields && config.fields.length ? config.fields : null,
+      updateFields: config.updateFields && config.updateFields.length ? config.updateFields : null,
+      libraryUpdate: !!config.libraryUpdate,
     };
+    if (creatorDb) {
+      // In "new only" mode, seed the runner's network-level dedupe set from
+      // the canonical database instead of relying only on legacy JSON files.
+      if (cfg.dedupe) cfg.existingIds = await creatorDb.getCreatorIds(cfg.shopRegion);
+      cfg.databaseJobId = await creatorDb.createScrapeJob(cfg);
+      runner._currentJobId = cfg.databaseJobId;
+    }
     // remember cookies for next launch
     appData.cookies = pasted.slice();
     saveAppData();
@@ -779,12 +824,20 @@ if (!gotLock) {
       mainWindow.focus();
     }
   });
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
     loadAppData();
     // always ensure dirs + shortcut on every launch (idempotent)
     ensureDirs();
     openLogStream();
     writeLog('应用启动: ' + APP_DIR);
+    try {
+      creatorDb = new CreatorDatabase(path.join(app.getPath('userData'), 'data', 'creators.db'));
+      await creatorDb.open();
+      writeLog('本地达人库就绪: ' + creatorDb.filePath);
+    } catch (e) {
+      creatorDb = null;
+      writeLog('本地达人库初始化失败，继续使用文件模式: ' + e.message);
+    }
     createWindow();
     createDesktopShortcut(); // skips if shortcut already exists
     // auto-update: wire events once, then check after window is ready
@@ -799,6 +852,7 @@ if (!gotLock) {
         if (s.browser) { try { Promise.race([s.browser.close(), new Promise(r => setTimeout(r, 2000))]).catch(() => { }); } catch (e) { } }
       }
     } catch (e) { }
+    if (creatorDb) creatorDb.close().catch(() => { });
     app.quit();
   });
 }
