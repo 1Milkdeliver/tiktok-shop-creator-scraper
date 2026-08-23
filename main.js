@@ -710,6 +710,7 @@ ipcMain.handle('scrape-status', () => ({
   logs: runner.logs,
   result: runner.result,
   rateLimit: runner.rateLimit,
+  autoResumeAt: runner.autoResumeAt || null, // for the auto-continue countdown UI
   update: updateState,
 }));
 

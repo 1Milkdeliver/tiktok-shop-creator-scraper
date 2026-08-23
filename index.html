@@ -876,7 +876,15 @@ async function poll() {
         stopSpin();
         syncMainButton('resume', { disabled: false });
         setStatus(uiLang === 'zh' ? '⏸ 已暂停' : '⏸ Paused', '');
-        detail.textContent = uiLang === 'zh' ? '已暂停，点击按钮恢复抓取' : 'Paused — click button to resume';
+        if (j.autoResumeAt) {
+          // show the auto-resume countdown (refreshed every poll ~1.5s)
+          const remain = Math.max(0, Math.ceil((j.autoResumeAt - Date.now()) / 1000));
+          const mm = String(Math.floor(remain / 60)).padStart(2, '0');
+          const ss = String(remain % 60).padStart(2, '0');
+          detail.textContent = uiLang === 'zh' ? `⏰ 风控冷却中，${mm}:${ss} 后自动继续（也可手动点击「继续」或完成滑块验证）` : `⏰ Risk-control cool-down, auto-resume in ${mm}:${ss} (or click Resume / solve the slider)`;
+        } else {
+          detail.textContent = uiLang === 'zh' ? '已暂停，点击按钮恢复抓取' : 'Paused — click button to resume';
+        }
       } else {
         // fast dot animation (250ms ticker) while running
         syncMainButton('pause', { disabled: false });
