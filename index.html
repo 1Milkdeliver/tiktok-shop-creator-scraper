@@ -105,14 +105,26 @@
   .cats { display: grid; grid-template-columns: repeat(auto-fill, minmax(225px, 1fr)); gap: 12px; }
   .cat { background: rgba(17,24,39,.03); border-radius: 15px; padding: 13px 15px; border: 1px solid rgba(17,24,39,.05); }
   .cat-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .cat-head-main { display:flex;align-items:center;gap:8px;cursor:pointer;min-width:0; }
+  .cat-chevron { color:var(--sub);font-size:11px;transition:transform .15s; }
+  .cat.collapsed .cat-chevron { transform:rotate(-90deg); }
+  .cat.collapsed .cat-chips { display:none; }
+  .cat.collapsed .cat-head { margin-bottom:0; }
+  .cat-count { color:var(--sub);font-size:11px;font-variant-numeric:tabular-nums; }
   .cat-head b { font-size: 13.5px; font-weight: 700; color: var(--text); }
-  .cat-head .cat-toggle { font-size: 11.5px; color: var(--sub); font-weight: 600; cursor: pointer; padding: 3px 10px; border-radius: 99px; background: rgba(17,24,39,.05); transition: .15s; }
+  .cat-head .cat-toggle { border:0;font-family:inherit;font-size: 11.5px; color: var(--sub); font-weight: 600; cursor: pointer; padding: 3px 10px; border-radius: 99px; background: rgba(17,24,39,.05); transition: .15s; }
   .cat-head .cat-toggle:hover { color: var(--accent); background: rgba(0,113,227,.1); }
   .cat-chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .cat-chips label { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; padding: 5px 11px; border-radius: 999px; background: #fff; border: 1px solid rgba(17,24,39,.11); cursor: pointer; color: var(--text-2); transition: .15s; }
   .cat-chips label:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-1px); }
   .cat-chips label:has(input:checked) { background: linear-gradient(135deg, rgba(0,113,227,.12), rgba(37,244,238,.12)); border-color: rgba(0,113,227,.4); color: var(--accent); font-weight: 600; }
   .cat-chips input { accent-color: var(--accent); }
+  .keyword-tools { display:grid;grid-template-columns:minmax(220px,1fr) auto;gap:10px;align-items:center;margin-bottom:12px; }
+  .keyword-search { position:relative; }
+  .keyword-search input { padding-left:34px !important; }
+  .keyword-search::before { content:'⌕';position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--sub);z-index:1; }
+  .keyword-actions { display:flex;align-items:center;gap:4px;white-space:nowrap; }
+  .keyword-summary { color:var(--sub);font-size:12px;margin-right:4px; }
   input[type=text] { width: 100%; padding: 10px 13px; border: 1px solid var(--border); border-radius: 11px; font-size: 14px; background: #fff; outline: none; transition: .15s; font-family: inherit; }
   input[type=text]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,113,227,.13); }
   select#shopRegion { padding: 9px 13px; border: 1px solid var(--border); border-radius: 11px; font-size: 13.5px; background: #fff; outline: none; font-family: inherit; cursor: pointer; }
@@ -150,7 +162,7 @@
   .sidebar-brand span { display: block; margin-top: 3px; color: #8b93a5; font-size: 10.5px; }
   .sidebar-label { padding: 8px 12px; color: #666f82; font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
   .sidebar-nav { display: grid; gap: 4px; }
-  .sidebar-nav a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; color: #b9c0ce; text-decoration: none; font-size: 13px; font-weight: 600; transition: .15s; }
+  .sidebar-nav a { position:relative;display:flex;align-items:center;gap:10px;min-height:44px;padding:10px 12px;border-radius:10px;color:#b9c0ce;text-decoration:none;font-size:13px;font-weight:600;transition:.15s; }
   .sidebar-nav a:hover, .sidebar-nav a.active { color: #fff; background: rgba(32,104,168,.22); }
   .sidebar-health { margin-top: auto; padding: 12px; border: 1px solid rgba(255,255,255,.08); border-radius: 12px; background: rgba(255,255,255,.04); }
   .sidebar-health strong { display: block; color: #6ee7a0; font-size: 12px; }
@@ -204,7 +216,9 @@
     .app-sidebar { padding-inline: 10px; }
     .sidebar-brand div, .sidebar-label, .sidebar-nav span, .sidebar-health { display: none; }
     .sidebar-brand { justify-content: center; padding-inline: 0; }
-    .sidebar-nav a { justify-content: center; font-size: 16px; }
+    .sidebar-nav a { justify-content:center;font-size:16px; }
+    .sidebar-nav a::after { content:attr(data-tooltip);position:absolute;left:calc(100% + 10px);top:50%;transform:translateY(-50%) translateX(-4px);padding:6px 9px;border-radius:6px;background:#24292f;color:#fff;font-size:12px;font-weight:500;white-space:nowrap;opacity:0;pointer-events:none;transition:.12s;box-shadow:var(--shadow-lg); }
+    .sidebar-nav a:hover::after,.sidebar-nav a:focus-visible::after { opacity:1;transform:translateY(-50%) translateX(0); }
     .workspace-grid { grid-template-columns: 1fr; }
     #runCard { position: static; }
   }
@@ -250,6 +264,14 @@
   .sidebar-nav a { border-radius:6px; font-weight:500; }
   .sidebar-nav a:hover { background:rgba(255,255,255,.08); }
   .sidebar-nav a.active { background:#ffffff; color:#24292f; box-shadow:0 1px 0 rgba(31,35,40,.08); }
+  .nav-icon { width:18px;height:18px;flex:0 0 18px;background:currentColor;mask-repeat:no-repeat;mask-position:center;mask-size:18px;-webkit-mask-repeat:no-repeat;-webkit-mask-position:center;-webkit-mask-size:18px; }
+  .nav-home { mask-image:url('./node_modules/@primer/octicons/build/svg/home-16.svg');-webkit-mask-image:url('./node_modules/@primer/octicons/build/svg/home-16.svg'); }
+  .nav-tasks { mask-image:url('./node_modules/@primer/octicons/build/svg/checklist-16.svg');-webkit-mask-image:url('./node_modules/@primer/octicons/build/svg/checklist-16.svg'); }
+  .nav-creators { mask-image:url('./node_modules/@primer/octicons/build/svg/people-16.svg');-webkit-mask-image:url('./node_modules/@primer/octicons/build/svg/people-16.svg'); }
+  .nav-exports { mask-image:url('./node_modules/@primer/octicons/build/svg/download-16.svg');-webkit-mask-image:url('./node_modules/@primer/octicons/build/svg/download-16.svg'); }
+  .metric-action { appearance:none;width:100%;font-family:inherit;text-align:left;cursor:pointer; }
+  .metric-action:hover { border-color:var(--accent-border);background:var(--accent-soft); }
+  .metric-action small::after { content:'  →'; }
   header { background:rgba(255,255,255,.97); }
   .card,.metric { border-radius:6px; box-shadow:var(--shadow); }
   .card:hover { border-color:var(--border); box-shadow:var(--shadow); }
@@ -343,11 +365,10 @@
   <div class="sidebar-brand"><img src="icon-256.png" alt="logo"><div><strong>TikTok Shop</strong><span>达人工作台 · Creator Desk</span></div></div>
   <div class="sidebar-label" data-i18n="workspace.label">工作区</div>
   <nav class="sidebar-nav">
-    <a href="#overview" data-page="overview" class="active">⌂ <span data-i18n="workspace.overview">概览</span></a>
-    <a href="#tasks" data-page="tasks">▶ <span data-i18n="workspace.tasks">任务中心</span></a>
-    <a href="#creators" data-page="creators">♙ <span data-i18n="workspace.creators">达人库</span></a>
-    <a href="#exports" data-page="exports">⇩ <span data-i18n="workspace.exportCenter">导出中心</span></a>
-    <a href="#settings" data-page="settings">⚙ <span data-i18n="workspace.settings">账号与设置</span></a>
+    <a href="#overview" data-page="overview" data-tooltip="概览" class="active"><i class="nav-icon nav-home" aria-hidden="true"></i><span data-i18n="workspace.overview">概览</span></a>
+    <a href="#tasks" data-page="tasks" data-tooltip="任务中心"><i class="nav-icon nav-tasks" aria-hidden="true"></i><span data-i18n="workspace.tasks">任务中心</span></a>
+    <a href="#creators" data-page="creators" data-tooltip="达人库"><i class="nav-icon nav-creators" aria-hidden="true"></i><span data-i18n="workspace.creators">达人库</span></a>
+    <a href="#exports" data-page="exports" data-tooltip="导出中心"><i class="nav-icon nav-exports" aria-hidden="true"></i><span data-i18n="workspace.exportCenter">导出中心</span></a>
   </nav>
   <div class="sidebar-health"><strong data-i18n="workspace.local">● 本地运行</strong><span data-i18n="workspace.localHint">数据和 Cookie 仅保存在当前设备</span></div>
 </aside>
@@ -374,7 +395,7 @@
   </section>
   <section class="metric-grid" aria-label="任务概览">
     <div class="metric"><span data-i18n="workspace.state">当前状态</span><strong data-i18n="status.ready">就绪</strong><small data-i18n="workspace.stateHint">账号与环境正常</small></div>
-    <div class="metric"><span data-i18n="workspace.availableAccounts">可用账号</span><strong id="accountMetric">—</strong><small data-i18n="workspace.accountsHint">支持多账号并发</small></div>
+    <button class="metric metric-action" id="accountMetricCard" type="button" aria-expanded="false"><span data-i18n="workspace.availableAccounts">可用账号</span><strong id="accountMetric">—</strong><small data-i18n="workspace.accountsHint">支持多账号并发</small></button>
     <div class="metric"><span data-i18n="workspace.creatorLibrary">本地达人库</span><strong id="creatorMetric">—</strong><small id="creatorMetricHint" data-i18n="workspace.creatorLibraryHint">自动去重并更新</small></div>
     <div class="metric"><span data-i18n="workspace.storage">本地占用</span><strong id="storageMetric">—</strong><small data-i18n="workspace.storageHint">仅保存结构化数据</small></div>
   </section>
@@ -411,7 +432,7 @@
   <div class="workspace-grid">
   <div class="workspace-column">
 
-  <div class="card" id="accounts">
+  <div class="card page-hidden" id="accounts">
     <h2><span class="step-num">1</span> <span data-i18n="step1.title">导入 Cookie</span> <span class="sel-all" id="addCookieBtn" data-i18n="step1.add">＋ 添加账号</span> <span class="sel-all" id="cookieGuideBtn" data-i18n="step1.guide" style="margin-left:8px">❓ 多账号指南</span></h2>
     <div class="cookie-zone" id="cookieZone">
       <div class="zone-label" data-i18n="step1.zone">将 <b>Cookie JSON 文件</b> 拖到此处，或直接 <b>粘贴</b> 到下方输入框</div>
@@ -463,7 +484,11 @@
     <div id="sourceCat">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <span style="font-size:13px;font-weight:600;color:var(--text-2)" data-i18n="step3.catTitle">类目关键词</span>
-        <span><button class="btn-link" id="langToggle" style="margin-left:4px">🌐 EN</button><span class="sel-all" id="selAll" data-i18n="step3.all">全选</span> <span class="sel-all" id="selNone" data-i18n="step3.none">清空</span></span>
+        <button class="btn-link" id="langToggle">🌐 EN</button>
+      </div>
+      <div class="keyword-tools">
+        <div class="keyword-search"><input type="search" id="keywordSearch" data-i18n-placeholder="step3.keywordSearch" placeholder="搜索关键词"></div>
+        <div class="keyword-actions"><span class="keyword-summary" id="keywordCount"></span><button class="btn-link" id="catsCollapse" data-i18n="step3.collapse">全部收起</button><button class="btn-link" id="selAll" data-i18n="step3.all">全选</button><button class="btn-link" id="selNone" data-i18n="step3.none">清空</button></div>
       </div>
       <div class="cats" id="cats"></div>
     </div>
@@ -474,6 +499,33 @@
 @beauty.pro
 https://www.tiktok.com/@makeup.lover'></textarea>
       <div class="hint" style="margin-top:6px" data-i18n="step3.listHint">ID 直接抓，handle/链接会自动解析。单次上限 500 条（防风控），超过请分批抓取。</div>
+    </div>
+    <div style="margin-top:18px;padding-top:18px;border-top:1px solid var(--border)">
+      <div style="font-size:13px;font-weight:600;color:var(--text-2);margin-bottom:8px" data-i18n="step4.mode">抓取模式</div>
+      <div class="radio-group">
+        <label><input type="radio" name="scrapeMode" value="fast"> <span data-i18n="step4.modeFast">⚡ 快速模式（只抓列表字段）</span></label>
+        <label><input type="radio" name="scrapeMode" value="full" checked> <span data-i18n="step4.modeFull">📦 完整模式（列表 + 详情全部字段）</span></label>
+      </div>
+      <div class="hint" style="margin-top:8px;padding-left:0" data-i18n="step4.modeHint">💡 <b>快速模式</b>约 3-7 秒/页，适合大批量筛选；<b>完整模式</b>额外抓每位达人的简介、合作邮箱、MCN 等（速度慢 2-3 倍），适合精挑合作对象。快速模式下详情字段为灰色不可选。</div>
+    </div>
+    <div style="margin-top:14px">
+      <div style="font-size:13px;font-weight:600;color:var(--text-2);margin-bottom:8px" data-i18n="step4.scope">抓取范围</div>
+      <div class="radio-group">
+        <label><input type="radio" name="dedupeMode" value="refresh" checked> <span data-i18n="step4.scopeAll">🔄 全部重抓（刷新数据）</span></label>
+        <label><input type="radio" name="dedupeMode" value="dedupe"> <span data-i18n="step4.scopeNew">🆕 只抓新的（跳过已抓过）</span></label>
+      </div>
+      <div class="hint" style="margin-top:6px" data-i18n="step4.scopeHint">💡 <b>只抓新的</b>：与之前抓取去重，不重复抓同一达人，适合持续增量采集；<b>全部重抓</b>：重新抓取所有达人（含之前已抓的），用于更新 GMV、粉丝数等有时效的数据。</div>
+    </div>
+    <div style="margin-top:14px">
+      <div style="font-size:13px;font-weight:600;color:var(--text-2);margin-bottom:8px" data-i18n="update.title">更新达人库字段</div>
+      <div class="field-grid" id="updateGroups" style="max-height:none">
+        <label><input type="checkbox" class="update-group" value="identity" checked> <span data-i18n="update.identity">身份与主页</span></label>
+        <label><input type="checkbox" class="update-group" value="performance" checked> <span data-i18n="update.performance">业绩与流量</span></label>
+        <label><input type="checkbox" class="update-group" value="audience" checked> <span data-i18n="update.audience">粉丝画像</span></label>
+        <label><input type="checkbox" class="update-group" value="contact" checked> <span data-i18n="update.contact">简介与联系方式</span></label>
+        <label><input type="checkbox" class="update-group" value="permissions" checked> <span data-i18n="update.permissions">合作与权限</span></label>
+      </div>
+      <div class="hint" data-i18n="update.hint">仅更新勾选的字段组；其他字段保留达人库中的原值。</div>
     </div>
   </div>
 
@@ -501,33 +553,6 @@ https://www.tiktok.com/@makeup.lover'></textarea>
           <button class="btn btn-secondary" id="btnChooseDir" style="white-space:nowrap" data-i18n="step4.choose">选择</button>
         </div>
       </div>
-    </div>
-    <div style="margin-top:14px">
-      <div style="font-size:13px;font-weight:600;color:var(--text-2);margin-bottom:8px" data-i18n="step4.mode">抓取模式</div>
-      <div class="radio-group">
-        <label><input type="radio" name="scrapeMode" value="fast"> <span data-i18n="step4.modeFast">⚡ 快速模式（只抓列表字段）</span></label>
-        <label><input type="radio" name="scrapeMode" value="full" checked> <span data-i18n="step4.modeFull">📦 完整模式（列表 + 详情全部字段）</span></label>
-      </div>
-      <div class="hint" style="margin-top:8px;padding-left:0" data-i18n="step4.modeHint">💡 <b>快速模式</b>约 3-7 秒/页，适合大批量筛选；<b>完整模式</b>额外抓每位达人的简介、合作邮箱、MCN 等（速度慢 2-3 倍），适合精挑合作对象。快速模式下详情字段为灰色不可选。</div>
-    </div>
-    <div style="margin-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <span style="font-size:13px;font-weight:600;color:var(--text-2)" data-i18n="step4.scope">抓取范围：</span>
-      <div class="radio-group">
-        <label><input type="radio" name="dedupeMode" value="refresh" checked> <span data-i18n="step4.scopeAll">🔄 全部重抓（刷新数据）</span></label>
-        <label><input type="radio" name="dedupeMode" value="dedupe"> <span data-i18n="step4.scopeNew">🆕 只抓新的（跳过已抓过）</span></label>
-      </div>
-    </div>
-    <div class="hint" style="margin-top:6px" data-i18n="step4.scopeHint">💡 <b>只抓新的</b>：与之前抓取去重，不重复抓同一达人，适合持续增量采集；<b>全部重抓</b>：重新抓取所有达人（含之前已抓的），用于更新 GMV、粉丝数等有时效的数据。</div>
-    <div style="margin-top:14px">
-      <div style="font-size:13px;font-weight:600;color:var(--text-2);margin-bottom:8px" data-i18n="update.title">更新达人库字段</div>
-      <div class="field-grid" id="updateGroups" style="max-height:none">
-        <label><input type="checkbox" class="update-group" value="identity" checked> <span data-i18n="update.identity">身份与主页</span></label>
-        <label><input type="checkbox" class="update-group" value="performance" checked> <span data-i18n="update.performance">业绩与流量</span></label>
-        <label><input type="checkbox" class="update-group" value="audience" checked> <span data-i18n="update.audience">粉丝画像</span></label>
-        <label><input type="checkbox" class="update-group" value="contact" checked> <span data-i18n="update.contact">简介与联系方式</span></label>
-        <label><input type="checkbox" class="update-group" value="permissions" checked> <span data-i18n="update.permissions">合作与权限</span></label>
-      </div>
-      <div class="hint" data-i18n="update.hint">仅更新勾选的字段组；其他字段保留达人库中的原值。</div>
     </div>
     <div style="margin-top:14px">
       <span style="font-size:13px;color:var(--sub)" data-i18n="step4.fields">导出字段</span>
@@ -639,7 +664,7 @@ const I18N = {
   'overview.openLibrary': { zh: '打开达人库', en: 'Open creator library' },
   'overview.workflow': { zh: '推荐工作流', en: 'Recommended workflow' },
   'overview.flow1': { zh: '准备账号', en: 'Prepare accounts' },
-  'overview.flow1Hint': { zh: '在账号与设置中导入 Cookie。', en: 'Import cookies in Accounts & Settings.' },
+  'overview.flow1Hint': { zh: '点击“可用账号”导入 Cookie。', en: 'Click Available accounts to import cookies.' },
   'overview.flow2': { zh: '运行采集', en: 'Run collection' },
   'overview.flow2Hint': { zh: '选择类目或名单并启动任务。', en: 'Choose categories or a list and start a task.' },
   'overview.flow3': { zh: '筛选导出', en: 'Filter and export' },
@@ -694,6 +719,9 @@ const I18N = {
   'step3.sourceCat': { zh: '🏷️ 按类目抓取', en: '🏷️ By Category' },
   'step3.sourceList': { zh: '📋 按达人名单抓取', en: '📋 By Creator List' },
   'step3.catTitle': { zh: '类目关键词', en: 'Category Keywords' },
+  'step3.keywordSearch': { zh: '搜索关键词或类目', en: 'Search keywords or categories' },
+  'step3.collapse': { zh: '全部收起', en: 'Collapse all' },
+  'step3.expand': { zh: '全部展开', en: 'Expand all' },
   'step3.listTitle': { zh: '📋 达人名单（数值ID / handle / TikTok链接，每行一个）', en: '📋 Creator list (numeric ID / @handle / TikTok link, one per line)' },
   'step3.listPlaceholder': { zh: '例如：\n7494397026366031127\n@beauty.pro\nhttps://www.tiktok.com/@makeup.lover', en: 'e.g.\n7494397026366031127\n@beauty.pro\nhttps://www.tiktok.com/@makeup.lover' },
   'step3.listHint': { zh: 'ID 直接抓，handle/链接会自动解析。单次上限 500 条（防风控），超过请分批抓取。', en: 'IDs are used directly; handles/links are auto-resolved. Max 500 per run (risk-control), split larger lists.' },
@@ -772,6 +800,10 @@ function applyI18n() {
   if (lt) lt.textContent = I18N['lang.toggle'][uiLang];
   const langToggle = document.getElementById('langToggle');
   if (langToggle) langToggle.textContent = uiLang === 'zh' ? '🌐 EN' : '🌐 中文';
+  document.querySelectorAll('.sidebar-nav [data-page]').forEach(link => {
+    const label = link.querySelector('span');
+    if (label) link.dataset.tooltip = label.textContent.trim();
+  });
   catLang = uiLang;
   renderCats();
   if (typeof renderFields === 'function') renderFields();
@@ -890,6 +922,21 @@ const CATS = {
   '生活方式': { en: 'Lifestyle', zh: '生活方式', items: [['lifestyle','生活方式'],['vlog','Vlog'],['travel','旅行'],['book','书籍'],['reading','阅读'],['art','艺术'],['craft','手工'],['budget','预算'],['deal','好价'],['coupon','优惠券'],['shopping','购物'],['target','Target'],['walmart','沃尔玛'],['amazon','亚马逊'],['amazon finds','亚马逊好物'],['tiktok made me buy','TikTok种草'],['cute','可爱'],['aesthetic','美学'],['viral','爆款'],['fyp','推荐页'],['product review','产品测评'],['review','测评']] },
 };
 let catLang = 'zh'; // 'zh' | 'en'
+const selectedKeywords = new Set(Object.values(CATS).flatMap(cat => cat.items.map(([key]) => key)));
+const collapsedCats = new Set(Object.keys(CATS));
+
+function updateKeywordCount() {
+  const total = Object.values(CATS).reduce((sum, cat) => sum + cat.items.length, 0);
+  const el = document.getElementById('keywordCount');
+  if (el) el.textContent = uiLang === 'zh' ? `已选 ${selectedKeywords.size}/${total}` : `${selectedKeywords.size}/${total} selected`;
+  document.querySelectorAll('.cat').forEach(card => {
+    const cat = CATS[card.dataset.cat];
+    const chosen = cat.items.filter(([key]) => selectedKeywords.has(key)).length;
+    const count = card.querySelector('.cat-count');
+    if (count) count.textContent = `${chosen}/${cat.items.length}`;
+  });
+}
+
 function renderCats() {
   const box = document.getElementById('cats');
   let html = '';
@@ -897,37 +944,70 @@ function renderCats() {
     const title = catLang === 'en' ? cat.en : cat.zh;
     const chips = cat.items.map(([k, zh]) => {
       const label = catLang === 'en' ? k : `${zh}`;
-      return `<label title="${k}"><input type="checkbox" class="kw" value="${k}" checked> ${label}</label>`;
+      return `<label title="${k}" data-search="${`${k} ${zh}`.toLowerCase()}"><input type="checkbox" class="kw" value="${k}" ${selectedKeywords.has(k) ? 'checked' : ''}> ${label}</label>`;
     }).join('');
-    html += `<div class="cat">
-      <div class="cat-head"><b>${title}</b><span class="cat-toggle" data-cat="${key}">${catLang === 'zh' ? '全选' : 'All'}</span></div>
+    html += `<div class="cat ${collapsedCats.has(key) ? 'collapsed' : ''}" data-cat="${key}" data-search="${`${key} ${cat.en} ${cat.zh}`.toLowerCase()}">
+      <div class="cat-head"><div class="cat-head-main"><span class="cat-chevron">▼</span><b>${title}</b><span class="cat-count"></span></div><button class="cat-toggle" data-cat="${key}">${catLang === 'zh' ? '全选' : 'All'}</button></div>
       <div class="cat-chips">${chips}</div>
     </div>`;
   }
   box.innerHTML = html;
-  // per-category toggle: click header label toggles all chips in that category
+  box.querySelectorAll('.cat-head-main').forEach(head => {
+    head.onclick = () => {
+      const card = head.closest('.cat');
+      const key = card.dataset.cat;
+      if (collapsedCats.has(key)) collapsedCats.delete(key); else collapsedCats.add(key);
+      card.classList.toggle('collapsed', collapsedCats.has(key));
+    };
+  });
   box.querySelectorAll('.cat-toggle').forEach(el => {
     el.onclick = () => {
       const cat = CATS[el.dataset.cat];
-      const allOn = cat.items.every(([k]) => {
-        const cb = box.querySelector(`input.kw[value="${CSS.escape(k)}"]`);
-        return cb && cb.checked;
-      });
-      cat.items.forEach(([k]) => {
-        const cb = box.querySelector(`input.kw[value="${CSS.escape(k)}"]`);
-        if (cb) cb.checked = !allOn;
-      });
+      const allOn = cat.items.every(([k]) => selectedKeywords.has(k));
+      cat.items.forEach(([k]) => allOn ? selectedKeywords.delete(k) : selectedKeywords.add(k));
+      renderCats();
     };
   });
+  box.querySelectorAll('.kw').forEach(input => {
+    input.onchange = () => {
+      if (input.checked) selectedKeywords.add(input.value); else selectedKeywords.delete(input.value);
+      updateKeywordCount();
+    };
+  });
+  updateKeywordCount();
+  const collapseButton = document.getElementById('catsCollapse');
+  const allCollapsed = Object.keys(CATS).every(key => collapsedCats.has(key));
+  if (collapseButton) collapseButton.textContent = I18N[allCollapsed ? 'step3.expand' : 'step3.collapse'][uiLang];
 }
 function toggleCatLang() {
   catLang = catLang === 'zh' ? 'en' : 'zh';
+  document.getElementById('keywordSearch').value = '';
   renderCats();
   document.getElementById('langToggle').textContent = catLang === 'zh' ? '🌐 EN' : '🌐 中文';
 }
 renderCats();
-document.getElementById('selAll').onclick = () => document.querySelectorAll('.kw').forEach(c => c.checked = true);
-document.getElementById('selNone').onclick = () => document.querySelectorAll('.kw').forEach(c => c.checked = false);
+document.getElementById('selAll').onclick = () => { Object.values(CATS).flatMap(cat => cat.items).forEach(([key]) => selectedKeywords.add(key)); renderCats(); };
+document.getElementById('selNone').onclick = () => { selectedKeywords.clear(); renderCats(); };
+document.getElementById('catsCollapse').onclick = () => {
+  const allCollapsed = Object.keys(CATS).every(key => collapsedCats.has(key));
+  Object.keys(CATS).forEach(key => allCollapsed ? collapsedCats.delete(key) : collapsedCats.add(key));
+  renderCats();
+};
+document.getElementById('keywordSearch').oninput = (event) => {
+  const query = event.target.value.trim().toLowerCase();
+  if (!query) { renderCats(); return; }
+  document.querySelectorAll('.cat').forEach(card => {
+    const categoryMatches = card.dataset.search.includes(query);
+    let matches = categoryMatches;
+    card.querySelectorAll('.cat-chips label').forEach(label => {
+      const visible = categoryMatches || label.dataset.search.includes(query);
+      label.style.display = visible ? '' : 'none';
+      matches = matches || visible;
+    });
+    card.style.display = matches ? '' : 'none';
+    if (matches) card.classList.remove('collapsed');
+  });
+};
 // source switch: categories vs creator list
 document.querySelectorAll('input[name=source]').forEach(r => r.addEventListener('change', () => {
   const list = document.querySelector('input[name=source]:checked').value === 'list';
@@ -1332,7 +1412,7 @@ document.getElementById('btnStart').onclick = async () => {
 function lockOptions(lock) {
   const ids = ['cookieInput', 'browseBtn', 'creatorInput', 'outPath', 'btnChooseDir'];
   for (const id of ids) { const el = document.getElementById(id); if (el) el.disabled = lock; }
-  document.querySelectorAll('input[name=scrapeMode], input[name=source], input[name=dedupeMode], input[name=mode], input[name=format], input[name=headerLang], .kw, .fld, .update-group, #detail, #selAll, #selNone, #fieldsAll, #fieldsNone, #langToggle, #shopRegion, #shopRegionCustom').forEach(el => { el.disabled = lock; });
+  document.querySelectorAll('input[name=scrapeMode], input[name=source], input[name=dedupeMode], input[name=mode], input[name=format], input[name=headerLang], .kw, .fld, .update-group, #detail, #selAll, #selNone, #catsCollapse, #keywordSearch, #fieldsAll, #fieldsNone, #langToggle, #shopRegion, #shopRegionCustom').forEach(el => { el.disabled = lock; });
   // category toggle + cookie add/remove
   document.querySelectorAll('.cat-toggle').forEach(el => { el.style.pointerEvents = lock ? 'none' : ''; });
   document.querySelectorAll('.cookie-item .del').forEach(el => { el.style.pointerEvents = lock ? 'none' : ''; });
@@ -1449,21 +1529,22 @@ async function refreshAppData() {
   } catch (e) { }
 }
 let activePage = 'overview';
+let accountPanelOpen = false;
 let creatorOffset = 0;
 const creatorPageSize = 50;
 let creatorSearchTimer = null;
 
 function showPage(page) {
-  const allowed = ['overview', 'tasks', 'creators', 'exports', 'settings'];
+  const allowed = ['overview', 'tasks', 'creators', 'exports'];
   activePage = allowed.includes(page) ? page : 'overview';
   const overviewParts = [document.getElementById('overview'), document.querySelector('.metric-grid'), document.getElementById('overviewActions')];
   overviewParts.forEach(el => el && el.classList.toggle('page-hidden', activePage !== 'overview'));
   document.getElementById('creatorPage').classList.toggle('active', activePage === 'creators');
   const grid = document.querySelector('.workspace-grid');
-  grid.classList.toggle('page-hidden', !['tasks', 'exports', 'settings'].includes(activePage));
+  grid.classList.toggle('page-hidden', !['overview', 'tasks', 'exports'].includes(activePage));
   const visibility = {
-    accounts: activePage === 'settings',
-    browserSettings: activePage === 'settings',
+    accounts: activePage === 'overview' && accountPanelOpen,
+    browserSettings: activePage === 'overview',
     targeting: activePage === 'tasks',
     exports: activePage === 'exports',
     runCard: activePage === 'tasks',
@@ -1475,10 +1556,19 @@ function showPage(page) {
   });
   grid.style.gridTemplateColumns = activePage === 'tasks' ? '' : 'minmax(0, 1fr)';
   document.querySelectorAll('.sidebar-nav [data-page]').forEach(link => link.classList.toggle('active', link.dataset.page === activePage));
+  document.querySelectorAll('.sidebar-nav [data-page]').forEach(link => link.setAttribute('aria-current', link.dataset.page === activePage ? 'page' : 'false'));
+  document.getElementById('accountMetricCard').setAttribute('aria-expanded', String(activePage === 'overview' && accountPanelOpen));
   if (location.hash !== `#${activePage}`) history.replaceState(null, '', `#${activePage}`);
   if (activePage === 'creators') loadCreators();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+
+const accountsPanel = document.getElementById('accounts');
+document.querySelector('.metric-grid').after(accountsPanel);
+document.getElementById('accountMetricCard').onclick = () => {
+  accountPanelOpen = !accountPanelOpen;
+  showPage('overview');
+};
 
 function appendCreatorCell(row, value, className) {
   const cell = document.createElement('td');

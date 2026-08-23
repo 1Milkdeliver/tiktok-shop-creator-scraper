@@ -42,8 +42,11 @@ Sources:
 ## Navigation and feedback
 
 - The active sidebar item uses a light surface with dark text; hover alone uses a low-contrast overlay.
+- Use bundled Primer Octicons at 18px for primary navigation. Icons supplement stable text labels and show localized tooltips when the sidebar is collapsed.
+- Keep four top-level destinations: Overview, Tasks, Creator Library, and Export Center. Account and environment setup belongs to Overview.
 - Status colors are semantic: green success, amber warning, red error, blue focus/information.
 - Destructive actions require clear wording and confirmation when data cannot be recovered.
 - Do not introduce new gradients, glass effects, oversized shadows, arbitrary radii, or emoji-only controls.
+- Large option sets use search, selected counts, and collapsed groups. Do not show every category keyword at once by default.
 - Keep system status visible and announce asynchronous state changes through polite live regions.
 - Validate required choices before starting a task; explain what must be corrected in user language.

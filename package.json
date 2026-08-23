@@ -9,6 +9,7 @@
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",
     "@fontsource-variable/noto-sans-sc": "^5.3.0",
+    "@primer/octicons": "^19.33.0",
     "electron-updater": "^6.8.9",
     "exceljs": "^4.4.0",
     "png2icons": "^2.0.1",
