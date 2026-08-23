@@ -299,6 +299,42 @@
     #btnGithub { width:96px; }
     #uiLangToggle { width:60px; }
   }
+
+  /* Research-backed type scale and data-tool density. */
+  body { font-size:14px; line-height:1.5; font-weight:400; font-synthesis:none; }
+  .logo h1 { font-size:18px; line-height:24px; font-weight:700; }
+  .logo p,.sidebar-brand span { font-size:12px; line-height:18px; }
+  .dashboard-intro h2,.page-heading h2 { font-size:24px; line-height:32px; font-weight:650; letter-spacing:-.02em; }
+  .dashboard-intro p,.page-heading p { font-size:13px; line-height:20px; }
+  .card h2 { font-size:16px; line-height:24px; font-weight:600; margin-bottom:18px; }
+  .step-num { display:none; }
+  .hint,.mode-desc { font-size:12.5px; line-height:19px; }
+  .btn,.header-btn,.hist-btn,.btn-link { min-height:34px; font-size:13px; line-height:20px; }
+  .radio-group label { min-height:36px; font-size:13px; line-height:20px; }
+  .field-grid label,.cat-chips label { min-height:32px; font-size:12.5px; line-height:18px; }
+  input[type=text],input[type=search],input[type=number],select,textarea { min-height:36px; font-size:13px !important; line-height:20px; }
+  .creator-table { width:max-content; min-width:100%; font-size:13px; line-height:20px; }
+  .creator-table th,.creator-table td { height:40px; padding:9px 12px; }
+  .creator-table th { z-index:2; }
+  .creator-table th:nth-child(1),.creator-table td:nth-child(1) { position:sticky;left:0;min-width:160px;width:160px; }
+  .creator-table th:nth-child(2),.creator-table td:nth-child(2) { position:sticky;left:160px;min-width:140px;width:140px; }
+  .creator-table th:nth-child(3),.creator-table td:nth-child(3) { position:sticky;left:300px;min-width:160px;width:160px;box-shadow:2px 0 0 rgba(208,215,222,.7); }
+  .creator-table th:nth-child(-n+3) { z-index:4;background:#f6f8fa; }
+  .creator-table td:nth-child(-n+3) { z-index:1;background:#fff; }
+  .creator-table tr:hover td,.creator-table tr:hover td:nth-child(-n+3) { background:#f6f8fa; }
+  .creator-table :is(th,td):is(:nth-child(6),:nth-child(8),:nth-child(10),:nth-child(11),:nth-child(12),:nth-child(14),:nth-child(15),:nth-child(16),:nth-child(17),:nth-child(18),:nth-child(19),:nth-child(20),:nth-child(23)) { text-align:right; font-variant-numeric:tabular-nums; }
+  .metric span { font-size:12px;line-height:18px; }
+  .metric strong { font-size:22px;line-height:28px;font-weight:650; }
+  .metric small { font-size:11.5px;line-height:18px; }
+  .overview-actions { display:grid;grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr);gap:14px; }
+  .overview-actions .card { margin-bottom:0; }
+  .quick-actions { display:flex;gap:10px;flex-wrap:wrap;margin-top:18px; }
+  .workflow-list { display:grid;gap:12px;margin-top:2px; }
+  .workflow-item { display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start; }
+  .workflow-item b { width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);font-size:12px; }
+  .workflow-item strong { display:block;font-size:13px;line-height:20px;font-weight:600; }
+  .workflow-item span { display:block;color:var(--sub);font-size:12px;line-height:18px; }
+  @media (max-width:900px) { .overview-actions { grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
@@ -326,7 +362,7 @@
       </div>
     </div>
     <span class="status-pill" id="appVersion" style="margin-right:8px">v—</span>
-    <span class="status-pill" id="status" data-i18n="status.ready">就绪</span>
+    <span class="status-pill" id="status" role="status" aria-live="polite" data-i18n="status.ready">就绪</span>
     <button class="header-btn" id="btnUpdate" data-i18n="action.update">检查更新</button>
     <a class="header-btn" id="btnGithub" href="https://github.com/1Milkdeliver/tiktok-shop-creator-scraper" target="_blank" data-i18n="action.github" style="text-decoration:none;display:inline-flex;align-items:center">GitHub</a>
     <button class="header-btn" id="uiLangToggle">🌐 EN</button>
@@ -341,6 +377,20 @@
     <div class="metric"><span data-i18n="workspace.availableAccounts">可用账号</span><strong id="accountMetric">—</strong><small data-i18n="workspace.accountsHint">支持多账号并发</small></div>
     <div class="metric"><span data-i18n="workspace.creatorLibrary">本地达人库</span><strong id="creatorMetric">—</strong><small id="creatorMetricHint" data-i18n="workspace.creatorLibraryHint">自动去重并更新</small></div>
     <div class="metric"><span data-i18n="workspace.storage">本地占用</span><strong id="storageMetric">—</strong><small data-i18n="workspace.storageHint">仅保存结构化数据</small></div>
+  </section>
+  <section class="overview-actions" id="overviewActions">
+    <div class="card">
+      <div class="page-heading" style="margin-bottom:0"><div><h2 data-i18n="overview.startTitle">开始采集达人数据</h2><p data-i18n="overview.startText">创建任务后，结果会自动进入本地达人库并去重更新。</p></div></div>
+      <div class="quick-actions"><button class="btn btn-primary" data-go-page="tasks" data-i18n="overview.newTask">新建抓取任务</button><button class="btn btn-secondary" data-go-page="creators" data-i18n="overview.openLibrary">打开达人库</button></div>
+    </div>
+    <div class="card">
+      <h2 data-i18n="overview.workflow">推荐工作流</h2>
+      <div class="workflow-list">
+        <div class="workflow-item"><b>1</b><div><strong data-i18n="overview.flow1">准备账号</strong><span data-i18n="overview.flow1Hint">在账号与设置中导入 Cookie。</span></div></div>
+        <div class="workflow-item"><b>2</b><div><strong data-i18n="overview.flow2">运行采集</strong><span data-i18n="overview.flow2Hint">选择类目或名单并启动任务。</span></div></div>
+        <div class="workflow-item"><b>3</b><div><strong data-i18n="overview.flow3">筛选导出</strong><span data-i18n="overview.flow3Hint">从达人库筛选需要的数据再导出。</span></div></div>
+      </div>
+    </div>
   </section>
 
   <section class="creator-page" id="creatorPage">
@@ -495,9 +545,9 @@ https://www.tiktok.com/@makeup.lover'></textarea>
       <button class="btn btn-danger" id="btnStop" disabled data-i18n="action.stop">结束并导出</button>
       <button class="btn btn-secondary" id="btnExit" data-i18n="action.exit">退出</button>
     </div>
-    <div class="hint" id="statusDetail" style="margin-top:10px;font-size:13px;color:var(--accent)"></div>
-    <div class="hint" id="testResult" style="display:none;margin-top:8px"></div>
-    <div class="result-box" id="resultBox"></div>
+    <div class="hint" id="statusDetail" role="status" aria-live="polite" style="margin-top:10px;font-size:13px;color:var(--accent)"></div>
+    <div class="hint" id="testResult" role="status" aria-live="polite" style="display:none;margin-top:8px"></div>
+    <div class="result-box" id="resultBox" role="status" aria-live="polite"></div>
     <div id="log" style="margin-top:14px"></div>
   </div>
 
@@ -583,6 +633,17 @@ const I18N = {
   'workspace.creatorLibraryHint': { zh: '自动去重并更新', en: 'Deduplicated and refreshed' },
   'workspace.storage': { zh: '本地占用', en: 'Local storage' },
   'workspace.storageHint': { zh: '仅保存结构化数据', en: 'Structured data only' },
+  'overview.startTitle': { zh: '开始采集达人数据', en: 'Start collecting creator data' },
+  'overview.startText': { zh: '创建任务后，结果会自动进入本地达人库并去重更新。', en: 'Task results are deduplicated and saved to your local creator library.' },
+  'overview.newTask': { zh: '新建抓取任务', en: 'New scrape task' },
+  'overview.openLibrary': { zh: '打开达人库', en: 'Open creator library' },
+  'overview.workflow': { zh: '推荐工作流', en: 'Recommended workflow' },
+  'overview.flow1': { zh: '准备账号', en: 'Prepare accounts' },
+  'overview.flow1Hint': { zh: '在账号与设置中导入 Cookie。', en: 'Import cookies in Accounts & Settings.' },
+  'overview.flow2': { zh: '运行采集', en: 'Run collection' },
+  'overview.flow2Hint': { zh: '选择类目或名单并启动任务。', en: 'Choose categories or a list and start a task.' },
+  'overview.flow3': { zh: '筛选导出', en: 'Filter and export' },
+  'overview.flow3Hint': { zh: '从达人库筛选需要的数据再导出。', en: 'Filter the creator library and export only what you need.' },
   'creators.title': { zh: '达人库', en: 'Creator Library' },
   'creators.subtitle': { zh: '查询已抓取的数据，需要时再筛选导出。', en: 'Explore collected data and export only when needed.' },
   'creators.newTask': { zh: '＋ 新建抓取任务', en: '+ New scrape task' },
@@ -678,6 +739,7 @@ const I18N = {
   'alert.noCookie': { zh: '请先导入 Cookie（拖入文件或粘贴内容）', en: 'Please import cookies first (drag file or paste)' },
   'alert.noList': { zh: '请填写达人名单', en: 'Please fill in the creator list' },
   'alert.noKw': { zh: '请至少选择一个类目/关键词', en: 'Select at least one category/keyword' },
+  'alert.noUpdateGroup': { zh: '请至少选择一组需要更新的达人库字段', en: 'Select at least one creator-library field group to update' },
   'alert.startFail': { zh: '启动失败', en: 'Start failed' },
   'hist.openFail': { zh: '打开失败', en: 'Open failed' },
   'hist.folderFail': { zh: '打开文件夹失败', en: 'Open folder failed' },
@@ -1249,6 +1311,7 @@ document.getElementById('btnStart').onclick = async () => {
   const shopRegion = (document.getElementById('shopRegionCustom').value.trim() || document.getElementById('shopRegion').value || 'US').toUpperCase();
 
   const selectedUpdateGroups = [...document.querySelectorAll('.update-group:checked')].map(c => c.value);
+  if (!selectedUpdateGroups.length) { alert(I18N['alert.noUpdateGroup'][uiLang]); return; }
   const updateFields = [...new Set(selectedUpdateGroups.flatMap(group => UPDATE_FIELD_GROUPS[group] || []))];
   const cfg = { pastedCookies: cookieList.map(c => c.data), mode, format, headerLang, outPath, detail, dedupe, creatorInput: source === 'list' && creatorInput.length ? creatorInput : null, keywords: kws, fields, updateFields, shopRegion };
   syncMainButton('pause', { disabled: true });
@@ -1393,7 +1456,7 @@ let creatorSearchTimer = null;
 function showPage(page) {
   const allowed = ['overview', 'tasks', 'creators', 'exports', 'settings'];
   activePage = allowed.includes(page) ? page : 'overview';
-  const overviewParts = [document.getElementById('overview'), document.querySelector('.metric-grid')];
+  const overviewParts = [document.getElementById('overview'), document.querySelector('.metric-grid'), document.getElementById('overviewActions')];
   overviewParts.forEach(el => el && el.classList.toggle('page-hidden', activePage !== 'overview'));
   document.getElementById('creatorPage').classList.toggle('active', activePage === 'creators');
   const grid = document.querySelector('.workspace-grid');

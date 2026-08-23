@@ -45,3 +45,5 @@ Sources:
 - Status colors are semantic: green success, amber warning, red error, blue focus/information.
 - Destructive actions require clear wording and confirmation when data cannot be recovered.
 - Do not introduce new gradients, glass effects, oversized shadows, arbitrary radii, or emoji-only controls.
+- Keep system status visible and announce asynchronous state changes through polite live regions.
+- Validate required choices before starting a task; explain what must be corrected in user language.
