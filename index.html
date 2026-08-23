@@ -1701,9 +1701,9 @@ let libraryUpdateStartedAt = 0;
 const hiddenCreatorColumns = new Set();
 const CREATOR_SORTABLE = { handle:'handle', nickname:'nickname', creator_oecuid:'creator_id', selection_region:'region', follower_cnt:'follower_count', med_gmv_revenue:'total_gmv', units_sold:'units_sold', '合作邮箱':'contact_email', last_publish_time:'last_publish_at', activity_status:'activity_status', last_refreshed_at:'last_refreshed_at' };
 const creatorSort = { key:'last_refreshed_at', direction:'desc' };
-// Columns that are images / object-shaped and don't render well in the table.
-// They stay in CSV/Excel exports (if selected), just not in the library table.
-const LIBRARY_SKIP = new Set(['avatar', 'ec_video_gpm', 'ec_live_gpm', 'top_follower_gender']);
+// Avatar is an image URL — heavy and not meaningful in a table, so the library
+// never shows it (it isn't stored either). GPM/gender fields ARE shown as text.
+const LIBRARY_SKIP = new Set(['avatar']);
 
 function showPage(page) {
   const allowed = ['overview', 'tasks', 'creators', 'exports'];
