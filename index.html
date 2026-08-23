@@ -244,8 +244,8 @@
   <section class="metric-grid" aria-label="任务概览">
     <div class="metric"><span data-i18n="workspace.state">当前状态</span><strong data-i18n="status.ready">就绪</strong><small data-i18n="workspace.stateHint">账号与环境正常</small></div>
     <div class="metric"><span data-i18n="workspace.availableAccounts">可用账号</span><strong id="accountMetric">—</strong><small data-i18n="workspace.accountsHint">支持多账号并发</small></div>
-    <div class="metric"><span data-i18n="workspace.scrapeMode">抓取模式</span><strong data-i18n="workspace.full">完整</strong><small data-i18n="workspace.fullHint">含邮箱与 MCN</small></div>
-    <div class="metric"><span data-i18n="workspace.outputFormat">输出格式</span><strong>CSV</strong><small data-i18n="workspace.fieldsHint">字段可自定义</small></div>
+    <div class="metric"><span data-i18n="workspace.creatorLibrary">本地达人库</span><strong id="creatorMetric">—</strong><small id="creatorMetricHint" data-i18n="workspace.creatorLibraryHint">自动去重并更新</small></div>
+    <div class="metric"><span data-i18n="workspace.storage">本地占用</span><strong id="storageMetric">—</strong><small data-i18n="workspace.storageHint">仅保存结构化数据</small></div>
   </section>
 
   <div class="workspace-grid">
@@ -454,6 +454,10 @@ const I18N = {
   'workspace.stateHint': { zh: '账号与环境正常', en: 'Accounts and environment healthy' },
   'workspace.availableAccounts': { zh: '可用账号', en: 'Available accounts' },
   'workspace.accountsHint': { zh: '支持多账号并发', en: 'Multi-account concurrency' },
+  'workspace.creatorLibrary': { zh: '本地达人库', en: 'Creator library' },
+  'workspace.creatorLibraryHint': { zh: '自动去重并更新', en: 'Deduplicated and refreshed' },
+  'workspace.storage': { zh: '本地占用', en: 'Local storage' },
+  'workspace.storageHint': { zh: '仅保存结构化数据', en: 'Structured data only' },
   'workspace.scrapeMode': { zh: '抓取模式', en: 'Scrape mode' },
   'workspace.full': { zh: '完整', en: 'Full' },
   'workspace.fullHint': { zh: '含邮箱与 MCN', en: 'Includes email and MCN' },
@@ -573,6 +577,7 @@ function toggleUiLang() {
   // history rows are rendered from the cached list — re-render so buttons
   // and row labels follow the new UI language too
   renderHistory(lastHistory);
+  refreshDatabaseMetrics();
 }
 document.addEventListener('DOMContentLoaded', () => {
   applyI18n();
@@ -1220,6 +1225,22 @@ async function refreshAppData() {
     // default output dir
     if (d.defaultOutDir) document.getElementById('outPath').value = d.defaultOutDir;
     renderHistory(d.history);
+    await refreshDatabaseMetrics();
+  } catch (e) { }
+}
+async function refreshDatabaseMetrics() {
+  try {
+    const stats = await window.api.creatorDbStats();
+    if (!stats || !stats.ok) return;
+    const creators = Number(stats.creators || 0);
+    const bytes = Number(stats.bytes || 0);
+    document.getElementById('creatorMetric').textContent = creators.toLocaleString();
+    document.getElementById('creatorMetricHint').textContent = uiLang === 'zh'
+      ? `${Number(stats.with_email || 0).toLocaleString()} 位含合作邮箱`
+      : `${Number(stats.with_email || 0).toLocaleString()} with contact email`;
+    document.getElementById('storageMetric').textContent = bytes < 1024 * 1024
+      ? `${Math.max(bytes / 1024, 0).toFixed(1)} KB`
+      : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
   } catch (e) { }
 }
 document.getElementById('histRefresh').onclick = refreshAppData;
