@@ -312,11 +312,13 @@
     --focus-ring: 0 0 0 3px rgba(9,105,218,.28);
   }
   body { background:#f6f8fa; color:var(--text); letter-spacing:normal; }
-  .app-sidebar { background:#24292f; }
-  .sidebar-nav a { border-radius:6px; font-weight:500; }
-  .sidebar-nav a:hover { background:rgba(255,255,255,.08); }
-  .sidebar-nav a.active { background:#ffffff; color:#24292f; box-shadow:0 1px 0 rgba(31,35,40,.08); }
-  .nav-icon { width:18px;height:18px;flex:0 0 18px;background:currentColor;mask-repeat:no-repeat;mask-position:center;mask-size:18px;-webkit-mask-repeat:no-repeat;-webkit-mask-position:center;-webkit-mask-size:18px; }
+  .app-sidebar { background:linear-gradient(180deg,#123f60 0%,#0d304b 100%);border-right:1px solid rgba(85,184,223,.28); }
+  .sidebar-brand span,.sidebar-label,.sidebar-health { color:#a9c9dc; }
+  .sidebar-nav { gap:7px; }
+  .sidebar-nav a { min-height:50px;padding:12px 14px;gap:12px;border-radius:7px;font-weight:500;color:#c6dce9; }
+  .sidebar-nav a:hover { color:#fff;background:rgba(85,184,223,.18); }
+  .sidebar-nav a.active { background:#ffffff;color:#174f7e;box-shadow:0 1px 3px rgba(3,20,32,.18); }
+  .nav-icon { width:21px;height:21px;flex:0 0 21px;background:currentColor;mask-repeat:no-repeat;mask-position:center;mask-size:21px;-webkit-mask-repeat:no-repeat;-webkit-mask-position:center;-webkit-mask-size:21px; }
   .nav-home { mask-image:url('./node_modules/@primer/octicons/build/svg/home-16.svg');-webkit-mask-image:url('./node_modules/@primer/octicons/build/svg/home-16.svg'); }
   .nav-tasks { mask-image:url('./node_modules/@primer/octicons/build/svg/checklist-16.svg');-webkit-mask-image:url('./node_modules/@primer/octicons/build/svg/checklist-16.svg'); }
   .nav-creators { mask-image:url('./node_modules/@primer/octicons/build/svg/people-16.svg');-webkit-mask-image:url('./node_modules/@primer/octicons/build/svg/people-16.svg'); }
@@ -366,7 +368,7 @@
   #btnExit { width:72px; }
   .toolbar { column-gap:10px; }
   .sidebar-nav a span { white-space:nowrap; }
-  html[lang="en"] .sidebar-nav a,html[lang="zh-CN"] .sidebar-nav a { min-height:40px; }
+  html[lang="en"] .sidebar-nav a,html[lang="zh-CN"] .sidebar-nav a { min-height:50px; }
   @media (max-width: 900px) {
     header { grid-template-columns:minmax(140px,1fr) 64px 72px 140px 124px 74px; gap:6px; }
   }
