@@ -134,6 +134,16 @@
   .field-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 5px; max-height: 240px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 11px; background: rgba(255,255,255,.6); }
   .field-grid label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-2); padding: 4.5px 7px; border-radius: 7px; cursor: pointer; transition: .12s; }
   .field-grid label:hover { background: rgba(0,113,227,.07); }
+  #exports .field-grid { max-height:none !important;overflow:visible !important;grid-template-columns:repeat(4,minmax(0,1fr)); }
+  #exports .field-grid label { height:36px;min-height:36px;white-space:nowrap;overflow:hidden; }
+  #exports .field-grid label span { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+  .scrape-field-preview { margin-top:12px;padding:12px;border:1px solid var(--border);border-radius:6px;background:#f6f8fa; }
+  .scrape-field-head { display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:9px;font-size:12px;color:var(--sub); }
+  .scrape-field-head strong { color:var(--text-2);font-size:13px;font-weight:600; }
+  .scrape-field-chips { display:flex;flex-wrap:wrap;gap:6px; }
+  .scrape-field-chip { display:inline-flex;align-items:center;height:28px;padding:0 9px;border:1px solid var(--border);border-radius:999px;background:#fff;color:var(--text-2);font-size:12px;white-space:nowrap; }
+  [data-i18n="step4.modeHint"],[data-i18n="step4.scopeHint"] { height:57px;overflow:hidden; }
+  [data-i18n="update.hint"],[data-i18n="step2.regionHint"],[data-i18n="step3.listHint"] { min-height:38px; }
   .sel-all { font-size: 12.5px; color: var(--accent); font-weight: 600; cursor: pointer; margin-left: 10px; }
   .sel-all:hover { text-decoration: underline; }
   .toolbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
@@ -507,6 +517,10 @@ https://www.tiktok.com/@makeup.lover'></textarea>
         <label><input type="radio" name="scrapeMode" value="full" checked> <span data-i18n="step4.modeFull">📦 完整模式（列表 + 详情全部字段）</span></label>
       </div>
       <div class="hint" style="margin-top:8px;padding-left:0" data-i18n="step4.modeHint">💡 <b>快速模式</b>约 3-7 秒/页，适合大批量筛选；<b>完整模式</b>额外抓每位达人的简介、合作邮箱、MCN 等（速度慢 2-3 倍），适合精挑合作对象。快速模式下详情字段为灰色不可选。</div>
+      <div class="scrape-field-preview">
+        <div class="scrape-field-head"><strong data-i18n="scrapeFields.title">本次会抓取的字段</strong><span id="scrapeFieldCount"></span></div>
+        <div class="scrape-field-chips" id="scrapeFieldPreview"></div>
+      </div>
     </div>
     <div style="margin-top:14px">
       <div style="font-size:13px;font-weight:600;color:var(--text-2);margin-bottom:8px" data-i18n="step4.scope">抓取范围</div>
@@ -690,6 +704,7 @@ const I18N = {
   'update.contact': { zh: '简介与联系方式', en: 'Bio and contact' },
   'update.permissions': { zh: '合作与权限', en: 'Collaboration and permissions' },
   'update.hint': { zh: '仅更新勾选的字段组；其他字段保留达人库中的原值。', en: 'Only selected groups are updated; all other saved values are preserved.' },
+  'scrapeFields.title': { zh: '本次会抓取的字段', en: 'Fields collected in this run' },
   'workspace.scrapeMode': { zh: '抓取模式', en: 'Scrape mode' },
   'workspace.full': { zh: '完整', en: 'Full' },
   'workspace.fullHint': { zh: '含邮箱与 MCN', en: 'Includes email and MCN' },
@@ -1038,6 +1053,18 @@ const UPDATE_FIELD_GROUPS = {
   contact: ['简介', '合作邮箱', 'MCN机构'],
   permissions: ['has_collaborated', 'creator_permission_tag', 'is_live_auction'],
 };
+function renderScrapeFieldPreview() {
+  const box = document.getElementById('scrapeFieldPreview');
+  if (!box) return;
+  const mode = (document.querySelector('input[name=scrapeMode]:checked') || {}).value || 'fast';
+  const available = mode === 'full' ? FIELDS : FIELDS.filter(field => !field.detail);
+  box.innerHTML = available.map(field => {
+    const label = uiLang === 'zh' ? field.n : field.e;
+    return `<span class="scrape-field-chip" title="${label}">${label}</span>`;
+  }).join('');
+  const count = document.getElementById('scrapeFieldCount');
+  if (count) count.textContent = uiLang === 'zh' ? `${available.length} 个字段` : `${available.length} fields`;
+}
 function syncDetailFields() {
   // fast mode → detail-only fields grayed out & uncheckable; full mode → all enabled + auto-checked
   const mode = (document.querySelector('input[name=scrapeMode]:checked') || {}).value || 'fast';
@@ -1050,6 +1077,7 @@ function syncDetailFields() {
     label.classList.toggle('on', on);
     label.title = on ? (cb.value) : (uiLang === 'zh' ? '完整模式才可抓取' : 'Available in Full mode');
   });
+  renderScrapeFieldPreview();
 }
 function renderFields() {
   const label = (f) => uiLang === 'zh' ? f.n : (f.e || f.n);
@@ -1057,7 +1085,7 @@ function renderFields() {
   const prev = new Set([...document.querySelectorAll('.fld:checked')].map(c => c.value));
   // first render (no prior selection): default to ALL fields checked
   const firstRender = !document.querySelectorAll('.fld').length;
-  document.getElementById('fields').innerHTML = FIELDS.map(f => `<label class="${f.detail ? 'fld-detail' : ''}" title="${f.k}"><input type="checkbox" class="fld" value="${f.k}" ${(firstRender || prev.has(f.k)) ? 'checked' : ''}> ${label(f)}</label>`).join('');
+  document.getElementById('fields').innerHTML = FIELDS.map(f => `<label class="${f.detail ? 'fld-detail' : ''}" title="${label(f)}"><input type="checkbox" class="fld" value="${f.k}" ${(firstRender || prev.has(f.k)) ? 'checked' : ''}><span>${label(f)}</span></label>`).join('');
   syncDetailFields();
 }
 renderFields();
