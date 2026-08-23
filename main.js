@@ -198,6 +198,53 @@ ipcMain.handle('creator-db-jobs', async (event, filters) => {
   catch (e) { return { error: e.message, rows: [], total: 0 }; }
 });
 
+// Export the creator library (filtered) to CSV / XLSX. Returns the written file path.
+ipcMain.handle('creator-db-export', async (event, payload) => {
+  try {
+    if (!creatorDb) return { ok: false, error: '本地达人库未初始化' };
+    const { filters = {}, format = 'csv', fields = null, headerLang = 'zh', outPath } = payload || {};
+    if (!outPath) return { ok: false, error: '缺少输出路径' };
+    const { exportCsv, exportXlsx, ensureDir } = require('./lib/exporter');
+    const FIELD_LABELS = {
+      handle: { zh: '达人主页', en: 'Creator Page' }, nickname: { zh: '昵称', en: 'Nickname' }, creator_oecuid: { zh: '达人ID', en: 'Creator ID' },
+      avatar: { zh: '头像', en: 'Avatar' }, selection_region: { zh: '地区', en: 'Region' }, follower_cnt: { zh: '粉丝数', en: 'Followers' },
+      category: { zh: '类目', en: 'Category' }, med_gmv_revenue: { zh: '总GMV', en: 'Total GMV' }, med_gmv_revenue_range: { zh: 'GMV区间', en: 'GMV Range' },
+      video_gmv: { zh: '视频GMV', en: 'Video GMV' }, live_gmv: { zh: '直播GMV', en: 'Live GMV' }, units_sold: { zh: '销量', en: 'Units Sold' },
+      units_sold_range: { zh: '销量区间', en: 'Units Sold Range' }, video_avg_view_cnt: { zh: '平均视频观看', en: 'Avg Video Views' },
+      video_play_cnt_med: { zh: '视频中位观看', en: 'Median Video Views' }, video_engagement: { zh: '视频互动量', en: 'Video Engagement' },
+      ec_video_engagement: { zh: '电商视频互动', en: 'E-comm Video Engagement' }, ec_video_gpm: { zh: '电商GPM', en: 'E-comm GPM' },
+      ec_live_gpm: { zh: '直播GPM', en: 'Live GPM' }, ec_live_avg_uv: { zh: '电商平均UV', en: 'E-comm Avg UV' },
+      top_follower_ages: { zh: '粉丝年龄段', en: 'Audience Ages' }, top_follower_gender: { zh: '粉丝性别分布', en: 'Audience Gender' },
+      pps_score: { zh: 'PPS评分', en: 'PPS Score' }, is_fast_growing: { zh: '快速增长', en: 'Fast Growing' }, has_collaborated: { zh: '已合作', en: 'Collaborated' },
+      creator_permission_tag: { zh: '达人类目权限', en: 'Category Permission' }, is_live_auction: { zh: '直播拍卖', en: 'Live Auction' },
+      '简介': { zh: '简介', en: 'Bio' }, '合作邮箱': { zh: '合作邮箱', en: 'Contact Email' }, 'MCN机构': { zh: 'MCN机构', en: 'MCN Agency' },
+      last_publish_time: { zh: '最后发布时间', en: 'Last Published' }, activity_status: { zh: '活跃状态', en: 'Activity Status' }, activity_reason: { zh: '判断原因', en: 'Activity Reason' },
+      last_refreshed_at: { zh: '最近更新', en: 'Last Updated' },
+    };
+    const label = k => (FIELD_LABELS[k] && FIELD_LABELS[k][headerLang]) || k;
+    // fetch up to 5000 rows (paged) matching the filters
+    const rows = [];
+    let offset = 0;
+    const pageSize = 500;
+    for (;;) {
+      const page = await creatorDb.listCreators({ ...filters, limit: pageSize, offset, sortBy: filters.sortBy || 'last_refreshed_at', sortDirection: filters.sortDirection || 'desc' });
+      rows.push(...(page.rows || []));
+      if (!page.rows || page.rows.length < pageSize) break;
+      if (offset > 20000) break; // hard safety cap
+      offset += pageSize;
+    }
+    // pick fields: default all known columns present in rows
+    const known = Object.keys(FIELD_LABELS);
+    const pick = (Array.isArray(fields) && fields.length) ? fields : known.filter(k => rows.some(r => r[k] !== undefined && r[k] !== null && r[k] !== ''));
+    const out = rows.map(r => { const o = {}; for (const k of pick) o[label(k)] = r[k] ?? ''; return o; });
+    if (!out.length) return { ok: false, error: '筛选条件下没有数据可导出', rows: 0 };
+    ensureDir(outPath);
+    if (String(format).toLowerCase() === 'xlsx') await exportXlsx(outPath, out, Object.keys(out[0] || {}));
+    else await exportCsv(outPath, out, Object.keys(out[0] || {}));
+    return { ok: true, outPath, rows: out.length };
+  } catch (e) { return { ok: false, error: e.message }; }
+});
+
 // Read creator IDs from an existing CSV/XLSX export (for "继续抓取" dedupe)
 function readExistingIds(filePath) {
   const ids = [];

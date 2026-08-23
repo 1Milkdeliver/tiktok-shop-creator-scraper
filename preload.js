@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('api', {
   listCreators: (filters) => ipcRenderer.invoke('creator-db-list', filters),
   listCreatorIds: (filters) => ipcRenderer.invoke('creator-db-ids', filters),
   listScrapeJobs: (filters) => ipcRenderer.invoke('creator-db-jobs', filters),
+  exportCreators: (payload) => ipcRenderer.invoke('creator-db-export', payload),
   openHistoryFile: (p) => ipcRenderer.invoke('open-history-file', p),
   copyHistoryPath: (p) => ipcRenderer.invoke('copy-history-path', p),
   openHistoryFolder: (p) => ipcRenderer.invoke('open-history-folder', p),

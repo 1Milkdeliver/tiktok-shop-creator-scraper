@@ -248,6 +248,8 @@
   .creator-cell-profile { display:flex;align-items:center;gap:8px;min-width:0; }
   .creator-cell-avatar { width:24px;height:24px;border-radius:50%;object-fit:cover;background:#d8dee4;flex:0 0 24px; }
   .creator-cell-profile span { overflow:hidden;text-overflow:ellipsis; }
+  .creator-cell-link { flex:0 0 auto;color:var(--accent);text-decoration:none;font-size:13px;font-weight:700;padding:0 3px;border-radius:4px; }
+  .creator-cell-link:hover { background:rgba(0,113,227,.12); }
   .activity-badge { display:inline-flex;align-items:center;min-height:24px;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600; }
   .activity-badge.active { color:#1a7f37;background:#dafbe1; }
   .activity-badge.inactive { color:#cf222e;background:#ffebe9; }
@@ -392,12 +394,11 @@
   .creator-table { width:max-content; min-width:100%; font-size:13px; line-height:20px; }
   .creator-table th,.creator-table td { height:40px; padding:9px 12px; }
   .creator-table th { z-index:2; }
-  .creator-table th:nth-child(1),.creator-table td:nth-child(1) { position:sticky;left:0;min-width:160px;width:160px; }
-  .creator-table th:nth-child(2),.creator-table td:nth-child(2) { position:sticky;left:160px;min-width:140px;width:140px; }
-  .creator-table th:nth-child(3),.creator-table td:nth-child(3) { position:sticky;left:300px;min-width:160px;width:160px;box-shadow:2px 0 0 rgba(208,215,222,.7); }
-  .creator-table th:nth-child(-n+3) { z-index:4;background:#f6f8fa; }
-  .creator-table td:nth-child(-n+3) { z-index:1;background:#fff; }
-  .creator-table tr:hover td,.creator-table tr:hover td:nth-child(-n+3) { background:#f6f8fa; }
+  /* only the handle column is frozen (first column) */
+  .creator-table th:nth-child(1),.creator-table td:nth-child(1) { position:sticky;left:0;min-width:180px;width:180px;z-index:1;box-shadow:2px 0 0 rgba(208,215,222,.7); }
+  .creator-table th:nth-child(1) { z-index:5;background:#f6f8fa; }
+  .creator-table td:nth-child(1) { background:#fff; }
+  .creator-table tr:hover td:nth-child(1) { background:#f6f8fa; }
   .creator-table :is(th,td):is(:nth-child(6),:nth-child(8),:nth-child(10),:nth-child(11),:nth-child(12),:nth-child(14),:nth-child(15),:nth-child(16),:nth-child(17),:nth-child(18),:nth-child(19),:nth-child(20),:nth-child(23)) { text-align:right; font-variant-numeric:tabular-nums; }
   .metric span { font-size:12px;line-height:18px; }
   .metric strong { font-size:22px;line-height:28px;font-weight:650; }
@@ -497,9 +498,14 @@
         <div class="creator-search-wrap"><input id="creatorSearch" type="search" data-i18n-placeholder="creators.search" placeholder="搜索昵称、账号、ID 或邮箱"></div>
         <select id="creatorRegion"><option value="" data-i18n="creators.allRegions">全部地区</option><option>US</option><option>UK</option><option>SG</option><option>MY</option><option>TH</option><option>VN</option><option>PH</option><option>ID</option><option>MX</option><option>BR</option></select>
         <input id="creatorMinFollowers" type="number" min="0" data-i18n-placeholder="creators.minFollowers" placeholder="最低粉丝数">
+        <input id="creatorMaxFollowers" type="number" min="0" data-i18n-placeholder="creators.maxFollowers" placeholder="最高粉丝数">
+        <input id="creatorMinGmv" type="number" min="0" data-i18n-placeholder="creators.minGmv" placeholder="最低GMV($)">
+        <input id="creatorMaxGmv" type="number" min="0" data-i18n-placeholder="creators.maxGmv" placeholder="最高GMV($)">
+        <input id="creatorCategory" type="text" data-i18n-placeholder="creators.category" placeholder="类目（如 Beauty）">
         <select id="creatorActivity"><option value="" data-i18n="creators.allActivity">全部活跃状态</option><option value="active" data-i18n="activity.active">活跃</option><option value="inactive" data-i18n="activity.inactive">不活跃</option><option value="unknown" data-i18n="activity.unknown">待判断</option></select>
         <label class="check-label"><input id="creatorHasEmail" type="checkbox"> <span data-i18n="creators.hasEmail">仅有邮箱</span></label>
         <button class="btn btn-secondary" id="creatorRefresh" data-i18n="creators.refresh">刷新</button>
+        <button class="btn btn-primary" id="creatorExport" data-i18n="creators.export">⬇ 导出当前筛选</button>
       </div>
       <div class="creator-table-tools">
         <div class="creator-table-tools-left"><strong data-i18n="creators.dataTable">达人数据</strong><span class="creator-result-label" id="creatorResultLabel">—</span></div>
@@ -766,6 +772,11 @@ const I18N = {
   'creators.search': { zh: '搜索昵称、账号、ID 或邮箱', en: 'Search name, handle, ID, or email' },
   'creators.allRegions': { zh: '全部地区', en: 'All regions' },
   'creators.minFollowers': { zh: '最低粉丝数', en: 'Minimum followers' },
+  'creators.maxFollowers': { zh: '最高粉丝数', en: 'Maximum followers' },
+  'creators.minGmv': { zh: '最低GMV($)', en: 'Min GMV ($)' },
+  'creators.maxGmv': { zh: '最高GMV($)', en: 'Max GMV ($)' },
+  'creators.category': { zh: '类目（如 Beauty）', en: 'Category (e.g. Beauty)' },
+  'creators.export': { zh: '⬇ 导出当前筛选', en: '⬇ Export filtered' },
   'creators.hasEmail': { zh: '仅有邮箱', en: 'Email only' },
   'creators.refresh': { zh: '刷新', en: 'Refresh' },
   'creators.dataTable': { zh: '达人数据', en: 'Creator data' },
@@ -1759,8 +1770,21 @@ function appendCreatorCell(row, value, className, field, creator) {
     const date = new Date(display); cell.textContent = Number.isNaN(date.getTime()) ? display : date.toLocaleDateString();
   } else if (field?.k === 'handle') {
     const profile = document.createElement('div'); profile.className = 'creator-cell-profile';
-    if (creator?.avatar_url || creator?.avatar) { const img = document.createElement('img'); img.className = 'creator-cell-avatar'; img.src = creator.avatar_url || creator.avatar; img.alt = ''; profile.appendChild(img); }
-    const label = document.createElement('span'); label.textContent = display; profile.appendChild(label); cell.appendChild(profile);
+    const label = document.createElement('span'); label.textContent = display; profile.appendChild(label);
+    // TikTok profile link for the handle (opened in the system browser)
+    const handleVal = String(creator?.handle || creator?.handle_name || '').replace(/^@/, '');
+    if (handleVal) {
+      const link = document.createElement('a');
+      link.className = 'creator-cell-link';
+      link.href = `https://www.tiktok.com/@${handleVal}`;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = '↗';
+      link.title = `https://www.tiktok.com/@${handleVal}`;
+      link.addEventListener('click', e => e.stopPropagation());
+      profile.appendChild(link);
+    }
+    cell.appendChild(profile);
   } else cell.textContent = display;
   cell.title = display;
   row.appendChild(cell);
@@ -1792,7 +1816,7 @@ function renderCreatorColumns() {
   grid.innerHTML = '';
   columns.forEach((field, index) => {
     const label = document.createElement('label');
-    const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.checked = !hiddenCreatorColumns.has(field.k); checkbox.disabled = index < 3;
+    const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.checked = !hiddenCreatorColumns.has(field.k); checkbox.disabled = field.k === 'handle'; // only handle is always frozen
     checkbox.onchange = () => { checkbox.checked ? hiddenCreatorColumns.delete(field.k) : hiddenCreatorColumns.add(field.k); renderCreatorHead(); document.querySelectorAll(`[data-field="${field.k}"]`).forEach(cell => cell.hidden = hiddenCreatorColumns.has(field.k)); };
     const text = document.createElement('span'); text.textContent = uiLang === 'zh' ? field.n : field.e;
     label.append(checkbox, text); grid.appendChild(label);
@@ -1808,6 +1832,10 @@ async function loadCreators() {
     search: document.getElementById('creatorSearch').value.trim(),
     region: document.getElementById('creatorRegion').value,
     minFollowers: document.getElementById('creatorMinFollowers').value || undefined,
+    maxFollowers: document.getElementById('creatorMaxFollowers').value || undefined,
+    minGmv: document.getElementById('creatorMinGmv').value || undefined,
+    maxGmv: document.getElementById('creatorMaxGmv').value || undefined,
+    category: document.getElementById('creatorCategory').value || undefined,
     hasEmail: document.getElementById('creatorHasEmail').checked,
     activityStatus: document.getElementById('creatorActivity').value,
     sortBy: creatorSort.key,
@@ -1859,7 +1887,36 @@ document.querySelectorAll('.sidebar-nav [data-page]').forEach(link => link.addEv
 }));
 document.querySelectorAll('[data-go-page]').forEach(button => button.addEventListener('click', () => showPage(button.dataset.goPage)));
 document.getElementById('creatorRefresh').onclick = () => { creatorOffset = 0; loadCreators(); refreshDatabaseMetrics(); };
-document.getElementById('creatorReset').onclick = () => { document.getElementById('creatorSearch').value = ''; document.getElementById('creatorRegion').value = ''; document.getElementById('creatorMinFollowers').value = ''; document.getElementById('creatorActivity').value = ''; document.getElementById('creatorHasEmail').checked = false; creatorOffset = 0; loadCreators(); };
+document.getElementById('creatorExport').onclick = async () => {
+  // reuse the Export Center settings (format / fields / output dir / header lang)
+  const format = (document.querySelector('input[name=format]:checked') || {}).value || 'csv';
+  const headerLang = (document.querySelector('input[name=headerLang]:checked') || {}).value || 'zh';
+  const outDir = document.getElementById('outPath').value.trim() || './output';
+  // 达人库导出默认导出全部字段；若用户在导出中心勾选了字段则跟随
+  const checkedFields = [...document.querySelectorAll('.fld:checked')].map(c => c.value);
+  const fields = checkedFields.length ? checkedFields : null;
+  const filters = {
+    search: document.getElementById('creatorSearch').value.trim(),
+    region: document.getElementById('creatorRegion').value,
+    minFollowers: document.getElementById('creatorMinFollowers').value || undefined,
+    maxFollowers: document.getElementById('creatorMaxFollowers').value || undefined,
+    minGmv: document.getElementById('creatorMinGmv').value || undefined,
+    maxGmv: document.getElementById('creatorMaxGmv').value || undefined,
+    category: document.getElementById('creatorCategory').value || undefined,
+    hasEmail: document.getElementById('creatorHasEmail').checked,
+    activityStatus: document.getElementById('creatorActivity').value,
+    sortBy: creatorSort.key,
+    sortDirection: creatorSort.direction,
+  };
+  const pad = n => String(n).padStart(2, '0');
+  const ts = new Date();
+  const stamp = `${ts.getFullYear()}${pad(ts.getMonth() + 1)}${pad(ts.getDate())}-${pad(ts.getHours())}${pad(ts.getMinutes())}${pad(ts.getSeconds())}`;
+  const file = `${outDir.replace(/[\\/]+$/, '')}/达人筛选-${stamp}.${format}`;
+  const r = await window.api.exportCreators({ filters, format, fields, headerLang, outPath: file });
+  if (!r.ok) { alert(r.error || (uiLang === 'zh' ? '导出失败' : 'Export failed')); return; }
+  alert(uiLang === 'zh' ? `✅ 已导出 ${r.rows} 行 → ${r.outPath}` : `✅ Exported ${r.rows} rows → ${r.outPath}`);
+};
+document.getElementById('creatorReset').onclick = () => { document.getElementById('creatorSearch').value = ''; document.getElementById('creatorRegion').value = ''; document.getElementById('creatorMinFollowers').value = ''; document.getElementById('creatorMaxFollowers').value = ''; document.getElementById('creatorMinGmv').value = ''; document.getElementById('creatorMaxGmv').value = ''; document.getElementById('creatorCategory').value = ''; document.getElementById('creatorActivity').value = ''; document.getElementById('creatorHasEmail').checked = false; creatorOffset = 0; loadCreators(); };
 document.getElementById('creatorDensity').onclick = event => { const compact = document.querySelector('.creator-table').classList.toggle('compact'); event.currentTarget.textContent = I18N[compact ? 'creators.comfortable' : 'creators.compact'][uiLang]; };
 document.getElementById('creatorColumns').onclick = event => { const menu = document.getElementById('creatorColumnMenu'); const open = menu.classList.toggle('open'); event.currentTarget.setAttribute('aria-expanded', String(open)); renderCreatorColumns(); };
 document.getElementById('creatorColumnsAll').onclick = () => { hiddenCreatorColumns.clear(); renderCreatorColumns(); renderCreatorHead(); document.querySelectorAll('.creator-table [data-field]').forEach(cell => cell.hidden = false); };
@@ -1867,6 +1924,10 @@ document.addEventListener('click', event => { if (!event.target.closest('.creato
 document.getElementById('creatorRegion').onchange = () => { creatorOffset = 0; loadCreators(); };
 document.getElementById('creatorHasEmail').onchange = () => { creatorOffset = 0; loadCreators(); };
 document.getElementById('creatorMinFollowers').onchange = () => { creatorOffset = 0; loadCreators(); };
+document.getElementById('creatorMaxFollowers').onchange = () => { creatorOffset = 0; loadCreators(); };
+document.getElementById('creatorMinGmv').onchange = () => { creatorOffset = 0; loadCreators(); };
+document.getElementById('creatorMaxGmv').onchange = () => { creatorOffset = 0; loadCreators(); };
+document.getElementById('creatorCategory').oninput = () => { clearTimeout(creatorSearchTimer); creatorSearchTimer = setTimeout(() => { creatorOffset = 0; loadCreators(); }, 250); };
 document.getElementById('creatorActivity').onchange = () => { creatorOffset = 0; loadCreators(); };
 document.getElementById('creatorSearch').oninput = () => {
   clearTimeout(creatorSearchTimer);
@@ -1884,7 +1945,7 @@ function formatUpdateDuration(seconds) {
 async function prepareLibraryUpdate() {
   const panel = document.getElementById('libraryUpdatePanel'); panel.classList.add('open');
   const region = document.getElementById('creatorRegion').value || (document.getElementById('shopRegionCustom').value.trim() || document.getElementById('shopRegion').value || 'US').toUpperCase();
-  const filters = { search:document.getElementById('creatorSearch').value.trim(), region, minFollowers:document.getElementById('creatorMinFollowers').value || undefined, hasEmail:document.getElementById('creatorHasEmail').checked, activityStatus:document.getElementById('creatorActivity').value };
+  const filters = { search:document.getElementById('creatorSearch').value.trim(), region, minFollowers:document.getElementById('creatorMinFollowers').value || undefined, maxFollowers:document.getElementById('creatorMaxFollowers').value || undefined, minGmv:document.getElementById('creatorMinGmv').value || undefined, maxGmv:document.getElementById('creatorMaxGmv').value || undefined, category:document.getElementById('creatorCategory').value || undefined, hasEmail:document.getElementById('creatorHasEmail').checked, activityStatus:document.getElementById('creatorActivity').value };
   const result = await window.api.listCreatorIds(filters);
   libraryUpdateIds = result?.ok ? result.ids : [];
   const accounts = Math.max(1, cookieList.length);
