@@ -39,6 +39,8 @@
 **TikTokShop Creator Scraper** is an open-source desktop application built for **TikTok Shop sellers** to:
 
 - Scrape creator data from the TikTok Shop Affiliate (联盟) marketplace — search by keywords, or import creator IDs / @handles / TikTok links directly
+- **Local creator library (SQLite)**: scraped creators are stored, deduplicated, browsable, sortable and filterable — builds up as you scrape
+- **Activity classification**: creators are automatically tagged active / inactive / unknown with explainable signals (last publish, growth, GMV trend)
 - Analyze creator performance (GMV, sales, engagement, follower demographics, PPS score)
 - Extract creator contact info (bio, collaboration email, MCN agency)
 - Export everything to **CSV / Excel** with selectable fields — headers follow the UI language (CN/EN one-click switch)
@@ -56,17 +58,21 @@
 
 | Feature | Description |
 |---|---|
+| 🎨 3-workspace UI | Sidebar navigation: **Scrape / Creator Library / History**, teal-glass theme, bilingual |
+| 💾 Creator library | SQLite storage: auto-dedupe, browse / sort / filter / refresh |
+| 📊 Activity status | Auto-tags creators active / inactive / unknown with explainable signals |
+| ⏱️ Refresh progress | Live progress bar + estimated remaining time while updating the library |
 | 🔍 Creator scraping | Batch keyword search, or import ID / @handle / TikTok links directly |
 | 🌍 Multi-region | Choose US / UK / Southeast Asia / LATAM shop regions |
-| 📊 Performance data | GMV, sales, video/live performance, follower profile (incl. gender %) |
 | 📧 Contact info | Bio, collaboration email (auto-extracted), MCN agency |
 | 📁 Export | CSV / Excel with customizable fields; headers follow UI language |
 | 🚀 Dual speed modes | Fast mode (list only) vs Full mode (list + details), Full by default |
 | 🔁 Resume history | One-click **Continue** (new creators only) or **Refresh** (re-scrape all, overwrite) |
-| 🧹 Deduplication | Already-scraped creators are skipped automatically |
-| 👥 Multi-account | Multiple cookies scraped concurrently with staggered starts |
-| 🛡️ Session rotation | Auto-rotates session on risk-control, resumes from breakpoint (up to 3×) |
+| 🧹 Deduplication | List + detail double dedupe — the same creator is never collected twice |
+| 👥 Multi-account | Keyword sharding / same-keyword split — several cookies in parallel, 3×+ faster in tests |
+| 🛡️ Risk-control self-heal | Auto-switches to backup cookies + auto-resumes after cool-down — no babysitting |
 | ⏯️ Tri-state control | Pause / Resume / one-click **Finish & Export** anytime |
+| 🛡️ Quit protection | Exiting during a scrape asks: Save & Export / Discard / Cancel |
 | 🌐 Bilingual UI | Chinese / English interface, field list and headers with one-click switch |
 | 🔄 Auto-update | Checks for new versions on startup, one-click update (differential download) |
 | 💾 Data memory | Remembers cookies, output history, resumes from breakpoints |
@@ -131,6 +137,14 @@ The app needs your TikTok Shop Affiliate **login cookie** to access creator data
 
 > 🔁 **Want to continue a previous scrape?** In "History", find the file and click **🔼 Continue** to scrape only new creators and write back to the same file, or **🔄 Refresh** to re-scrape all and overwrite.
 
+### Step 3 — Creator Library (new in v1.2.0)
+
+- Switch to **📚 Creator Library** in the sidebar: every scraped creator is automatically stored in a local SQLite database (deduplicated)
+- Sort / filter by nickname, followers, GMV, sales, activity status (active / inactive / unknown)
+- **Activity**: the app uses last-publish time, growth trend and GMV changes to flag creators that may have stopped or slowed down — quickly screen out "zombie creators" before outreach
+- Click **Refresh** to re-scrape the latest data into the library (with a progress bar + estimated remaining time)
+- Library data lives only on your machine — no external service involved
+
 ## ❓ FAQ
 
 **Q: "Page did not load properly"?**  
@@ -143,10 +157,19 @@ A: Request intervals are randomized (~6-15s) for stability. Full mode (details) 
 A: Click "＋ Add Account" in the cookie area and paste multiple account cookies. The app scrapes concurrently with staggered starts.
 
 **Q: Interrupted mid-scrape?**  
-A: Restart the app and scrape again — it resumes automatically from the last checkpoint. If risk-control triggers, the app auto-rotates to a new session and continues (up to 3×).
+A: Restart the app and scrape again — it resumes automatically from the last checkpoint. If risk-control triggers, the app auto-switches to a backup cookie and auto-resumes after the cool-down — no babysitting.
 
 **Q: Will already-scraped creators be scraped again?**  
 A: No, by default. "New only" mode skips creators already saved (dedup by creator ID); choose "Re-scrape all" to refresh data.
+
+**Q: What is the Creator Library (v1.2.0)?**  
+A: Scraped creators are automatically stored in a local SQLite database with deduplication — browse, sort, filter, and refresh. Data stays on your machine only.
+
+**Q: How is "activity" judged?**  
+A: The app combines last-publish time, growth trend and GMV changes to classify creators as active / inactive / unknown — useful for screening out creators who may have stopped posting or are declining before you reach out.
+
+**Q: Will I lose data when quitting?**  
+A: Quitting during a scrape shows a dialog: "Save & Export" (finish and export first, then quit) / "Discard" / "Cancel" — data is never silently lost.
 
 **Q: No email found?**  
 A: In Full mode the app auto-extracts emails from creator bios. If the creator didn't write an email in their bio, the cell is empty — that's normal.
