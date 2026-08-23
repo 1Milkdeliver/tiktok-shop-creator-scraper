@@ -312,12 +312,15 @@
     --focus-ring: 0 0 0 3px rgba(9,105,218,.28);
   }
   body { background:#f6f8fa; color:var(--text); letter-spacing:normal; }
-  .app-sidebar { background:linear-gradient(180deg,#123f60 0%,#0d304b 100%);border-right:1px solid rgba(85,184,223,.28); }
-  .sidebar-brand span,.sidebar-label,.sidebar-health { color:#a9c9dc; }
+  .app-sidebar { overflow:hidden;background:linear-gradient(155deg,rgba(24,116,128,.94) 0%,rgba(36,103,145,.91) 48%,rgba(18,70,112,.95) 100%);border-right:1px solid rgba(134,245,235,.4);box-shadow:8px 0 30px rgba(17,90,112,.14);backdrop-filter:blur(22px) saturate(145%);-webkit-backdrop-filter:blur(22px) saturate(145%); }
+  .app-sidebar::before { content:'';position:absolute;inset:-15% -70% 45% -35%;pointer-events:none;background:radial-gradient(circle,rgba(57,197,187,.62) 0%,rgba(52,211,204,.18) 42%,transparent 70%);filter:blur(10px); }
+  .app-sidebar::after { content:'';position:absolute;inset:48% -55% -22% 10%;pointer-events:none;background:radial-gradient(circle,rgba(89,201,255,.26) 0%,transparent 67%);filter:blur(18px); }
+  .app-sidebar > * { position:relative;z-index:1; }
+  .sidebar-brand span,.sidebar-label,.sidebar-health { color:#c4f2ef; }
   .sidebar-nav { gap:7px; }
-  .sidebar-nav a { min-height:50px;padding:12px 14px;gap:12px;border-radius:7px;font-weight:500;color:#c6dce9; }
-  .sidebar-nav a:hover { color:#fff;background:rgba(85,184,223,.18); }
-  .sidebar-nav a.active { background:#ffffff;color:#174f7e;box-shadow:0 1px 3px rgba(3,20,32,.18); }
+  .sidebar-nav a { min-height:50px;padding:12px 14px;gap:12px;border:1px solid transparent;border-radius:8px;font-weight:500;color:#e2fbf9; }
+  .sidebar-nav a:hover { color:#fff;background:rgba(224,255,252,.13);border-color:rgba(198,255,249,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.08); }
+  .sidebar-nav a.active { color:#0d5966;background:linear-gradient(135deg,rgba(255,255,255,.9),rgba(223,255,252,.76));border-color:rgba(255,255,255,.74);box-shadow:0 8px 22px rgba(4,57,75,.18),inset 0 1px 0 rgba(255,255,255,.9);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px); }
   .nav-icon { width:21px;height:21px;flex:0 0 21px;background:currentColor;mask-repeat:no-repeat;mask-position:center;mask-size:21px;-webkit-mask-repeat:no-repeat;-webkit-mask-position:center;-webkit-mask-size:21px; }
   .nav-home { mask-image:url('./node_modules/@primer/octicons/build/svg/home-16.svg');-webkit-mask-image:url('./node_modules/@primer/octicons/build/svg/home-16.svg'); }
   .nav-tasks { mask-image:url('./node_modules/@primer/octicons/build/svg/checklist-16.svg');-webkit-mask-image:url('./node_modules/@primer/octicons/build/svg/checklist-16.svg'); }
