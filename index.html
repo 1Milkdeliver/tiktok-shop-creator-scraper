@@ -7,7 +7,7 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
     --bg: #f4f5f9;
-    --bg-grad: radial-gradient(1200px 600px at 85% -10%, rgba(37,244,238,.08), transparent 60%), radial-gradient(1000px 500px at -10% 110%, rgba(254,44,85,.06), transparent 55%);
+    --bg-grad: radial-gradient(1200px 600px at 85% -10%, rgba(37,244,238,.08), transparent 60%), radial-gradient(1000px 500px at -10% 110%, rgba(32,104,168,.06), transparent 55%);
     --card: rgba(255,255,255,.86);
     --card-solid: #ffffff;
     --border: rgba(17,24,39,.08);
@@ -18,8 +18,8 @@
     --accent: #0071e3;
     --accent-hover: #0063c9;
     --tiktok-cyan: #25f4ee;
-    --tiktok-pink: #fe2c55;
-    --danger: #fe2c55;
+    --brand-blue: #2068a8;
+    --danger: #cf222e;
     --ok: #16a34a;
     --warn: #f59e0b;
     --radius: 18px;
@@ -41,7 +41,7 @@
   .status-pill { padding: 7px 16px; border-radius: 99px; font-size: 13px; font-weight: 600; background: var(--card); border: 1px solid var(--border); color: var(--sub); backdrop-filter: blur(12px); min-width: 110px; text-align: center; white-space: nowrap; transition: .2s; }
   .status-pill.running { color: var(--accent); border-color: rgba(0,113,227,.35); background: rgba(0,113,227,.06); }
   .status-pill.done { color: var(--ok); border-color: rgba(22,163,74,.35); background: rgba(22,163,74,.06); }
-  .status-pill.error { color: var(--danger); border-color: rgba(254,44,85,.35); background: rgba(254,44,85,.06); }
+  .status-pill.error { color: var(--danger); border-color: rgba(207,34,46,.35); background: rgba(207,34,46,.06); }
   .card { background: var(--card); border-radius: var(--radius); padding: 24px 26px; margin-bottom: 18px; border: 1px solid var(--border); box-shadow: var(--shadow); backdrop-filter: blur(24px); transition: box-shadow .25s, border-color .25s; }
   .card:hover { box-shadow: var(--shadow-lg); border-color: var(--border-strong); }
   .card h2 { font-size: 15.5px; font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 10px; letter-spacing: -.01em; }
@@ -62,10 +62,10 @@
   .cookie-item .tag { flex-shrink: 0; background: rgba(0,113,227,.1); color: var(--accent); font-size: 11px; font-weight: 700; padding: 3px 11px; border-radius: 99px; }
   .cookie-item .sum { font-size: 12px; color: var(--text-2); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .cookie-item .del { cursor: pointer; color: var(--sub); font-size: 15px; padding: 3px 7px; border-radius: 7px; }
-  .cookie-item .del:hover { background: rgba(254,44,85,.12); color: var(--danger); }
+  .cookie-item .del:hover { background: rgba(207,34,46,.12); color: var(--danger); }
   .hist-btn { border: none; background: rgba(17,24,39,.05); border-radius: 8px; padding: 4px 9px; cursor: pointer; font-size: 13px; line-height: 1.3; transition: .15s; }
   .hist-btn:hover { background: rgba(0,113,227,.14); }
-  .hist-btn.hist-del:hover { background: rgba(254,44,85,.14); }
+  .hist-btn.hist-del:hover { background: rgba(207,34,46,.14); }
   .hist-row:hover { background: rgba(17,24,39,.025); }
   .fld-detail { opacity: .45; filter: grayscale(.6); }
   .fld-detail.on { opacity: 1; filter: none; }
@@ -86,7 +86,7 @@
   .btn-primary { background: linear-gradient(135deg, #0071e3, #0a84ff); color: #fff; box-shadow: 0 2px 10px rgba(0,113,227,.35); }
   .btn-primary:hover { filter: brightness(1.08); }
   .btn-primary:disabled { background: #a8c7e8; box-shadow: none; cursor: not-allowed; filter: none; }
-  .btn-danger { background: linear-gradient(135deg, #fe2c55, #ff5b77); color: #fff; box-shadow: 0 2px 10px rgba(254,44,85,.3); }
+  .btn-danger { background: var(--danger); color: #fff; box-shadow: 0 2px 10px rgba(207,34,46,.3); }
   .btn-danger:hover { filter: brightness(1.08); }
   .btn-danger:disabled { background: #f0b3b0; box-shadow: none; cursor: not-allowed; filter: none; }
   .btn-secondary { background: rgba(17,24,39,.06); color: var(--text); }
@@ -149,7 +149,7 @@
   .sidebar-label { padding: 8px 12px; color: #666f82; font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
   .sidebar-nav { display: grid; gap: 4px; }
   .sidebar-nav a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; color: #b9c0ce; text-decoration: none; font-size: 13px; font-weight: 600; transition: .15s; }
-  .sidebar-nav a:hover, .sidebar-nav a.active { color: #fff; background: rgba(254,44,85,.18); }
+  .sidebar-nav a:hover, .sidebar-nav a.active { color: #fff; background: rgba(32,104,168,.22); }
   .sidebar-health { margin-top: auto; padding: 12px; border: 1px solid rgba(255,255,255,.08); border-radius: 12px; background: rgba(255,255,255,.04); }
   .sidebar-health strong { display: block; color: #6ee7a0; font-size: 12px; }
   .sidebar-health span { display: block; color: #8790a2; margin-top: 5px; font-size: 10.5px; line-height: 1.45; }
@@ -176,9 +176,9 @@
   .card:hover { box-shadow: 0 8px 28px rgba(17,24,39,.06); }
   .step-num { background: #111827; box-shadow: none; }
   .btn { border-radius: 10px; }
-  .btn-primary { background: var(--tiktok-pink); box-shadow: 0 2px 10px rgba(254,44,85,.24); }
-  .radio-group label:has(input:checked), .cat-chips label:has(input:checked) { background: rgba(254,44,85,.08); border-color: rgba(254,44,85,.28); color: #d91e45; }
-  input[type=checkbox], input[type=radio] { accent-color: var(--tiktok-pink); }
+  .btn-primary { background: var(--brand-blue); box-shadow: 0 2px 10px rgba(32,104,168,.24); }
+  .radio-group label:has(input:checked), .cat-chips label:has(input:checked) { background: rgba(85,184,223,.12); border-color: rgba(32,104,168,.32); color: #174f7e; }
+  input[type=checkbox], input[type=radio] { accent-color: var(--brand-blue); }
   #runCard { position: sticky; top: 88px; }
   .page-hidden { display: none !important; }
   .creator-page { display: none; }
@@ -218,6 +218,61 @@
     .metric-grid { grid-template-columns: repeat(2,1fr); }
     .dashboard-intro { align-items: flex-start; }
   }
+
+  /* Creator Desk UI foundation — adapted from GitHub Primer's component and
+     interaction model, using the blue/cyan palette sampled from the app logo. */
+  :root {
+    --bg: #f6f8fa;
+    --card: #ffffff;
+    --card-solid: #ffffff;
+    --border: #d0d7de;
+    --border-strong: #afb8c1;
+    --text: #1f2328;
+    --text-2: #25292e;
+    --sub: #59636e;
+    --accent: #2068a8;
+    --accent-hover: #19578f;
+    --accent-soft: #e8f5fb;
+    --accent-border: #55b8df;
+    --danger: #cf222e;
+    --ok: #1a7f37;
+    --warn: #9a6700;
+    --radius: 6px;
+    --radius-sm: 6px;
+    --shadow: 0 1px 0 rgba(31,35,40,.04);
+    --shadow-lg: 0 3px 6px rgba(140,149,159,.15);
+    --focus-ring: 0 0 0 3px rgba(9,105,218,.28);
+  }
+  body { background:#f6f8fa; color:var(--text); letter-spacing:normal; }
+  .app-sidebar { background:#24292f; }
+  .sidebar-nav a { border-radius:6px; font-weight:500; }
+  .sidebar-nav a:hover { background:rgba(255,255,255,.08); }
+  .sidebar-nav a.active { background:#ffffff; color:#24292f; box-shadow:0 1px 0 rgba(31,35,40,.08); }
+  header { background:rgba(255,255,255,.97); }
+  .card,.metric { border-radius:6px; box-shadow:var(--shadow); }
+  .card:hover { border-color:var(--border); box-shadow:var(--shadow); }
+  .step-num { border-radius:6px; background:#57606a; }
+  .btn,.header-btn,.hist-btn,.btn-link { min-height:32px; border-radius:6px; font-weight:600; white-space:nowrap; transition:background-color .12s,border-color .12s,color .12s,box-shadow .12s; }
+  .btn { padding:5px 16px; border:1px solid rgba(31,35,40,.15); }
+  .btn:active { transform:none; }
+  .btn-primary { color:#fff; background:var(--accent); border-color:rgba(31,35,40,.15); box-shadow:0 1px 0 rgba(31,35,40,.1); }
+  .btn-primary:hover { background:var(--accent-hover); filter:none; }
+  .btn-secondary,.header-btn,.hist-btn { color:#25292e; background:#f6f8fa; border:1px solid rgba(31,35,40,.15); box-shadow:0 1px 0 rgba(31,35,40,.04); }
+  .btn-secondary:hover,.header-btn:hover,.hist-btn:hover { color:#25292e; background:#eff2f5; border-color:rgba(31,35,40,.15); }
+  .btn-danger { color:var(--danger); background:#f6f8fa; border:1px solid rgba(31,35,40,.15); box-shadow:0 1px 0 rgba(31,35,40,.04); }
+  .btn-danger:hover { color:#fff; background:var(--danger); filter:none; }
+  .btn:disabled { color:#8c959f; background:#f6f8fa; border-color:#d8dee4; box-shadow:none; opacity:.72; }
+  :where(button,a,input,select,textarea,[tabindex]):focus-visible { outline:2px solid #0969da; outline-offset:2px; box-shadow:var(--focus-ring); }
+  input[type=text],input[type=search],input[type=number],select#shopRegion,.creator-toolbar input,.creator-toolbar select,.cookie-zone textarea,#creatorInput { border-radius:6px !important; border-color:var(--border) !important; box-shadow:inset 0 1px 0 rgba(208,215,222,.2); }
+  input[type=text]:focus,input[type=search]:focus,input[type=number]:focus,select:focus,textarea:focus { border-color:#0969da !important; outline:none; box-shadow:var(--focus-ring) !important; }
+  .radio-group label,.cat,.cat-chips label,.field-grid,.creator-table-wrap { border-radius:6px; }
+  .radio-group label { background:#f6f8fa; border-color:rgba(31,35,40,.12); }
+  .radio-group label:has(input:checked),.cat-chips label:has(input:checked) { background:var(--accent-soft); border-color:var(--accent-border); color:#174f7e; }
+  input[type=checkbox],input[type=radio] { accent-color:var(--accent); }
+  .creator-table th { background:#f6f8fa; color:#59636e; font-weight:600; }
+  .creator-table tbody tr:hover { background:#f6f8fa; }
+  .status-pill,.ready-badge { border-radius:999px; box-shadow:none; }
+  .modal-panel { border-radius:6px; border:1px solid var(--border); }
 </style>
 </head>
 <body>
@@ -246,8 +301,8 @@
     </div>
     <span class="status-pill" id="appVersion" style="margin-right:8px">v—</span>
     <span class="status-pill" id="status" data-i18n="status.ready">就绪</span>
-    <button class="header-btn" id="btnUpdate" data-i18n="action.update">🔄 检查更新</button>
-    <a class="header-btn" id="btnGithub" href="https://github.com/1Milkdeliver/tiktok-shop-creator-scraper" target="_blank" data-i18n="action.github" style="text-decoration:none;display:inline-flex;align-items:center">⭐ GitHub</a>
+    <button class="header-btn" id="btnUpdate" data-i18n="action.update">检查更新</button>
+    <a class="header-btn" id="btnGithub" href="https://github.com/1Milkdeliver/tiktok-shop-creator-scraper" target="_blank" data-i18n="action.github" style="text-decoration:none;display:inline-flex;align-items:center">GitHub</a>
     <button class="header-btn" id="uiLangToggle">🌐 EN</button>
   </header>
 
@@ -367,7 +422,7 @@ https://www.tiktok.com/@makeup.lover'></textarea>
         <div class="hint" style="margin-bottom:8px" data-i18n="step4.out">输出位置</div>
         <div style="display:flex;gap:8px">
           <input type="text" id="outPath" value="./output" placeholder="./output 或 D:/data">
-          <button class="btn btn-secondary" id="btnChooseDir" style="white-space:nowrap" data-i18n="step4.choose">📁 选择</button>
+          <button class="btn btn-secondary" id="btnChooseDir" style="white-space:nowrap" data-i18n="step4.choose">选择</button>
         </div>
       </div>
     </div>
@@ -398,9 +453,9 @@ https://www.tiktok.com/@makeup.lover'></textarea>
   <div class="workspace-column">
   <div class="card" id="runCard">
     <div class="toolbar">
-      <button class="btn btn-primary" id="btnStart" style="padding:11px 34px;font-size:15px" data-i18n="action.start">▶ 开始抓取</button>
-      <button class="btn btn-secondary" id="btnTest" data-i18n="action.test">🔍 测试连接</button>
-      <button class="btn btn-danger" id="btnStop" disabled data-i18n="action.stop">■ 结束并导出</button>
+      <button class="btn btn-primary" id="btnStart" style="padding:11px 34px;font-size:15px" data-i18n="action.start">开始抓取</button>
+      <button class="btn btn-secondary" id="btnTest" data-i18n="action.test">测试连接</button>
+      <button class="btn btn-danger" id="btnStop" disabled data-i18n="action.stop">结束并导出</button>
       <button class="btn btn-secondary" id="btnExit" data-i18n="action.exit">退出</button>
     </div>
     <div class="hint" id="statusDetail" style="margin-top:10px;font-size:13px;color:var(--accent)"></div>
@@ -543,7 +598,7 @@ const I18N = {
   'step4.format': { zh: '格式', en: 'Format' },
   'step4.headerLang': { zh: '表头语言', en: 'Header Language' },
   'step4.out': { zh: '输出位置', en: 'Output Location' },
-  'step4.choose': { zh: '📁 选择', en: '📁 Choose' },
+  'step4.choose': { zh: '选择', en: 'Choose' },
   'step4.mode': { zh: '抓取模式', en: 'Scrape Mode' },
   'step4.modeFast': { zh: '⚡ 快速模式（只抓列表字段）', en: '⚡ Fast (list fields only)' },
   'step4.modeFull': { zh: '📦 完整模式（列表 + 详情全部字段）', en: '📦 Full (list + all detail fields)' },
@@ -557,14 +612,14 @@ const I18N = {
   'step4.fields': { zh: '导出字段', en: 'Export Fields' },
   'step4.fieldsAll': { zh: '全选', en: 'Select All' },
   'step4.fieldsNone': { zh: '清空', en: 'Clear' },
-  'action.start': { zh: '▶ 开始抓取', en: '▶ Start Scraping' },
-  'action.test': { zh: '🔍 测试连接', en: '🔍 Test' },
-  'action.pause': { zh: '⏸ 暂停', en: '⏸ Pause' },
-  'action.resume': { zh: '▶ 继续', en: '▶ Resume' },
-  'action.stop': { zh: '■ 结束并导出', en: '■ Finish & Export' },
+  'action.start': { zh: '开始抓取', en: 'Start scraping' },
+  'action.test': { zh: '测试连接', en: 'Test connection' },
+  'action.pause': { zh: '暂停', en: 'Pause' },
+  'action.resume': { zh: '继续', en: 'Resume' },
+  'action.stop': { zh: '结束并导出', en: 'Finish and export' },
   'action.exit': { zh: '退出', en: 'Exit' },
-  'action.update': { zh: '🔄 检查更新', en: '🔄 Check Update' },
-  'action.github': { zh: '⭐ GitHub 项目', en: '⭐ GitHub Project' },
+  'action.update': { zh: '检查更新', en: 'Check for updates' },
+  'action.github': { zh: 'GitHub 项目', en: 'GitHub project' },
   'step5.title': { zh: '历史输出', en: 'Output History' },
   'step5.refresh': { zh: '刷新', en: 'Refresh' },
   'step5.empty': { zh: '暂无历史记录', en: 'No history yet' },
@@ -1101,9 +1156,9 @@ function syncMainButton(mode, opts) {
   const btn = document.getElementById('btnStart');
   const zh = uiLang === 'zh';
   const labels = {
-    start: ['▶ 开始抓取', '▶ Start Scraping'],
-    pause: ['⏸ 暂停', '⏸ Pause'],
-    resume: ['▶ 继续', '▶ Resume'],
+    start: ['开始抓取', 'Start scraping'],
+    pause: ['暂停', 'Pause'],
+    resume: ['继续', 'Resume'],
   };
   btn.textContent = labels[mode][zh ? 0 : 1];
   btn.className = 'btn ' + (mode === 'pause' ? 'btn-secondary' : 'btn-primary');
