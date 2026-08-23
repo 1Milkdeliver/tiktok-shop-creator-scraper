@@ -1620,7 +1620,7 @@ function showPage(page) {
   grid.classList.toggle('page-hidden', !['overview', 'tasks', 'exports'].includes(activePage));
   const visibility = {
     accounts: activePage === 'overview' && accountPanelOpen,
-    browserSettings: activePage === 'overview',
+    browserSettings: activePage === 'tasks',
     targeting: activePage === 'tasks',
     exports: activePage === 'exports',
     runCard: activePage === 'tasks',
