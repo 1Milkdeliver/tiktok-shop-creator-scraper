@@ -187,6 +187,11 @@ ipcMain.handle('creator-db-list', async (event, filters) => {
   try { return { ok: true, ...(await creatorDb.listCreators(filters || {})) }; }
   catch (e) { return { error: e.message, rows: [], total: 0 }; }
 });
+ipcMain.handle('creator-db-ids', async (event, filters) => {
+  if (!creatorDb) return { error: '本地达人库未初始化', ids: [] };
+  try { return { ok: true, ids: await creatorDb.listCreatorIds(filters || {}) }; }
+  catch (e) { return { error: e.message, ids: [] }; }
+});
 ipcMain.handle('creator-db-jobs', async (event, filters) => {
   if (!creatorDb) return { error: '本地达人库未初始化', rows: [], total: 0 };
   try { return { ok: true, ...(await creatorDb.listScrapeJobs(filters || {})) }; }
@@ -742,6 +747,8 @@ ipcMain.handle('start-scrape', async (event, config) => {
       creatorInput: Array.isArray(config.creatorInput) ? config.creatorInput : null,
       keywords: config.keywords && config.keywords.length ? config.keywords : require('./lib/exporter').DEFAULT_KEYWORDS,
       fields: config.fields && config.fields.length ? config.fields : null,
+      updateFields: config.updateFields && config.updateFields.length ? config.updateFields : null,
+      libraryUpdate: !!config.libraryUpdate,
     };
     if (creatorDb) {
       // In "new only" mode, seed the runner's network-level dedupe set from

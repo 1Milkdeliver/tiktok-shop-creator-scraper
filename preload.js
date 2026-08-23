@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('api', {
   clearCookies: () => ipcRenderer.invoke('clear-cookies'),
   creatorDbStats: () => ipcRenderer.invoke('creator-db-stats'),
   listCreators: (filters) => ipcRenderer.invoke('creator-db-list', filters),
+  listCreatorIds: (filters) => ipcRenderer.invoke('creator-db-ids', filters),
   listScrapeJobs: (filters) => ipcRenderer.invoke('creator-db-jobs', filters),
   openHistoryFile: (p) => ipcRenderer.invoke('open-history-file', p),
   copyHistoryPath: (p) => ipcRenderer.invoke('copy-history-path', p),

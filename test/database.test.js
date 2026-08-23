@@ -46,6 +46,7 @@ test('creator database migrates, deduplicates and filters creators', async (t) =
   const result = await db.listCreators({ region: 'US', search: 'updated', hasEmail: true });
   assert.equal(result.total, 1);
   assert.equal(result.rows[0].creator_id, '123');
+  assert.deepEqual(await db.listCreatorIds({ region: 'US' }), ['123']);
   assert.equal(result.rows[0].handle, 'updated_handle');
   assert.equal(result.rows[0].nickname, 'Creator One');
   assert.equal(result.rows[0].contact_email, 'hello@example.com');

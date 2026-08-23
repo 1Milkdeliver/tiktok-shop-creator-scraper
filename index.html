@@ -252,6 +252,15 @@
   .activity-badge.active { color:#1a7f37;background:#dafbe1; }
   .activity-badge.inactive { color:#cf222e;background:#ffebe9; }
   .activity-badge.unknown { color:#59636e;background:#eaeef2; }
+  .library-update-panel { display:none;margin-bottom:16px;padding:16px;background:#fff;border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow); }
+  .library-update-panel.open { display:block; }
+  .library-update-summary { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0; }
+  .library-update-summary div { padding:10px 12px;background:#f6f8fa;border-radius:6px; }
+  .library-update-summary span { display:block;color:var(--sub);font-size:12px; }
+  .library-update-summary strong { display:block;margin-top:3px;font-size:16px; }
+  .library-progress { height:8px;overflow:hidden;background:#eaeef2;border-radius:999px;margin-top:12px; }
+  .library-progress-fill { width:0;height:100%;background:var(--accent);border-radius:inherit;transition:width .3s; }
+  .library-progress-text { display:flex;justify-content:space-between;gap:12px;margin-top:7px;color:var(--sub);font-size:12px; }
   #log { height: 220px; }
   footer { padding-top: 12px; }
   @media (max-width: 1100px) {
@@ -462,7 +471,7 @@
   </section>
 
   <section class="creator-page" id="creatorPage">
-    <div class="page-heading"><div><h2 data-i18n="creators.title">达人库</h2><p data-i18n="creators.subtitle">查询已抓取的数据，需要时再筛选导出。</p></div><button class="btn btn-primary" data-go-page="tasks" data-i18n="creators.newTask">＋ 新建抓取任务</button></div>
+    <div class="page-heading"><div><h2 data-i18n="creators.title">达人库</h2><p data-i18n="creators.subtitle">查询已抓取的数据，需要时再筛选导出。</p></div><div style="display:flex;gap:8px"><button class="btn btn-secondary" id="creatorUpdateOpen" data-i18n="creators.updateData">更新达人数据</button><button class="btn btn-primary" data-go-page="tasks" data-i18n="creators.newTask">＋ 新建抓取任务</button></div></div>
     <div class="creator-dashboard" aria-label="Creator library dashboard">
       <div class="creator-dashboard-card"><span data-i18n="creators.dashboardTotal">达人总数</span><strong id="creatorDashTotal">—</strong><small data-i18n="creators.dashboardTotalHint">已自动去重</small></div>
       <div class="creator-dashboard-card"><span data-i18n="creators.dashboardEmail">含合作邮箱</span><strong id="creatorDashEmail">—</strong><small id="creatorDashEmailHint">—</small></div>
@@ -470,6 +479,13 @@
       <div class="creator-dashboard-card"><span data-i18n="creators.dashboardRegions">覆盖地区</span><strong id="creatorDashRegions">—</strong><small data-i18n="creators.dashboardRegionsHint">TikTok Shop 站点</small></div>
       <div class="creator-dashboard-card"><span data-i18n="creators.dashboardUpdated">最近更新</span><strong id="creatorDashUpdated">—</strong><small data-i18n="creators.dashboardUpdatedHint">最后一次数据刷新</small></div>
       <div class="creator-dashboard-card"><span data-i18n="creators.dashboardStorage">数据库占用</span><strong id="creatorDashStorage">—</strong><small data-i18n="creators.dashboardStorageHint">仅本地结构化数据</small></div>
+    </div>
+    <div class="library-update-panel" id="libraryUpdatePanel">
+      <div class="page-heading" style="margin-bottom:0"><div><h2 data-i18n="creators.updateTitle">更新达人数据</h2><p data-i18n="creators.updateHint">复用达人库名单，更新当前地区和筛选范围，不重复搜索达人。</p></div><button class="btn-link" id="libraryUpdateClose" data-i18n="action.cancel">取消</button></div>
+      <div class="library-update-summary"><div><span data-i18n="creators.updateScope">更新范围</span><strong id="libraryUpdateCount">—</strong></div><div><span data-i18n="creators.updateAccounts">并行账号</span><strong id="libraryUpdateAccounts">—</strong></div><div><span data-i18n="creators.updateEstimate">预计耗时</span><strong id="libraryUpdateEstimate">—</strong></div></div>
+      <div class="hint" id="libraryUpdateMessage"></div>
+      <div class="library-progress"><div class="library-progress-fill" id="libraryUpdateProgressFill"></div></div><div class="library-progress-text"><span id="libraryUpdateProgressText">0 / 0</span><span id="libraryUpdateRemaining">—</span></div>
+      <div style="display:flex;gap:8px;margin-top:14px"><button class="btn btn-primary" id="libraryUpdateStart" data-i18n="creators.updateStart">开始更新</button><button class="btn btn-secondary" id="libraryUpdatePause" style="display:none" data-i18n="action.pause">暂停</button></div>
     </div>
     <div class="card creator-workbench">
       <div class="creator-toolbar">
@@ -773,6 +789,13 @@ const I18N = {
   'creators.dashboardUpdatedHint': { zh: '最后一次数据刷新', en: 'Most recent data refresh' },
   'creators.dashboardStorage': { zh: '数据库占用', en: 'Database size' },
   'creators.dashboardStorageHint': { zh: '仅本地结构化数据', en: 'Local structured data only' },
+  'creators.updateData': { zh: '更新达人数据', en: 'Update creator data' },
+  'creators.updateTitle': { zh: '更新达人数据', en: 'Update creator data' },
+  'creators.updateHint': { zh: '复用达人库名单，更新当前地区和筛选范围，不重复搜索达人。', en: 'Reuse saved creator IDs and update the current region and filters without rediscovery.' },
+  'creators.updateScope': { zh: '更新范围', en: 'Update scope' },
+  'creators.updateAccounts': { zh: '并行账号', en: 'Parallel accounts' },
+  'creators.updateEstimate': { zh: '预计耗时', en: 'Estimated time' },
+  'creators.updateStart': { zh: '开始更新', en: 'Start update' },
   'creators.creator': { zh: '达人', en: 'Creator' },
   'creators.region': { zh: '地区', en: 'Region' },
   'creators.followers': { zh: '粉丝', en: 'Followers' },
@@ -855,6 +878,7 @@ const I18N = {
   'action.test': { zh: '测试连接', en: 'Test connection' },
   'action.pause': { zh: '暂停', en: 'Pause' },
   'action.resume': { zh: '继续', en: 'Resume' },
+  'action.cancel': { zh: '取消', en: 'Cancel' },
   'action.stop': { zh: '结束并导出', en: 'Finish and export' },
   'action.exit': { zh: '退出', en: 'Exit' },
   'action.update': { zh: '检查更新', en: 'Check for updates' },
@@ -1460,6 +1484,7 @@ async function poll() {
       detail.textContent = uiLang === 'zh' ? '已暂停' : 'Paused';
     } else if (j.result && j.result.ok) { stopSpin(); setStatus(uiLang === 'zh' ? '✅ 完成' : '✅ Done', 'done'); showResult(j.result); detail.textContent = ''; syncMainButton('start', { disabled: false }); btnStop.disabled = true; lockOptions(false); refreshAppData(); }
     else if (j.result && !j.result.ok) { stopSpin(); setStatus(uiLang === 'zh' ? '❌ 出错' : '❌ Error', 'error'); detail.textContent = ''; syncMainButton('start', { disabled: false }); btnStop.disabled = true; lockOptions(false); }
+    renderLibraryUpdateProgress(j);
   } catch (e) { }
 }
 function showResult(r) {
@@ -1663,6 +1688,9 @@ let accountPanelOpen = false;
 let creatorOffset = 0;
 let creatorPageSize = 50;
 let creatorSearchTimer = null;
+let libraryUpdateIds = [];
+let libraryUpdateActive = false;
+let libraryUpdateStartedAt = 0;
 const hiddenCreatorColumns = new Set();
 const CREATOR_SORTABLE = { handle:'handle', nickname:'nickname', creator_oecuid:'creator_id', selection_region:'region', follower_cnt:'follower_count', med_gmv_revenue:'total_gmv', units_sold:'units_sold', '合作邮箱':'contact_email', last_publish_time:'last_publish_at', activity_status:'activity_status', last_refreshed_at:'last_refreshed_at' };
 const creatorSort = { key:'last_refreshed_at', direction:'desc' };
@@ -1837,6 +1865,48 @@ document.getElementById('creatorSearch').oninput = () => {
 document.getElementById('creatorPrev').onclick = () => { creatorOffset = Math.max(0, creatorOffset - creatorPageSize); loadCreators(); };
 document.getElementById('creatorNext').onclick = () => { creatorOffset += creatorPageSize; loadCreators(); };
 document.getElementById('creatorPageSize').onchange = event => { creatorPageSize = Number(event.target.value) || 50; creatorOffset = 0; loadCreators(); };
+function formatUpdateDuration(seconds) {
+  const minutes = Math.max(1, Math.ceil(seconds / 60));
+  if (minutes < 60) return uiLang === 'zh' ? `约 ${minutes} 分钟` : `About ${minutes} min`;
+  const hours = (minutes / 60).toFixed(1);
+  return uiLang === 'zh' ? `约 ${hours} 小时` : `About ${hours} hr`;
+}
+async function prepareLibraryUpdate() {
+  const panel = document.getElementById('libraryUpdatePanel'); panel.classList.add('open');
+  const region = document.getElementById('creatorRegion').value || (document.getElementById('shopRegionCustom').value.trim() || document.getElementById('shopRegion').value || 'US').toUpperCase();
+  const filters = { search:document.getElementById('creatorSearch').value.trim(), region, minFollowers:document.getElementById('creatorMinFollowers').value || undefined, hasEmail:document.getElementById('creatorHasEmail').checked, activityStatus:document.getElementById('creatorActivity').value };
+  const result = await window.api.listCreatorIds(filters);
+  libraryUpdateIds = result?.ok ? result.ids : [];
+  const accounts = Math.max(1, cookieList.length);
+  document.getElementById('libraryUpdateCount').textContent = uiLang === 'zh' ? `${libraryUpdateIds.length.toLocaleString()} 位 · ${region}` : `${libraryUpdateIds.length.toLocaleString()} · ${region}`;
+  document.getElementById('libraryUpdateAccounts').textContent = cookieList.length.toLocaleString();
+  document.getElementById('libraryUpdateEstimate').textContent = formatUpdateDuration(libraryUpdateIds.length * 7 / accounts + 20);
+  const message = document.getElementById('libraryUpdateMessage');
+  message.textContent = !cookieList.length ? (uiLang === 'zh' ? '请先在首页“可用账号”中导入 Cookie。' : 'Import a cookie from Available accounts first.') : !libraryUpdateIds.length ? (uiLang === 'zh' ? '当前地区和筛选条件下没有可更新的达人。' : 'No creators match the current region and filters.') : (uiLang === 'zh' ? '预计时间会根据账号数量、网络和风控情况动态修正。' : 'The estimate adjusts with account count, network speed, and risk controls.');
+  document.getElementById('libraryUpdateStart').disabled = !cookieList.length || !libraryUpdateIds.length;
+}
+document.getElementById('creatorUpdateOpen').onclick = prepareLibraryUpdate;
+document.getElementById('libraryUpdateClose').onclick = () => { if (!libraryUpdateActive) document.getElementById('libraryUpdatePanel').classList.remove('open'); };
+document.getElementById('libraryUpdateStart').onclick = async () => {
+  if (!libraryUpdateIds.length || !cookieList.length) return;
+  const regionText = document.getElementById('creatorRegion').value || (document.getElementById('shopRegionCustom').value.trim() || document.getElementById('shopRegion').value || 'US').toUpperCase();
+  const updateFields = [...new Set(Object.values(UPDATE_FIELD_GROUPS).flat())];
+  const cfg = { pastedCookies:cookieList.map(cookie => cookie.data), mode:(document.querySelector('input[name=mode]:checked') || {}).value || 'auto', format:'csv', headerLang:uiLang, outPath:document.getElementById('outPath').value.trim() || './output', detail:true, dedupe:false, creatorInput:libraryUpdateIds, keywords:[], fields:FIELDS.map(field => field.k), updateFields, shopRegion:regionText, libraryUpdate:true };
+  const result = await window.api.start(cfg);
+  if (result.error) { document.getElementById('libraryUpdateMessage').textContent = result.error; return; }
+  libraryUpdateActive = true; libraryUpdateStartedAt = Date.now();
+  document.getElementById('libraryUpdateStart').disabled = true;
+  document.getElementById('libraryUpdatePause').style.display = '';
+};
+document.getElementById('libraryUpdatePause').onclick = async event => { const status = await window.api.status(); if (status.paused) { await window.api.resume(); event.currentTarget.textContent = I18N['action.pause'][uiLang]; } else { await window.api.pause(); event.currentTarget.textContent = I18N['action.resume'][uiLang]; } };
+function renderLibraryUpdateProgress(status) {
+  if (!libraryUpdateActive) return;
+  const total = Number(status.currentInfo?.total || libraryUpdateIds.length || 0); const completed = Math.min(total, Number(status.currentInfo?.completed || 0)); const percent = total ? Math.round(completed / total * 100) : 0;
+  document.getElementById('libraryUpdateProgressFill').style.width = `${percent}%`;
+  document.getElementById('libraryUpdateProgressText').textContent = `${completed.toLocaleString()} / ${total.toLocaleString()} · ${percent}%`;
+  if (completed && status.running) { const elapsed = (Date.now() - libraryUpdateStartedAt) / 1000; document.getElementById('libraryUpdateRemaining').textContent = (uiLang === 'zh' ? '剩余 ' : 'Remaining ') + formatUpdateDuration(elapsed / completed * (total - completed)); }
+  if (!status.running && status.result?.libraryUpdate) { libraryUpdateActive = false; document.getElementById('libraryUpdateProgressFill').style.width = '100%'; document.getElementById('libraryUpdateRemaining').textContent = uiLang === 'zh' ? '更新完成' : 'Update complete'; document.getElementById('libraryUpdatePause').style.display = 'none'; document.getElementById('libraryUpdateStart').disabled = false; loadCreators(); refreshDatabaseMetrics(); }
+}
 window.addEventListener('hashchange', () => showPage(location.hash.slice(1)));
 
 async function refreshDatabaseMetrics() {
