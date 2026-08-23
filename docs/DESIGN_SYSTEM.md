@@ -31,6 +31,14 @@ Sources:
 - Inputs use a blue focus ring because focus is a universal interaction state, not brand decoration.
 - Tables use neutral sticky headers and a subtle row hover. Numeric columns should be right-aligned in future table work.
 
+## Typography and localization
+
+- Use bundled `Inter Variable` for Latin text, numbers, and UI punctuation; use bundled `Noto Sans SC Variable` for Simplified Chinese glyphs.
+- Body text defaults to 13–14px, supporting text to 11–12px, section headings to 15–16px, and page headings to 22–25px.
+- Use tabular numerals for metrics and numeric table columns. Logs and machine-readable values use the system monospace stack.
+- Chinese and English must share the same layout slots. Switching locale may replace text but must not move navigation, header actions, task controls, or filter columns.
+- Give dynamic-label buttons a fixed width based on the longer locale. Do not solve localization with a smaller font size.
+
 ## Navigation and feedback
 
 - The active sidebar item uses a light surface with dark text; hover alone uses a low-contrast overlay.

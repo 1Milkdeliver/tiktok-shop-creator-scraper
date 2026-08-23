@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <title>TikTokShop达人抓取工具</title>
+<link rel="stylesheet" href="./node_modules/@fontsource-variable/inter/index.css">
+<link rel="stylesheet" href="./node_modules/@fontsource-variable/noto-sans-sc/index.css">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -27,7 +29,7 @@
     --shadow: 0 1px 2px rgba(17,24,39,.04), 0 8px 28px rgba(17,24,39,.07);
     --shadow-lg: 0 4px 12px rgba(17,24,39,.06), 0 20px 60px rgba(17,24,39,.12);
   }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif; background: var(--bg); background-image: var(--bg-grad); background-attachment: fixed; color: var(--text); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; letter-spacing: .01em; }
+  body { font-family: 'Inter Variable', 'Noto Sans SC Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif; background: var(--bg); background-image: var(--bg-grad); background-attachment: fixed; color: var(--text); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; letter-spacing: .01em; font-optical-sizing:auto; }
   ::-webkit-scrollbar { width: 9px; height: 9px; }
   ::-webkit-scrollbar-thumb { background: rgba(17,24,39,.18); border-radius: 99px; border: 2px solid transparent; background-clip: content-box; }
   ::-webkit-scrollbar-thumb:hover { background: rgba(17,24,39,.3); background-clip: content-box; border: 2px solid transparent; }
@@ -191,7 +193,7 @@
   .creator-table-wrap { overflow:auto;border:1px solid var(--border);border-radius:12px; }
   .creator-table { width:100%;border-collapse:collapse;min-width:820px;font-size:12px; }
   .creator-table th { position:sticky;top:0;background:#f7f8fa;color:var(--sub);text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap; }
-  .creator-table td { padding:11px 12px;border-bottom:1px solid #eef0f3;white-space:nowrap; }
+  .creator-table td { max-width:220px;padding:11px 12px;border-bottom:1px solid #eef0f3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
   .creator-table tr:last-child td { border-bottom:0; }
   .creator-empty { padding:42px 20px;text-align:center;color:var(--sub); }
   .creator-pagination { display:flex;align-items:center;justify-content:space-between;margin-top:12px;color:var(--sub);font-size:12px; }
@@ -273,6 +275,30 @@
   .creator-table tbody tr:hover { background:#f6f8fa; }
   .status-pill,.ready-badge { border-radius:999px; box-shadow:none; }
   .modal-panel { border-radius:6px; border:1px solid var(--border); }
+  code,pre,#log,.cookie-zone textarea,#creatorInput { font-family:'Cascadia Mono','SFMono-Regular',Consolas,'Liberation Mono',monospace; font-variant-ligatures:none; }
+  .metric strong,.creator-table td:nth-child(3),.creator-table td:nth-child(4),#appVersion { font-variant-numeric:tabular-nums; }
+
+  /* Locale-stable layout: translated labels change, control positions do not. */
+  header { display:grid; grid-template-columns:minmax(190px,1fr) 64px 72px 120px 108px 64px; gap:8px; }
+  header > * { margin-left:0 !important; min-width:0; }
+  .header-btn { display:inline-flex;align-items:center;justify-content:center;text-align:center; }
+  #appVersion,#status { width:100%; }
+  #btnUpdate { width:120px; }
+  #btnGithub { width:108px; }
+  #uiLangToggle { width:64px; }
+  #btnStart { width:136px; }
+  #btnTest { width:116px; }
+  #btnStop { width:136px; }
+  #btnExit { width:64px; }
+  .toolbar { column-gap:10px; }
+  .sidebar-nav a span { white-space:nowrap; }
+  html[lang="en"] .sidebar-nav a,html[lang="zh-CN"] .sidebar-nav a { min-height:40px; }
+  @media (max-width: 900px) {
+    header { grid-template-columns:minmax(180px,1fr) 64px 72px 112px 96px 60px; gap:6px; }
+    #btnUpdate { width:112px; }
+    #btnGithub { width:96px; }
+    #uiLangToggle { width:60px; }
+  }
 </style>
 </head>
 <body>
@@ -327,7 +353,7 @@
         <label class="check-label"><input id="creatorHasEmail" type="checkbox"> <span data-i18n="creators.hasEmail">仅有邮箱</span></label>
         <button class="btn btn-secondary" id="creatorRefresh" data-i18n="creators.refresh">刷新</button>
       </div>
-      <div class="creator-table-wrap"><table class="creator-table"><thead><tr><th data-i18n="creators.creator">达人</th><th data-i18n="creators.region">地区</th><th data-i18n="creators.followers">粉丝</th><th>GMV</th><th data-i18n="creators.email">合作邮箱</th><th data-i18n="creators.updated">最近更新</th></tr></thead><tbody id="creatorRows"><tr><td colspan="6" class="creator-empty" data-i18n="creators.empty">暂无达人数据，先创建一个抓取任务。</td></tr></tbody></table></div>
+      <div class="creator-table-wrap"><table class="creator-table"><thead><tr id="creatorHeadRow"></tr></thead><tbody id="creatorRows"></tbody></table></div>
       <div class="creator-pagination"><span id="creatorCount">0 位达人</span><div><button class="btn btn-secondary" id="creatorPrev" disabled>‹</button> <button class="btn btn-secondary" id="creatorNext" disabled>›</button></div></div>
     </div>
   </section>
@@ -442,6 +468,17 @@ https://www.tiktok.com/@makeup.lover'></textarea>
       </div>
     </div>
     <div class="hint" style="margin-top:6px" data-i18n="step4.scopeHint">💡 <b>只抓新的</b>：与之前抓取去重，不重复抓同一达人，适合持续增量采集；<b>全部重抓</b>：重新抓取所有达人（含之前已抓的），用于更新 GMV、粉丝数等有时效的数据。</div>
+    <div style="margin-top:14px">
+      <div style="font-size:13px;font-weight:600;color:var(--text-2);margin-bottom:8px" data-i18n="update.title">更新达人库字段</div>
+      <div class="field-grid" id="updateGroups" style="max-height:none">
+        <label><input type="checkbox" class="update-group" value="identity" checked> <span data-i18n="update.identity">身份与主页</span></label>
+        <label><input type="checkbox" class="update-group" value="performance" checked> <span data-i18n="update.performance">业绩与流量</span></label>
+        <label><input type="checkbox" class="update-group" value="audience" checked> <span data-i18n="update.audience">粉丝画像</span></label>
+        <label><input type="checkbox" class="update-group" value="contact" checked> <span data-i18n="update.contact">简介与联系方式</span></label>
+        <label><input type="checkbox" class="update-group" value="permissions" checked> <span data-i18n="update.permissions">合作与权限</span></label>
+      </div>
+      <div class="hint" data-i18n="update.hint">仅更新勾选的字段组；其他字段保留达人库中的原值。</div>
+    </div>
     <div style="margin-top:14px">
       <span style="font-size:13px;color:var(--sub)" data-i18n="step4.fields">导出字段</span>
       <span class="sel-all" id="fieldsAll" data-i18n="step4.fieldsAll">全选</span> <span class="sel-all" id="fieldsNone" data-i18n="step4.fieldsNone">清空</span>
@@ -560,6 +597,13 @@ const I18N = {
   'creators.email': { zh: '合作邮箱', en: 'Contact email' },
   'creators.updated': { zh: '最近更新', en: 'Last updated' },
   'creators.empty': { zh: '暂无达人数据，先创建一个抓取任务。', en: 'No creators yet. Start a scrape task first.' },
+  'update.title': { zh: '更新达人库字段', en: 'Update creator library fields' },
+  'update.identity': { zh: '身份与主页', en: 'Identity and profile' },
+  'update.performance': { zh: '业绩与流量', en: 'Performance and traffic' },
+  'update.audience': { zh: '粉丝画像', en: 'Audience profile' },
+  'update.contact': { zh: '简介与联系方式', en: 'Bio and contact' },
+  'update.permissions': { zh: '合作与权限', en: 'Collaboration and permissions' },
+  'update.hint': { zh: '仅更新勾选的字段组；其他字段保留达人库中的原值。', en: 'Only selected groups are updated; all other saved values are preserved.' },
   'workspace.scrapeMode': { zh: '抓取模式', en: 'Scrape mode' },
   'workspace.full': { zh: '完整', en: 'Full' },
   'workspace.fullHint': { zh: '含邮箱与 MCN', en: 'Includes email and MCN' },
@@ -647,6 +691,7 @@ const I18N = {
 };
 let uiLang = localStorage.getItem('uiLang') || 'zh';
 function applyI18n() {
+  document.documentElement.lang = uiLang === 'zh' ? 'zh-CN' : 'en';
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
     const t = I18N[key];
@@ -680,6 +725,7 @@ function toggleUiLang() {
   // and row labels follow the new UI language too
   renderHistory(lastHistory);
   refreshDatabaseMetrics();
+  if (activePage === 'creators') loadCreators();
 }
 document.addEventListener('DOMContentLoaded', () => {
   applyI18n();
@@ -843,6 +889,13 @@ const FIELDS = [
   { k: 'creator_permission_tag', n: '达人类目权限', e: 'Category Permission' }, { k: 'is_live_auction', n: '直播拍卖', e: 'Live Auction' },
   { k: '简介', n: '简介', e: 'Bio', detail: true }, { k: '合作邮箱', n: '合作邮箱', e: 'Contact Email', detail: true }, { k: 'MCN机构', n: 'MCN机构', e: 'MCN Agency', detail: true },
 ];
+const UPDATE_FIELD_GROUPS = {
+  identity: ['handle', 'nickname', 'avatar', 'selection_region', 'category'],
+  performance: ['follower_cnt', 'med_gmv_revenue', 'med_gmv_revenue_range', 'video_gmv', 'live_gmv', 'units_sold', 'units_sold_range', 'video_avg_view_cnt', 'video_play_cnt_med', 'video_engagement', 'ec_video_engagement', 'ec_video_gpm', 'ec_live_gpm', 'ec_live_avg_uv', 'pps_score', 'is_fast_growing'],
+  audience: ['top_follower_ages', 'top_follower_gender'],
+  contact: ['简介', '合作邮箱', 'MCN机构'],
+  permissions: ['has_collaborated', 'creator_permission_tag', 'is_live_auction'],
+};
 function syncDetailFields() {
   // fast mode → detail-only fields grayed out & uncheckable; full mode → all enabled + auto-checked
   const mode = (document.querySelector('input[name=scrapeMode]:checked') || {}).value || 'fast';
@@ -1195,7 +1248,9 @@ document.getElementById('btnStart').onclick = async () => {
   const dedupe = (document.querySelector('input[name=dedupeMode]:checked') || {}).value !== 'refresh';
   const shopRegion = (document.getElementById('shopRegionCustom').value.trim() || document.getElementById('shopRegion').value || 'US').toUpperCase();
 
-  const cfg = { pastedCookies: cookieList.map(c => c.data), mode, format, headerLang, outPath, detail, dedupe, creatorInput: source === 'list' && creatorInput.length ? creatorInput : null, keywords: kws, fields, shopRegion };
+  const selectedUpdateGroups = [...document.querySelectorAll('.update-group:checked')].map(c => c.value);
+  const updateFields = [...new Set(selectedUpdateGroups.flatMap(group => UPDATE_FIELD_GROUPS[group] || []))];
+  const cfg = { pastedCookies: cookieList.map(c => c.data), mode, format, headerLang, outPath, detail, dedupe, creatorInput: source === 'list' && creatorInput.length ? creatorInput : null, keywords: kws, fields, updateFields, shopRegion };
   syncMainButton('pause', { disabled: true });
   document.getElementById('btnStop').disabled = false;
   document.getElementById('resultBox').style.display = 'none';
@@ -1214,7 +1269,7 @@ document.getElementById('btnStart').onclick = async () => {
 function lockOptions(lock) {
   const ids = ['cookieInput', 'browseBtn', 'creatorInput', 'outPath', 'btnChooseDir'];
   for (const id of ids) { const el = document.getElementById(id); if (el) el.disabled = lock; }
-  document.querySelectorAll('input[name=scrapeMode], input[name=source], input[name=dedupeMode], input[name=mode], input[name=format], input[name=headerLang], .kw, .fld, #detail, #selAll, #selNone, #fieldsAll, #fieldsNone, #langToggle, #shopRegion, #shopRegionCustom').forEach(el => { el.disabled = lock; });
+  document.querySelectorAll('input[name=scrapeMode], input[name=source], input[name=dedupeMode], input[name=mode], input[name=format], input[name=headerLang], .kw, .fld, .update-group, #detail, #selAll, #selNone, #fieldsAll, #fieldsNone, #langToggle, #shopRegion, #shopRegionCustom').forEach(el => { el.disabled = lock; });
   // category toggle + cookie add/remove
   document.querySelectorAll('.cat-toggle').forEach(el => { el.style.pointerEvents = lock ? 'none' : ''; });
   document.querySelectorAll('.cookie-item .del').forEach(el => { el.style.pointerEvents = lock ? 'none' : ''; });
@@ -1365,13 +1420,30 @@ function showPage(page) {
 function appendCreatorCell(row, value, className) {
   const cell = document.createElement('td');
   if (className) cell.className = className;
-  cell.textContent = value || '—';
+  let shown = value;
+  if (value && typeof value === 'object') {
+    shown = value.value !== undefined ? value.value : JSON.stringify(value);
+  }
+  cell.textContent = shown === null || shown === undefined || shown === '' ? '—' : String(shown);
+  cell.title = cell.textContent;
   row.appendChild(cell);
+}
+
+function renderCreatorHead() {
+  const head = document.getElementById('creatorHeadRow');
+  head.innerHTML = '';
+  [...FIELDS, { k: 'last_refreshed_at', n: '最近更新', e: 'Last updated' }].forEach(field => {
+    const th = document.createElement('th');
+    th.textContent = uiLang === 'zh' ? field.n : field.e;
+    head.appendChild(th);
+  });
 }
 
 async function loadCreators() {
   const body = document.getElementById('creatorRows');
-  body.innerHTML = `<tr><td colspan="6" class="creator-empty">${uiLang === 'zh' ? '正在读取本地达人库…' : 'Loading creator library…'}</td></tr>`;
+  renderCreatorHead();
+  const columnCount = FIELDS.length + 1;
+  body.innerHTML = `<tr><td colspan="${columnCount}" class="creator-empty">${uiLang === 'zh' ? '正在读取本地达人库…' : 'Loading creator library…'}</td></tr>`;
   const filters = {
     search: document.getElementById('creatorSearch').value.trim(),
     region: document.getElementById('creatorRegion').value,
@@ -1385,7 +1457,7 @@ async function loadCreators() {
   if (!result.ok || !result.rows.length) {
     const row = document.createElement('tr');
     const cell = document.createElement('td');
-    cell.colSpan = 6;
+    cell.colSpan = columnCount;
     cell.className = 'creator-empty';
     cell.textContent = result.error || I18N['creators.empty'][uiLang];
     row.appendChild(cell);
@@ -1393,11 +1465,17 @@ async function loadCreators() {
   } else {
     result.rows.forEach(creator => {
       const row = document.createElement('tr');
-      appendCreatorCell(row, creator.nickname || creator.handle || creator.creator_id);
-      appendCreatorCell(row, creator.region);
-      appendCreatorCell(row, creator.follower_count == null ? '—' : Number(creator.follower_count).toLocaleString());
-      appendCreatorCell(row, creator.total_gmv == null ? '—' : Number(creator.total_gmv).toLocaleString());
-      appendCreatorCell(row, creator.contact_email);
+      FIELDS.forEach(field => {
+        let value = creator[field.k];
+        if (field.k === 'creator_oecuid') value = value || creator.creator_id;
+        if (field.k === 'selection_region') value = value || creator.region;
+        if (field.k === 'follower_cnt' && (value === null || value === undefined)) value = creator.follower_count;
+        if (field.k === 'med_gmv_revenue' && (value === null || value === undefined)) value = creator.total_gmv;
+        if (field.k === '合作邮箱') value = value || creator.contact_email;
+        if (field.k === '简介') value = value || creator.bio;
+        if (field.k === 'MCN机构') value = value || creator.mcn;
+        appendCreatorCell(row, value);
+      });
       appendCreatorCell(row, creator.last_refreshed_at ? new Date(creator.last_refreshed_at).toLocaleString() : '—');
       body.appendChild(row);
     });

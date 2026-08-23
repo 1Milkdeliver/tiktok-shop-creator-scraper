@@ -36,14 +36,23 @@ test('creator database migrates, deduplicates and filters creators', async (t) =
     med_gmv_revenue: '$45K',
   }], { region: 'US', jobId });
 
+  await db.upsertCreators([{
+    creator_oecuid: '123',
+    handle: 'must_not_replace_handle',
+    follower_cnt: '14K',
+    med_gmv_revenue: '$99K',
+  }], { region: 'US', jobId, updateFields: ['follower_cnt'] });
+
   const result = await db.listCreators({ region: 'US', search: 'updated', hasEmail: true });
   assert.equal(result.total, 1);
   assert.equal(result.rows[0].creator_id, '123');
   assert.equal(result.rows[0].handle, 'updated_handle');
   assert.equal(result.rows[0].nickname, 'Creator One');
   assert.equal(result.rows[0].contact_email, 'hello@example.com');
-  assert.equal(result.rows[0].follower_count, 13000);
+  assert.equal(result.rows[0].follower_count, 14000);
   assert.equal(result.rows[0].total_gmv, 45000);
+  assert.equal(result.rows[0].handle, 'updated_handle');
+  assert.equal(result.rows[0].med_gmv_revenue, '$45K');
   assert.deepEqual(await db.getCreatorIds('US'), ['123']);
 
   const jobs = await db.listScrapeJobs({ region: 'US' });

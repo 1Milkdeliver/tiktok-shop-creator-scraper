@@ -18,6 +18,7 @@ runner.onDataReady = async (rows, config) => {
   return creatorDb.upsertCreators(rows, {
     region: config.shopRegion || 'US',
     jobId: config.databaseJobId || null,
+    updateFields: config.updateFields || null,
   });
 };
 // record history immediately when a run finishes (reliable, no polling)
