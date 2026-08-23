@@ -11,7 +11,8 @@
     "exceljs": "^4.4.0",
     "png2icons": "^2.0.1",
     "pngjs": "^7.0.0",
-    "puppeteer-core": "^24.0.0"
+    "puppeteer-core": "^24.0.0",
+    "sqlite3": "^5.1.7"
   },
   "devDependencies": {
     "electron": "^33.0.0",
@@ -20,6 +21,9 @@
   "build": {
     "appId": "com.tiktok.creator.scraper",
     "productName": "TikTokShop达人抓取",
+    "asarUnpack": [
+      "node_modules/sqlite3/build/Release/*.node"
+    ],
     "directories": {
       "output": "dist"
     },
@@ -79,6 +83,7 @@
   },
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --win nsis"
+    "build": "electron-builder --win nsis",
+    "test": "node --test"
   }
 }
