@@ -1111,17 +1111,8 @@ function renderScrapeFieldPreview() {
   if (count) count.textContent = uiLang === 'zh' ? `${available.length} 个字段` : `${available.length} fields`;
 }
 function syncDetailFields() {
-  // fast mode → detail-only fields grayed out & uncheckable; full mode → all enabled + auto-checked
-  const mode = (document.querySelector('input[name=scrapeMode]:checked') || {}).value || 'fast';
-  const on = mode === 'full';
-  document.querySelectorAll('.fld-detail').forEach(label => {
-    const cb = label.querySelector('input.fld');
-    cb.disabled = !on;
-    if (on) cb.checked = true;      // full mode: auto-check bio/email/MCN so they export
-    else cb.checked = false;        // fast mode: force unchecked
-    label.classList.toggle('on', on);
-    label.title = on ? (cb.value) : (uiLang === 'zh' ? '完整模式才可抓取' : 'Available in Full mode');
-  });
+  // Export field selection is independent from scrape mode. A fast scrape may
+  // still export detail values already stored in the local creator library.
   renderScrapeFieldPreview();
 }
 function renderFields() {
@@ -1130,13 +1121,13 @@ function renderFields() {
   const prev = new Set([...document.querySelectorAll('.fld:checked')].map(c => c.value));
   // first render (no prior selection): default to ALL fields checked
   const firstRender = !document.querySelectorAll('.fld').length;
-  document.getElementById('fields').innerHTML = FIELDS.map(f => `<label class="${f.detail ? 'fld-detail' : ''}" title="${label(f)}"><input type="checkbox" class="fld" value="${f.k}" ${(firstRender || prev.has(f.k)) ? 'checked' : ''}><span>${label(f)}</span></label>`).join('');
+  document.getElementById('fields').innerHTML = FIELDS.map(f => `<label title="${label(f)}"><input type="checkbox" class="fld" value="${f.k}" ${(firstRender || prev.has(f.k)) ? 'checked' : ''}><span>${label(f)}</span></label>`).join('');
   syncDetailFields();
 }
 renderFields();
 document.querySelectorAll('input[name=scrapeMode]').forEach(r => r.addEventListener('change', syncDetailFields));
-document.getElementById('fieldsAll').onclick = () => { document.querySelectorAll('.fld:not(:disabled)').forEach(c => c.checked = true); };
-document.getElementById('fieldsNone').onclick = () => { document.querySelectorAll('.fld:not(:disabled)').forEach(c => c.checked = false); };
+document.getElementById('fieldsAll').onclick = () => { document.querySelectorAll('.fld').forEach(c => c.checked = true); };
+document.getElementById('fieldsNone').onclick = () => { document.querySelectorAll('.fld').forEach(c => c.checked = false); };
 
 // ═══════════ Cookie 统一输入（拖拽 + 粘贴） ═══════════
 const cookieList = []; // array of { source: 'paste'|'file', data: string, name: string }
@@ -1454,18 +1445,15 @@ document.getElementById('btnStart').onclick = async () => {
   const format = document.querySelector('input[name=format]:checked').value;
   const headerLang = document.querySelector('input[name=headerLang]:checked').value;
   const outPath = document.getElementById('outPath').value.trim() || './output';
-  // 模式：fast=纯列表；full=详情。若用户选了完整模式但没勾任何详情字段，
-  // 自动按快速模式抓（不告知，避免无谓的详情请求）。
   const scrapeMode = (document.querySelector('input[name=scrapeMode]:checked') || {}).value || 'fast';
-  const detailKeys = new Set(FIELDS.filter(f => f.detail).map(f => f.k));
-  const hasDetailField = fields.some(f => detailKeys.has(f));
-  const detail = scrapeMode === 'full' && hasDetailField;
   const dedupe = (document.querySelector('input[name=dedupeMode]:checked') || {}).value !== 'refresh';
   const shopRegion = (document.getElementById('shopRegionCustom').value.trim() || document.getElementById('shopRegion').value || 'US').toUpperCase();
 
   const selectedUpdateGroups = [...document.querySelectorAll('.update-group:checked')].map(c => c.value);
   if (!selectedUpdateGroups.length) { alert(I18N['alert.noUpdateGroup'][uiLang]); return; }
   const updateFields = [...new Set(selectedUpdateGroups.flatMap(group => UPDATE_FIELD_GROUPS[group] || []))];
+  const detailKeys = new Set(FIELDS.filter(field => field.detail).map(field => field.k));
+  const detail = scrapeMode === 'full' && updateFields.some(field => detailKeys.has(field));
   const cfg = { pastedCookies: cookieList.map(c => c.data), mode, format, headerLang, outPath, detail, dedupe, creatorInput: source === 'list' && creatorInput.length ? creatorInput : null, keywords: kws, fields, updateFields, shopRegion };
   syncMainButton('pause', { disabled: true });
   document.getElementById('btnStop').disabled = false;
