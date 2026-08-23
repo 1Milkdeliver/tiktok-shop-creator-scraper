@@ -431,7 +431,7 @@
     <span class="ready-badge" data-i18n="workspace.ready">● 系统就绪</span>
   </section>
   <section class="metric-grid" aria-label="任务概览">
-    <div class="metric"><span data-i18n="workspace.state">当前状态</span><strong data-i18n="status.ready">就绪</strong><small data-i18n="workspace.stateHint">账号与环境正常</small></div>
+    <div class="metric"><span data-i18n="workspace.state">当前状态</span><strong id="statusMetric" data-i18n="status.ready">就绪</strong><small id="statusMetricHint" data-i18n="status.readyHint">可以开始新的抓取任务</small></div>
     <button class="metric metric-action" id="accountMetricCard" type="button" aria-expanded="false"><span data-i18n="workspace.availableAccounts">可用账号</span><strong id="accountMetric">—</strong><small data-i18n="workspace.accountsHint">支持多账号并发</small></button>
     <div class="metric"><span data-i18n="workspace.creatorLibrary">本地达人库</span><strong id="creatorMetric">—</strong><small id="creatorMetricHint" data-i18n="workspace.creatorLibraryHint">自动去重并更新</small></div>
     <div class="metric"><span data-i18n="workspace.storage">本地占用</span><strong id="storageMetric">—</strong><small data-i18n="workspace.storageHint">仅保存结构化数据</small></div>
@@ -758,6 +758,15 @@ const I18N = {
   'status.done': { zh: '完成', en: 'Done' },
   'status.error': { zh: '出错', en: 'Error' },
   'status.starting': { zh: '启动中…', en: 'Starting…' },
+  'status.paused': { zh: '已暂停', en: 'Paused' },
+  'status.stopping': { zh: '正在结束', en: 'Finishing' },
+  'status.readyHint': { zh: '可以开始新的抓取任务', en: 'Ready to start a new task' },
+  'status.startingHint': { zh: '正在初始化浏览器和任务', en: 'Initializing browser and task' },
+  'status.runningHint': { zh: '正在采集并保存达人数据', en: 'Collecting and saving creator data' },
+  'status.pausedHint': { zh: '任务已保留，可继续运行', en: 'Progress saved; ready to resume' },
+  'status.stoppingHint': { zh: '正在保存已有数据并导出', en: 'Saving collected data and exporting' },
+  'status.doneHint': { zh: '任务已完成并保存', en: 'Task completed and saved' },
+  'status.errorHint': { zh: '任务失败，请查看运行记录', en: 'Task failed; check the run log' },
   'step1.title': { zh: '导入 Cookie', en: 'Import Cookie' },
   'step1.add': { zh: '＋ 添加账号', en: '+ Add Account' },
   'step1.guide': { zh: '❓ 多账号指南', en: '❓ Multi-account Guide' },
@@ -860,6 +869,7 @@ function applyI18n() {
   if (langToggle) langToggle.textContent = uiLang === 'zh' ? '🌐 EN' : '🌐 中文';
   const densityButton = document.getElementById('creatorDensity');
   if (densityButton) densityButton.textContent = I18N[document.querySelector('.creator-table')?.classList.contains('compact') ? 'creators.comfortable' : 'creators.compact'][uiLang];
+  if (typeof setAppState === 'function') setAppState(currentAppState);
   document.querySelectorAll('.sidebar-nav [data-page]').forEach(link => {
     const label = link.querySelector('span');
     if (label) link.dataset.tooltip = label.textContent.trim();
@@ -1285,9 +1295,27 @@ document.getElementById('btnChooseDir').onclick = async () => {
 const logEl = document.getElementById('log');
 let lastCount = 0;
 const statusEl = document.getElementById('status');
+let currentAppState = 'ready';
+function setAppState(state) {
+  currentAppState = state;
+  const metric = document.getElementById('statusMetric');
+  const hint = document.getElementById('statusMetricHint');
+  if (metric && I18N[`status.${state}`]) metric.textContent = I18N[`status.${state}`][uiLang].replace(/…$/, '');
+  if (hint && I18N[`status.${state}Hint`]) hint.textContent = I18N[`status.${state}Hint`][uiLang];
+}
+function stateFromStatusText(text, cls) {
+  if (cls === 'done') return 'done';
+  if (cls === 'error') return 'error';
+  if (/暂停|Paused/i.test(text)) return 'paused';
+  if (/结束|Finishing/i.test(text)) return 'stopping';
+  if (/启动|Starting/i.test(text)) return 'starting';
+  if (/抓取|Scraping|Running/i.test(text)) return 'running';
+  return 'ready';
+}
 function setStatus(text, cls) {
   statusEl.textContent = text;
   statusEl.className = 'status-pill' + (cls ? ' ' + cls : '');
+  setAppState(stateFromStatusText(text, cls));
 }
 
 // spinner animation frames: dots grow 1 → 2 → 3 → repeat
@@ -1297,6 +1325,7 @@ let spinIdx = 0;
 let spinTimer = null;
 let spinPrefix = '⏳ 抓取中';function startSpin(prefix) {
   spinPrefix = prefix;
+  setAppState(stateFromStatusText(prefix, ''));
   if (spinTimer) return;
   spinTimer = setInterval(() => {
     spinIdx = (spinIdx + 1) % SPINNER.length;
