@@ -211,6 +211,11 @@
   .page-heading h2 { margin:0 0 5px;font-size:22px; }
   .page-heading p { margin:0;color:var(--sub);font-size:13px; }
   .creator-workbench { padding:0;overflow:visible; }
+  .creator-dashboard { display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:16px; }
+  .creator-dashboard-card { min-width:0;padding:14px 16px;background:#fff;border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow); }
+  .creator-dashboard-card span { display:block;color:var(--sub);font-size:12px;line-height:18px; }
+  .creator-dashboard-card strong { display:block;margin-top:5px;font-size:20px;line-height:28px;font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+  .creator-dashboard-card small { display:block;margin-top:2px;color:var(--sub);font-size:11.5px;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
   .creator-toolbar { display:grid;grid-template-columns:minmax(280px,1fr) 140px 160px 150px auto;gap:10px;padding:16px;border-bottom:1px solid var(--border); }
   .creator-toolbar input,.creator-toolbar select { width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:9px;background:#fff; }
   .creator-search-wrap { position:relative; }
@@ -382,6 +387,7 @@
   .creator-page [data-go-page="tasks"] { min-width:156px; }
   #creatorRefresh { min-width:84px; }
   @media (max-width:1050px) {
+    .creator-dashboard { grid-template-columns:repeat(3,minmax(0,1fr)); }
     .creator-toolbar { grid-template-columns:minmax(240px,1fr) 120px 140px; }
     .creator-toolbar .check-label,#creatorRefresh { justify-self:start; }
   }
@@ -433,7 +439,7 @@
   <section class="metric-grid" aria-label="任务概览">
     <div class="metric"><span data-i18n="workspace.state">当前状态</span><strong id="statusMetric" data-i18n="status.ready">就绪</strong><small id="statusMetricHint" data-i18n="status.readyHint">可以开始新的抓取任务</small></div>
     <button class="metric metric-action" id="accountMetricCard" type="button" aria-expanded="false"><span data-i18n="workspace.availableAccounts">可用账号</span><strong id="accountMetric">—</strong><small data-i18n="workspace.accountsHint">支持多账号并发</small></button>
-    <div class="metric"><span data-i18n="workspace.creatorLibrary">本地达人库</span><strong id="creatorMetric">—</strong><small id="creatorMetricHint" data-i18n="workspace.creatorLibraryHint">自动去重并更新</small></div>
+    <button class="metric metric-action" id="creatorMetricCard" type="button" data-go-page="creators"><span data-i18n="workspace.creatorLibrary">本地达人库</span><strong id="creatorMetric">—</strong><small id="creatorMetricHint" data-i18n="workspace.creatorLibraryHint">自动去重并更新</small></button>
     <div class="metric"><span data-i18n="workspace.storage">本地占用</span><strong id="storageMetric">—</strong><small data-i18n="workspace.storageHint">仅保存结构化数据</small></div>
   </section>
   <section class="overview-actions" id="overviewActions">
@@ -453,6 +459,13 @@
 
   <section class="creator-page" id="creatorPage">
     <div class="page-heading"><div><h2 data-i18n="creators.title">达人库</h2><p data-i18n="creators.subtitle">查询已抓取的数据，需要时再筛选导出。</p></div><button class="btn btn-primary" data-go-page="tasks" data-i18n="creators.newTask">＋ 新建抓取任务</button></div>
+    <div class="creator-dashboard" aria-label="Creator library dashboard">
+      <div class="creator-dashboard-card"><span data-i18n="creators.dashboardTotal">达人总数</span><strong id="creatorDashTotal">—</strong><small data-i18n="creators.dashboardTotalHint">已自动去重</small></div>
+      <div class="creator-dashboard-card"><span data-i18n="creators.dashboardEmail">含合作邮箱</span><strong id="creatorDashEmail">—</strong><small id="creatorDashEmailHint">—</small></div>
+      <div class="creator-dashboard-card"><span data-i18n="creators.dashboardRegions">覆盖地区</span><strong id="creatorDashRegions">—</strong><small data-i18n="creators.dashboardRegionsHint">TikTok Shop 站点</small></div>
+      <div class="creator-dashboard-card"><span data-i18n="creators.dashboardUpdated">最近更新</span><strong id="creatorDashUpdated">—</strong><small data-i18n="creators.dashboardUpdatedHint">最后一次数据刷新</small></div>
+      <div class="creator-dashboard-card"><span data-i18n="creators.dashboardStorage">数据库占用</span><strong id="creatorDashStorage">—</strong><small data-i18n="creators.dashboardStorageHint">仅本地结构化数据</small></div>
+    </div>
     <div class="card creator-workbench">
       <div class="creator-toolbar">
         <div class="creator-search-wrap"><input id="creatorSearch" type="search" data-i18n-placeholder="creators.search" placeholder="搜索昵称、账号、ID 或邮箱"></div>
@@ -734,6 +747,15 @@ const I18N = {
   'creators.columnsTitle': { zh: '显示字段', en: 'Visible columns' },
   'creators.allColumns': { zh: '全部显示', en: 'Show all' },
   'creators.perPage': { zh: '每页', en: 'Per page' },
+  'creators.dashboardTotal': { zh: '达人总数', en: 'Total creators' },
+  'creators.dashboardTotalHint': { zh: '已自动去重', en: 'Automatically deduplicated' },
+  'creators.dashboardEmail': { zh: '含合作邮箱', en: 'With contact email' },
+  'creators.dashboardRegions': { zh: '覆盖地区', en: 'Regions covered' },
+  'creators.dashboardRegionsHint': { zh: 'TikTok Shop 站点', en: 'TikTok Shop regions' },
+  'creators.dashboardUpdated': { zh: '最近更新', en: 'Last refreshed' },
+  'creators.dashboardUpdatedHint': { zh: '最后一次数据刷新', en: 'Most recent data refresh' },
+  'creators.dashboardStorage': { zh: '数据库占用', en: 'Database size' },
+  'creators.dashboardStorageHint': { zh: '仅本地结构化数据', en: 'Local structured data only' },
   'creators.creator': { zh: '达人', en: 'Creator' },
   'creators.region': { zh: '地区', en: 'Region' },
   'creators.followers': { zh: '粉丝', en: 'Followers' },
@@ -1771,7 +1793,7 @@ document.querySelectorAll('.sidebar-nav [data-page]').forEach(link => link.addEv
   showPage(link.dataset.page);
 }));
 document.querySelectorAll('[data-go-page]').forEach(button => button.addEventListener('click', () => showPage(button.dataset.goPage)));
-document.getElementById('creatorRefresh').onclick = () => { creatorOffset = 0; loadCreators(); };
+document.getElementById('creatorRefresh').onclick = () => { creatorOffset = 0; loadCreators(); refreshDatabaseMetrics(); };
 document.getElementById('creatorReset').onclick = () => { document.getElementById('creatorSearch').value = ''; document.getElementById('creatorRegion').value = ''; document.getElementById('creatorMinFollowers').value = ''; document.getElementById('creatorHasEmail').checked = false; creatorOffset = 0; loadCreators(); };
 document.getElementById('creatorDensity').onclick = event => { const compact = document.querySelector('.creator-table').classList.toggle('compact'); event.currentTarget.textContent = I18N[compact ? 'creators.comfortable' : 'creators.compact'][uiLang]; };
 document.getElementById('creatorColumns').onclick = event => { const menu = document.getElementById('creatorColumnMenu'); const open = menu.classList.toggle('open'); event.currentTarget.setAttribute('aria-expanded', String(open)); renderCreatorColumns(); };
@@ -1802,6 +1824,17 @@ async function refreshDatabaseMetrics() {
     document.getElementById('storageMetric').textContent = bytes < 1024 * 1024
       ? `${Math.max(bytes / 1024, 0).toFixed(1)} KB`
       : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+    const sizeText = document.getElementById('storageMetric').textContent;
+    const withEmail = Number(stats.with_email || 0);
+    const emailRate = creators ? Math.round(withEmail / creators * 100) : 0;
+    document.getElementById('creatorDashTotal').textContent = creators.toLocaleString();
+    document.getElementById('creatorDashEmail').textContent = withEmail.toLocaleString();
+    document.getElementById('creatorDashEmailHint').textContent = uiLang === 'zh' ? `覆盖率 ${emailRate}%` : `${emailRate}% coverage`;
+    document.getElementById('creatorDashRegions').textContent = Number(stats.regions || 0).toLocaleString();
+    document.getElementById('creatorDashStorage').textContent = sizeText;
+    document.getElementById('creatorDashUpdated').textContent = stats.last_refreshed_at
+      ? new Date(stats.last_refreshed_at).toLocaleDateString(uiLang === 'zh' ? 'zh-CN' : 'en-US', { month:'short', day:'numeric' })
+      : '—';
   } catch (e) { }
 }
 document.getElementById('histRefresh').onclick = refreshAppData;
