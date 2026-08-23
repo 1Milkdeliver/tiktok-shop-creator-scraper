@@ -180,6 +180,21 @@
   .radio-group label:has(input:checked), .cat-chips label:has(input:checked) { background: rgba(254,44,85,.08); border-color: rgba(254,44,85,.28); color: #d91e45; }
   input[type=checkbox], input[type=radio] { accent-color: var(--tiktok-pink); }
   #runCard { position: sticky; top: 88px; }
+  .page-hidden { display: none !important; }
+  .creator-page { display: none; }
+  .creator-page.active { display: block; }
+  .page-heading { display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px; }
+  .page-heading h2 { margin:0 0 5px;font-size:22px; }
+  .page-heading p { margin:0;color:var(--sub);font-size:13px; }
+  .creator-toolbar { display:grid;grid-template-columns:minmax(220px,1fr) 140px 150px 150px auto;gap:10px;margin-bottom:14px; }
+  .creator-toolbar input,.creator-toolbar select { width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:9px;background:#fff; }
+  .creator-table-wrap { overflow:auto;border:1px solid var(--border);border-radius:12px; }
+  .creator-table { width:100%;border-collapse:collapse;min-width:820px;font-size:12px; }
+  .creator-table th { position:sticky;top:0;background:#f7f8fa;color:var(--sub);text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap; }
+  .creator-table td { padding:11px 12px;border-bottom:1px solid #eef0f3;white-space:nowrap; }
+  .creator-table tr:last-child td { border-bottom:0; }
+  .creator-empty { padding:42px 20px;text-align:center;color:var(--sub); }
+  .creator-pagination { display:flex;align-items:center;justify-content:space-between;margin-top:12px;color:var(--sub);font-size:12px; }
   #log { height: 220px; }
   footer { padding-top: 12px; }
   @media (max-width: 1100px) {
@@ -211,12 +226,11 @@
   <div class="sidebar-brand"><img src="icon-256.png" alt="logo"><div><strong>TikTok Shop</strong><span>达人工作台 · Creator Desk</span></div></div>
   <div class="sidebar-label" data-i18n="workspace.label">工作区</div>
   <nav class="sidebar-nav">
-    <a href="#overview" class="active">⌂ <span data-i18n="workspace.overview">概览</span></a>
-    <a href="#accounts">♙ <span data-i18n="workspace.accounts">账号与环境</span></a>
-    <a href="#targeting">⌕ <span data-i18n="workspace.targets">抓取对象</span></a>
-    <a href="#exports">⇩ <span data-i18n="workspace.exports">导出配置</span></a>
-    <a href="#runCard">▶ <span data-i18n="workspace.monitor">运行监控</span></a>
-    <a href="#history">↻ <span data-i18n="workspace.history">历史任务</span></a>
+    <a href="#overview" data-page="overview" class="active">⌂ <span data-i18n="workspace.overview">概览</span></a>
+    <a href="#tasks" data-page="tasks">▶ <span data-i18n="workspace.tasks">任务中心</span></a>
+    <a href="#creators" data-page="creators">♙ <span data-i18n="workspace.creators">达人库</span></a>
+    <a href="#exports" data-page="exports">⇩ <span data-i18n="workspace.exportCenter">导出中心</span></a>
+    <a href="#settings" data-page="settings">⚙ <span data-i18n="workspace.settings">账号与设置</span></a>
   </nav>
   <div class="sidebar-health"><strong data-i18n="workspace.local">● 本地运行</strong><span data-i18n="workspace.localHint">数据和 Cookie 仅保存在当前设备</span></div>
 </aside>
@@ -248,6 +262,21 @@
     <div class="metric"><span data-i18n="workspace.storage">本地占用</span><strong id="storageMetric">—</strong><small data-i18n="workspace.storageHint">仅保存结构化数据</small></div>
   </section>
 
+  <section class="creator-page" id="creatorPage">
+    <div class="page-heading"><div><h2 data-i18n="creators.title">达人库</h2><p data-i18n="creators.subtitle">查询已抓取的数据，需要时再筛选导出。</p></div><button class="btn btn-primary" data-go-page="tasks" data-i18n="creators.newTask">＋ 新建抓取任务</button></div>
+    <div class="card">
+      <div class="creator-toolbar">
+        <input id="creatorSearch" type="search" data-i18n-placeholder="creators.search" placeholder="搜索昵称、账号、ID 或邮箱">
+        <select id="creatorRegion"><option value="" data-i18n="creators.allRegions">全部地区</option><option>US</option><option>UK</option><option>SG</option><option>MY</option><option>TH</option><option>VN</option><option>PH</option><option>ID</option><option>MX</option><option>BR</option></select>
+        <input id="creatorMinFollowers" type="number" min="0" data-i18n-placeholder="creators.minFollowers" placeholder="最低粉丝数">
+        <label class="check-label"><input id="creatorHasEmail" type="checkbox"> <span data-i18n="creators.hasEmail">仅有邮箱</span></label>
+        <button class="btn btn-secondary" id="creatorRefresh" data-i18n="creators.refresh">刷新</button>
+      </div>
+      <div class="creator-table-wrap"><table class="creator-table"><thead><tr><th data-i18n="creators.creator">达人</th><th data-i18n="creators.region">地区</th><th data-i18n="creators.followers">粉丝</th><th>GMV</th><th data-i18n="creators.email">合作邮箱</th><th data-i18n="creators.updated">最近更新</th></tr></thead><tbody id="creatorRows"><tr><td colspan="6" class="creator-empty" data-i18n="creators.empty">暂无达人数据，先创建一个抓取任务。</td></tr></tbody></table></div>
+      <div class="creator-pagination"><span id="creatorCount">0 位达人</span><div><button class="btn btn-secondary" id="creatorPrev" disabled>‹</button> <button class="btn btn-secondary" id="creatorNext" disabled>›</button></div></div>
+    </div>
+  </section>
+
   <div class="workspace-grid">
   <div class="workspace-column">
 
@@ -267,7 +296,7 @@
     <div class="hint" data-i18n="step1.hint">可添加多个账号 Cookie 实现多账号并发抓取 · 用 <a href="https://chromewebstore.google.com/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm" target="_blank" style="color:var(--accent)">Cookie-Editor</a> 扩展导出 JSON 后粘贴或拖入</div>
   </div>
 
-  <div class="card">
+  <div class="card" id="browserSettings">
     <h2><span class="step-num">2</span> <span data-i18n="step2.title">浏览器模式</span></h2>
     <div class="radio-group">
       <label><input type="radio" name="mode" value="auto" checked> <span data-i18n="step2.auto">自动（推荐）</span></label>
@@ -440,6 +469,10 @@ const I18N = {
   'app.subtitle': { zh: 'TikTok Shop 联盟达人数据 · 多账号并发', en: 'TikTok Shop Affiliate Creator Data · Multi-Account' },
   'workspace.label': { zh: '工作区', en: 'Workspace' },
   'workspace.overview': { zh: '概览', en: 'Overview' },
+  'workspace.tasks': { zh: '任务中心', en: 'Tasks' },
+  'workspace.creators': { zh: '达人库', en: 'Creator Library' },
+  'workspace.exportCenter': { zh: '导出中心', en: 'Export Center' },
+  'workspace.settings': { zh: '账号与设置', en: 'Accounts & Settings' },
   'workspace.accounts': { zh: '账号与环境', en: 'Accounts & Environment' },
   'workspace.targets': { zh: '抓取对象', en: 'Scrape Targets' },
   'workspace.exports': { zh: '导出配置', en: 'Export Setup' },
@@ -458,6 +491,20 @@ const I18N = {
   'workspace.creatorLibraryHint': { zh: '自动去重并更新', en: 'Deduplicated and refreshed' },
   'workspace.storage': { zh: '本地占用', en: 'Local storage' },
   'workspace.storageHint': { zh: '仅保存结构化数据', en: 'Structured data only' },
+  'creators.title': { zh: '达人库', en: 'Creator Library' },
+  'creators.subtitle': { zh: '查询已抓取的数据，需要时再筛选导出。', en: 'Explore collected data and export only when needed.' },
+  'creators.newTask': { zh: '＋ 新建抓取任务', en: '+ New scrape task' },
+  'creators.search': { zh: '搜索昵称、账号、ID 或邮箱', en: 'Search name, handle, ID, or email' },
+  'creators.allRegions': { zh: '全部地区', en: 'All regions' },
+  'creators.minFollowers': { zh: '最低粉丝数', en: 'Minimum followers' },
+  'creators.hasEmail': { zh: '仅有邮箱', en: 'Email only' },
+  'creators.refresh': { zh: '刷新', en: 'Refresh' },
+  'creators.creator': { zh: '达人', en: 'Creator' },
+  'creators.region': { zh: '地区', en: 'Region' },
+  'creators.followers': { zh: '粉丝', en: 'Followers' },
+  'creators.email': { zh: '合作邮箱', en: 'Contact email' },
+  'creators.updated': { zh: '最近更新', en: 'Last updated' },
+  'creators.empty': { zh: '暂无达人数据，先创建一个抓取任务。', en: 'No creators yet. Start a scrape task first.' },
   'workspace.scrapeMode': { zh: '抓取模式', en: 'Scrape mode' },
   'workspace.full': { zh: '完整', en: 'Full' },
   'workspace.fullHint': { zh: '含邮箱与 MCN', en: 'Includes email and MCN' },
@@ -1228,6 +1275,101 @@ async function refreshAppData() {
     await refreshDatabaseMetrics();
   } catch (e) { }
 }
+let activePage = 'overview';
+let creatorOffset = 0;
+const creatorPageSize = 50;
+let creatorSearchTimer = null;
+
+function showPage(page) {
+  const allowed = ['overview', 'tasks', 'creators', 'exports', 'settings'];
+  activePage = allowed.includes(page) ? page : 'overview';
+  const overviewParts = [document.getElementById('overview'), document.querySelector('.metric-grid')];
+  overviewParts.forEach(el => el && el.classList.toggle('page-hidden', activePage !== 'overview'));
+  document.getElementById('creatorPage').classList.toggle('active', activePage === 'creators');
+  const grid = document.querySelector('.workspace-grid');
+  grid.classList.toggle('page-hidden', !['tasks', 'exports', 'settings'].includes(activePage));
+  const visibility = {
+    accounts: activePage === 'settings',
+    browserSettings: activePage === 'settings',
+    targeting: activePage === 'tasks',
+    exports: activePage === 'exports',
+    runCard: activePage === 'tasks',
+    history: activePage === 'tasks',
+  };
+  Object.entries(visibility).forEach(([id, visible]) => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('page-hidden', !visible);
+  });
+  grid.style.gridTemplateColumns = activePage === 'tasks' ? '' : 'minmax(0, 1fr)';
+  document.querySelectorAll('.sidebar-nav [data-page]').forEach(link => link.classList.toggle('active', link.dataset.page === activePage));
+  if (location.hash !== `#${activePage}`) history.replaceState(null, '', `#${activePage}`);
+  if (activePage === 'creators') loadCreators();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function appendCreatorCell(row, value, className) {
+  const cell = document.createElement('td');
+  if (className) cell.className = className;
+  cell.textContent = value || '—';
+  row.appendChild(cell);
+}
+
+async function loadCreators() {
+  const body = document.getElementById('creatorRows');
+  body.innerHTML = `<tr><td colspan="6" class="creator-empty">${uiLang === 'zh' ? '正在读取本地达人库…' : 'Loading creator library…'}</td></tr>`;
+  const filters = {
+    search: document.getElementById('creatorSearch').value.trim(),
+    region: document.getElementById('creatorRegion').value,
+    minFollowers: document.getElementById('creatorMinFollowers').value || undefined,
+    hasEmail: document.getElementById('creatorHasEmail').checked,
+    limit: creatorPageSize,
+    offset: creatorOffset,
+  };
+  const result = await window.api.listCreators(filters);
+  body.innerHTML = '';
+  if (!result.ok || !result.rows.length) {
+    const row = document.createElement('tr');
+    const cell = document.createElement('td');
+    cell.colSpan = 6;
+    cell.className = 'creator-empty';
+    cell.textContent = result.error || I18N['creators.empty'][uiLang];
+    row.appendChild(cell);
+    body.appendChild(row);
+  } else {
+    result.rows.forEach(creator => {
+      const row = document.createElement('tr');
+      appendCreatorCell(row, creator.nickname || creator.handle || creator.creator_id);
+      appendCreatorCell(row, creator.region);
+      appendCreatorCell(row, creator.follower_count == null ? '—' : Number(creator.follower_count).toLocaleString());
+      appendCreatorCell(row, creator.total_gmv == null ? '—' : Number(creator.total_gmv).toLocaleString());
+      appendCreatorCell(row, creator.contact_email);
+      appendCreatorCell(row, creator.last_refreshed_at ? new Date(creator.last_refreshed_at).toLocaleString() : '—');
+      body.appendChild(row);
+    });
+  }
+  const total = Number(result.total || 0);
+  document.getElementById('creatorCount').textContent = uiLang === 'zh' ? `${total.toLocaleString()} 位达人` : `${total.toLocaleString()} creators`;
+  document.getElementById('creatorPrev').disabled = creatorOffset === 0;
+  document.getElementById('creatorNext').disabled = creatorOffset + creatorPageSize >= total;
+}
+
+document.querySelectorAll('.sidebar-nav [data-page]').forEach(link => link.addEventListener('click', event => {
+  event.preventDefault();
+  showPage(link.dataset.page);
+}));
+document.querySelectorAll('[data-go-page]').forEach(button => button.addEventListener('click', () => showPage(button.dataset.goPage)));
+document.getElementById('creatorRefresh').onclick = () => { creatorOffset = 0; loadCreators(); };
+document.getElementById('creatorRegion').onchange = () => { creatorOffset = 0; loadCreators(); };
+document.getElementById('creatorHasEmail').onchange = () => { creatorOffset = 0; loadCreators(); };
+document.getElementById('creatorMinFollowers').onchange = () => { creatorOffset = 0; loadCreators(); };
+document.getElementById('creatorSearch').oninput = () => {
+  clearTimeout(creatorSearchTimer);
+  creatorSearchTimer = setTimeout(() => { creatorOffset = 0; loadCreators(); }, 250);
+};
+document.getElementById('creatorPrev').onclick = () => { creatorOffset = Math.max(0, creatorOffset - creatorPageSize); loadCreators(); };
+document.getElementById('creatorNext').onclick = () => { creatorOffset += creatorPageSize; loadCreators(); };
+window.addEventListener('hashchange', () => showPage(location.hash.slice(1)));
+
 async function refreshDatabaseMetrics() {
   try {
     const stats = await window.api.creatorDbStats();
@@ -1247,6 +1389,7 @@ document.getElementById('histRefresh').onclick = refreshAppData;
 
 poll();
 refreshAppData();
+showPage(location.hash.slice(1) || 'overview');
 // load app version into header + footer
 window.api.getVersion().then(v => {
   const ver = 'v' + (v.version || '—');
