@@ -211,12 +211,12 @@
   .page-heading h2 { margin:0 0 5px;font-size:22px; }
   .page-heading p { margin:0;color:var(--sub);font-size:13px; }
   .creator-workbench { padding:0;overflow:visible; }
-  .creator-dashboard { display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:16px; }
+  .creator-dashboard { display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:16px; }
   .creator-dashboard-card { min-width:0;padding:14px 16px;background:#fff;border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow); }
   .creator-dashboard-card span { display:block;color:var(--sub);font-size:12px;line-height:18px; }
   .creator-dashboard-card strong { display:block;margin-top:5px;font-size:20px;line-height:28px;font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
   .creator-dashboard-card small { display:block;margin-top:2px;color:var(--sub);font-size:11.5px;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
-  .creator-toolbar { display:grid;grid-template-columns:minmax(280px,1fr) 140px 160px 150px auto;gap:10px;padding:16px;border-bottom:1px solid var(--border); }
+  .creator-toolbar { display:grid;grid-template-columns:minmax(250px,1fr) 120px 150px 140px 140px auto;gap:10px;padding:16px;border-bottom:1px solid var(--border); }
   .creator-toolbar input,.creator-toolbar select { width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:9px;background:#fff; }
   .creator-search-wrap { position:relative; }
   .creator-search-wrap::before { content:'⌕';position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:18px;color:var(--sub);pointer-events:none; }
@@ -248,6 +248,10 @@
   .creator-cell-profile { display:flex;align-items:center;gap:8px;min-width:0; }
   .creator-cell-avatar { width:24px;height:24px;border-radius:50%;object-fit:cover;background:#d8dee4;flex:0 0 24px; }
   .creator-cell-profile span { overflow:hidden;text-overflow:ellipsis; }
+  .activity-badge { display:inline-flex;align-items:center;min-height:24px;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600; }
+  .activity-badge.active { color:#1a7f37;background:#dafbe1; }
+  .activity-badge.inactive { color:#cf222e;background:#ffebe9; }
+  .activity-badge.unknown { color:#59636e;background:#eaeef2; }
   #log { height: 220px; }
   footer { padding-top: 12px; }
   @media (max-width: 1100px) {
@@ -462,6 +466,7 @@
     <div class="creator-dashboard" aria-label="Creator library dashboard">
       <div class="creator-dashboard-card"><span data-i18n="creators.dashboardTotal">达人总数</span><strong id="creatorDashTotal">—</strong><small data-i18n="creators.dashboardTotalHint">已自动去重</small></div>
       <div class="creator-dashboard-card"><span data-i18n="creators.dashboardEmail">含合作邮箱</span><strong id="creatorDashEmail">—</strong><small id="creatorDashEmailHint">—</small></div>
+      <div class="creator-dashboard-card"><span data-i18n="creators.dashboardInactive">不活跃达人</span><strong id="creatorDashInactive">—</strong><small id="creatorDashInactiveHint">—</small></div>
       <div class="creator-dashboard-card"><span data-i18n="creators.dashboardRegions">覆盖地区</span><strong id="creatorDashRegions">—</strong><small data-i18n="creators.dashboardRegionsHint">TikTok Shop 站点</small></div>
       <div class="creator-dashboard-card"><span data-i18n="creators.dashboardUpdated">最近更新</span><strong id="creatorDashUpdated">—</strong><small data-i18n="creators.dashboardUpdatedHint">最后一次数据刷新</small></div>
       <div class="creator-dashboard-card"><span data-i18n="creators.dashboardStorage">数据库占用</span><strong id="creatorDashStorage">—</strong><small data-i18n="creators.dashboardStorageHint">仅本地结构化数据</small></div>
@@ -471,6 +476,7 @@
         <div class="creator-search-wrap"><input id="creatorSearch" type="search" data-i18n-placeholder="creators.search" placeholder="搜索昵称、账号、ID 或邮箱"></div>
         <select id="creatorRegion"><option value="" data-i18n="creators.allRegions">全部地区</option><option>US</option><option>UK</option><option>SG</option><option>MY</option><option>TH</option><option>VN</option><option>PH</option><option>ID</option><option>MX</option><option>BR</option></select>
         <input id="creatorMinFollowers" type="number" min="0" data-i18n-placeholder="creators.minFollowers" placeholder="最低粉丝数">
+        <select id="creatorActivity"><option value="" data-i18n="creators.allActivity">全部活跃状态</option><option value="active" data-i18n="activity.active">活跃</option><option value="inactive" data-i18n="activity.inactive">不活跃</option><option value="unknown" data-i18n="activity.unknown">待判断</option></select>
         <label class="check-label"><input id="creatorHasEmail" type="checkbox"> <span data-i18n="creators.hasEmail">仅有邮箱</span></label>
         <button class="btn btn-secondary" id="creatorRefresh" data-i18n="creators.refresh">刷新</button>
       </div>
@@ -750,6 +756,17 @@ const I18N = {
   'creators.dashboardTotal': { zh: '达人总数', en: 'Total creators' },
   'creators.dashboardTotalHint': { zh: '已自动去重', en: 'Automatically deduplicated' },
   'creators.dashboardEmail': { zh: '含合作邮箱', en: 'With contact email' },
+  'creators.dashboardInactive': { zh: '不活跃达人', en: 'Inactive creators' },
+  'creators.allActivity': { zh: '全部活跃状态', en: 'All activity states' },
+  'activity.active': { zh: '活跃', en: 'Active' },
+  'activity.inactive': { zh: '不活跃', en: 'Inactive' },
+  'activity.unknown': { zh: '待判断', en: 'Pending' },
+  'activity.recent_post': { zh: '45 天内发布过内容', en: 'Posted within 45 days' },
+  'activity.recent_performance': { zh: '近期带货或互动表现活跃', en: 'Recent sales or engagement detected' },
+  'activity.no_post_90d': { zh: '超过 90 天未发布内容', en: 'No post for over 90 days' },
+  'activity.stale_and_low_performance': { zh: '发布减少且近期表现低', en: 'Stale posting and low performance' },
+  'activity.no_recent_performance': { zh: '近期 GMV、销量、观看和互动均为 0', en: 'No recent sales, views, or engagement' },
+  'activity.insufficient_data': { zh: '缺少最后发布时间或表现数据', en: 'Insufficient posting or performance data' },
   'creators.dashboardRegions': { zh: '覆盖地区', en: 'Regions covered' },
   'creators.dashboardRegionsHint': { zh: 'TikTok Shop 站点', en: 'TikTok Shop regions' },
   'creators.dashboardUpdated': { zh: '最近更新', en: 'Last refreshed' },
@@ -1122,10 +1139,11 @@ const FIELDS = [
   { k: 'pps_score', n: 'PPS评分', e: 'PPS Score' }, { k: 'is_fast_growing', n: '快速增长', e: 'Fast Growing' }, { k: 'has_collaborated', n: '已合作', e: 'Collaborated' },
   { k: 'creator_permission_tag', n: '达人类目权限', e: 'Category Permission' }, { k: 'is_live_auction', n: '直播拍卖', e: 'Live Auction' },
   { k: '简介', n: '简介', e: 'Bio', detail: true }, { k: '合作邮箱', n: '合作邮箱', e: 'Contact Email', detail: true }, { k: 'MCN机构', n: 'MCN机构', e: 'MCN Agency', detail: true },
+  { k: 'last_publish_time', n: '最后发布时间', e: 'Last Published' }, { k: 'activity_status', n: '活跃状态', e: 'Activity Status' }, { k: 'activity_reason', n: '判断原因', e: 'Activity Reason' },
 ];
 const UPDATE_FIELD_GROUPS = {
   identity: ['handle', 'nickname', 'avatar', 'selection_region', 'category'],
-  performance: ['follower_cnt', 'med_gmv_revenue', 'med_gmv_revenue_range', 'video_gmv', 'live_gmv', 'units_sold', 'units_sold_range', 'video_avg_view_cnt', 'video_play_cnt_med', 'video_engagement', 'ec_video_engagement', 'ec_video_gpm', 'ec_live_gpm', 'ec_live_avg_uv', 'pps_score', 'is_fast_growing'],
+  performance: ['follower_cnt', 'med_gmv_revenue', 'med_gmv_revenue_range', 'video_gmv', 'live_gmv', 'units_sold', 'units_sold_range', 'video_avg_view_cnt', 'video_play_cnt_med', 'video_engagement', 'ec_video_engagement', 'ec_video_gpm', 'ec_live_gpm', 'ec_live_avg_uv', 'pps_score', 'is_fast_growing', 'last_publish_time'],
   audience: ['top_follower_ages', 'top_follower_gender'],
   contact: ['简介', '合作邮箱', 'MCN机构'],
   permissions: ['has_collaborated', 'creator_permission_tag', 'is_live_auction'],
@@ -1646,7 +1664,7 @@ let creatorOffset = 0;
 let creatorPageSize = 50;
 let creatorSearchTimer = null;
 const hiddenCreatorColumns = new Set();
-const CREATOR_SORTABLE = { handle:'handle', nickname:'nickname', creator_oecuid:'creator_id', selection_region:'region', follower_cnt:'follower_count', med_gmv_revenue:'total_gmv', units_sold:'units_sold', '合作邮箱':'contact_email', last_refreshed_at:'last_refreshed_at' };
+const CREATOR_SORTABLE = { handle:'handle', nickname:'nickname', creator_oecuid:'creator_id', selection_region:'region', follower_cnt:'follower_count', med_gmv_revenue:'total_gmv', units_sold:'units_sold', '合作邮箱':'contact_email', last_publish_time:'last_publish_at', activity_status:'activity_status', last_refreshed_at:'last_refreshed_at' };
 const creatorSort = { key:'last_refreshed_at', direction:'desc' };
 
 function showPage(page) {
@@ -1694,7 +1712,14 @@ function appendCreatorCell(row, value, className, field, creator) {
     shown = value.value !== undefined ? value.value : JSON.stringify(value);
   }
   const display = shown === null || shown === undefined || shown === '' ? '—' : String(shown);
-  if (field?.k === 'handle') {
+  if (field?.k === 'activity_status') {
+    const badge = document.createElement('span'); const status = ['active','inactive'].includes(display) ? display : 'unknown';
+    badge.className = `activity-badge ${status}`; badge.textContent = I18N[`activity.${status}`][uiLang]; cell.appendChild(badge);
+  } else if (field?.k === 'activity_reason' && I18N[`activity.${display}`]) {
+    cell.textContent = I18N[`activity.${display}`][uiLang];
+  } else if (field?.k === 'last_publish_time' && display !== '—') {
+    const date = new Date(display); cell.textContent = Number.isNaN(date.getTime()) ? display : date.toLocaleDateString();
+  } else if (field?.k === 'handle') {
     const profile = document.createElement('div'); profile.className = 'creator-cell-profile';
     if (creator?.avatar_url || creator?.avatar) { const img = document.createElement('img'); img.className = 'creator-cell-avatar'; img.src = creator.avatar_url || creator.avatar; img.alt = ''; profile.appendChild(img); }
     const label = document.createElement('span'); label.textContent = display; profile.appendChild(label); cell.appendChild(profile);
@@ -1746,6 +1771,7 @@ async function loadCreators() {
     region: document.getElementById('creatorRegion').value,
     minFollowers: document.getElementById('creatorMinFollowers').value || undefined,
     hasEmail: document.getElementById('creatorHasEmail').checked,
+    activityStatus: document.getElementById('creatorActivity').value,
     sortBy: creatorSort.key,
     sortDirection: creatorSort.direction,
     limit: creatorPageSize,
@@ -1773,6 +1799,7 @@ async function loadCreators() {
         if (field.k === '合作邮箱') value = value || creator.contact_email;
         if (field.k === '简介') value = value || creator.bio;
         if (field.k === 'MCN机构') value = value || creator.mcn;
+        if (field.k === 'last_publish_time') value = value || creator.last_publish_at;
         appendCreatorCell(row, value, '', field, creator);
       });
       appendCreatorCell(row, creator.last_refreshed_at ? new Date(creator.last_refreshed_at).toLocaleString() : '—', '', { k:'last_refreshed_at' }, creator);
@@ -1794,7 +1821,7 @@ document.querySelectorAll('.sidebar-nav [data-page]').forEach(link => link.addEv
 }));
 document.querySelectorAll('[data-go-page]').forEach(button => button.addEventListener('click', () => showPage(button.dataset.goPage)));
 document.getElementById('creatorRefresh').onclick = () => { creatorOffset = 0; loadCreators(); refreshDatabaseMetrics(); };
-document.getElementById('creatorReset').onclick = () => { document.getElementById('creatorSearch').value = ''; document.getElementById('creatorRegion').value = ''; document.getElementById('creatorMinFollowers').value = ''; document.getElementById('creatorHasEmail').checked = false; creatorOffset = 0; loadCreators(); };
+document.getElementById('creatorReset').onclick = () => { document.getElementById('creatorSearch').value = ''; document.getElementById('creatorRegion').value = ''; document.getElementById('creatorMinFollowers').value = ''; document.getElementById('creatorActivity').value = ''; document.getElementById('creatorHasEmail').checked = false; creatorOffset = 0; loadCreators(); };
 document.getElementById('creatorDensity').onclick = event => { const compact = document.querySelector('.creator-table').classList.toggle('compact'); event.currentTarget.textContent = I18N[compact ? 'creators.comfortable' : 'creators.compact'][uiLang]; };
 document.getElementById('creatorColumns').onclick = event => { const menu = document.getElementById('creatorColumnMenu'); const open = menu.classList.toggle('open'); event.currentTarget.setAttribute('aria-expanded', String(open)); renderCreatorColumns(); };
 document.getElementById('creatorColumnsAll').onclick = () => { hiddenCreatorColumns.clear(); renderCreatorColumns(); renderCreatorHead(); document.querySelectorAll('.creator-table [data-field]').forEach(cell => cell.hidden = false); };
@@ -1802,6 +1829,7 @@ document.addEventListener('click', event => { if (!event.target.closest('.creato
 document.getElementById('creatorRegion').onchange = () => { creatorOffset = 0; loadCreators(); };
 document.getElementById('creatorHasEmail').onchange = () => { creatorOffset = 0; loadCreators(); };
 document.getElementById('creatorMinFollowers').onchange = () => { creatorOffset = 0; loadCreators(); };
+document.getElementById('creatorActivity').onchange = () => { creatorOffset = 0; loadCreators(); };
 document.getElementById('creatorSearch').oninput = () => {
   clearTimeout(creatorSearchTimer);
   creatorSearchTimer = setTimeout(() => { creatorOffset = 0; loadCreators(); }, 250);
@@ -1831,6 +1859,9 @@ async function refreshDatabaseMetrics() {
     document.getElementById('creatorDashEmail').textContent = withEmail.toLocaleString();
     document.getElementById('creatorDashEmailHint').textContent = uiLang === 'zh' ? `覆盖率 ${emailRate}%` : `${emailRate}% coverage`;
     document.getElementById('creatorDashRegions').textContent = Number(stats.regions || 0).toLocaleString();
+    const inactive = Number(stats.inactive || 0);
+    document.getElementById('creatorDashInactive').textContent = inactive.toLocaleString();
+    document.getElementById('creatorDashInactiveHint').textContent = uiLang === 'zh' ? `占达人库 ${creators ? Math.round(inactive / creators * 100) : 0}%` : `${creators ? Math.round(inactive / creators * 100) : 0}% of library`;
     document.getElementById('creatorDashStorage').textContent = sizeText;
     document.getElementById('creatorDashUpdated').textContent = stats.last_refreshed_at
       ? new Date(stats.last_refreshed_at).toLocaleDateString(uiLang === 'zh' ? 'zh-CN' : 'en-US', { month:'short', day:'numeric' })
