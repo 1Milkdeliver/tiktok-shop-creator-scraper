@@ -137,9 +137,90 @@
     header { flex-wrap: wrap; gap: 8px; }
     .cats { grid-template-columns: 1fr; }
   }
+  /* Workspace redesign: keep the existing DOM/API contract while presenting it
+     as a task-oriented desktop console. */
+  body { background: #f5f6f8; background-image: none; }
+  .app-shell { min-height: 100vh; display: grid; grid-template-columns: 232px minmax(0, 1fr); }
+  .app-sidebar { position: sticky; top: 0; height: 100vh; padding: 22px 16px; background: #0f1219; color: #fff; display: flex; flex-direction: column; z-index: 20; }
+  .sidebar-brand { display: flex; gap: 11px; align-items: center; padding: 2px 8px 24px; }
+  .sidebar-brand img { width: 38px; height: 38px; border-radius: 11px; }
+  .sidebar-brand strong { display: block; font-size: 14px; }
+  .sidebar-brand span { display: block; margin-top: 3px; color: #8b93a5; font-size: 10.5px; }
+  .sidebar-label { padding: 8px 12px; color: #666f82; font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+  .sidebar-nav { display: grid; gap: 4px; }
+  .sidebar-nav a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; color: #b9c0ce; text-decoration: none; font-size: 13px; font-weight: 600; transition: .15s; }
+  .sidebar-nav a:hover, .sidebar-nav a.active { color: #fff; background: rgba(254,44,85,.18); }
+  .sidebar-health { margin-top: auto; padding: 12px; border: 1px solid rgba(255,255,255,.08); border-radius: 12px; background: rgba(255,255,255,.04); }
+  .sidebar-health strong { display: block; color: #6ee7a0; font-size: 12px; }
+  .sidebar-health span { display: block; color: #8790a2; margin-top: 5px; font-size: 10.5px; line-height: 1.45; }
+  .app-main { min-width: 0; }
+  .wrap { max-width: 1260px; margin: 0 auto; padding: 0 32px 52px; }
+  header { position: sticky; top: 0; z-index: 10; margin: 0 -32px 26px; padding: 14px 32px; min-height: 70px; background: rgba(255,255,255,.94); border-bottom: 1px solid var(--border); backdrop-filter: blur(18px); }
+  header .logo-icon { display: none; }
+  header .logo h1 { font-size: 18px; background: none; -webkit-text-fill-color: initial; }
+  header .logo p { font-size: 11px; }
+  .status-pill { min-width: auto; padding: 7px 12px; background: #f5f6f8; }
+  .header-btn { background: #f5f6f8; box-shadow: none; }
+  .dashboard-intro { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; margin-bottom: 20px; }
+  .dashboard-intro h2 { font-size: 25px; letter-spacing: -.035em; }
+  .dashboard-intro p { margin-top: 7px; color: var(--sub); font-size: 13px; }
+  .ready-badge { color: #15803d; background: #ecfdf3; border: 1px solid #bbf7d0; border-radius: 99px; padding: 8px 12px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; margin-bottom: 18px; }
+  .metric { padding: 16px 18px; border: 1px solid var(--border); border-radius: 14px; background: #fff; }
+  .metric span { display: block; color: var(--sub); font-size: 11px; }
+  .metric strong { display: block; margin: 7px 0 4px; font-size: 20px; }
+  .metric small { color: var(--ok); font-size: 10.5px; }
+  .workspace-grid { display: grid; grid-template-columns: minmax(0,1.05fr) minmax(360px,.95fr); gap: 18px; align-items: start; }
+  .workspace-column { min-width: 0; }
+  .card { background: #fff; border-radius: 14px; padding: 20px 22px; margin-bottom: 14px; box-shadow: none; backdrop-filter: none; }
+  .card:hover { box-shadow: 0 8px 28px rgba(17,24,39,.06); }
+  .step-num { background: #111827; box-shadow: none; }
+  .btn { border-radius: 10px; }
+  .btn-primary { background: var(--tiktok-pink); box-shadow: 0 2px 10px rgba(254,44,85,.24); }
+  .radio-group label:has(input:checked), .cat-chips label:has(input:checked) { background: rgba(254,44,85,.08); border-color: rgba(254,44,85,.28); color: #d91e45; }
+  input[type=checkbox], input[type=radio] { accent-color: var(--tiktok-pink); }
+  #runCard { position: sticky; top: 88px; }
+  #log { height: 220px; }
+  footer { padding-top: 12px; }
+  @media (max-width: 1100px) {
+    .app-shell { grid-template-columns: 76px minmax(0,1fr); }
+    .app-sidebar { padding-inline: 10px; }
+    .sidebar-brand div, .sidebar-label, .sidebar-nav span, .sidebar-health { display: none; }
+    .sidebar-brand { justify-content: center; padding-inline: 0; }
+    .sidebar-nav a { justify-content: center; font-size: 16px; }
+    .workspace-grid { grid-template-columns: 1fr; }
+    #runCard { position: static; }
+  }
+  @media (max-width: 760px) {
+    .app-shell { display: block; }
+    .app-sidebar { position: static; width: 100%; height: auto; flex-direction: row; align-items: center; padding: 10px 12px; overflow-x: auto; }
+    .sidebar-brand { padding: 0 10px 0 0; }
+    .sidebar-brand img { width: 32px; height: 32px; }
+    .sidebar-nav { display: flex; }
+    .sidebar-nav a { white-space: nowrap; padding: 8px 10px; }
+    .wrap { padding: 0 16px 36px; }
+    header { margin-inline: -16px; padding-inline: 16px; flex-wrap: wrap; }
+    .metric-grid { grid-template-columns: repeat(2,1fr); }
+    .dashboard-intro { align-items: flex-start; }
+  }
 </style>
 </head>
 <body>
+<div class="app-shell">
+<aside class="app-sidebar">
+  <div class="sidebar-brand"><img src="icon-256.png" alt="logo"><div><strong>TikTok Shop</strong><span>达人工作台 · Creator Desk</span></div></div>
+  <div class="sidebar-label" data-i18n="workspace.label">工作区</div>
+  <nav class="sidebar-nav">
+    <a href="#overview" class="active">⌂ <span data-i18n="workspace.overview">概览</span></a>
+    <a href="#accounts">♙ <span data-i18n="workspace.accounts">账号与环境</span></a>
+    <a href="#targeting">⌕ <span data-i18n="workspace.targets">抓取对象</span></a>
+    <a href="#exports">⇩ <span data-i18n="workspace.exports">导出配置</span></a>
+    <a href="#runCard">▶ <span data-i18n="workspace.monitor">运行监控</span></a>
+    <a href="#history">↻ <span data-i18n="workspace.history">历史任务</span></a>
+  </nav>
+  <div class="sidebar-health"><strong data-i18n="workspace.local">● 本地运行</strong><span data-i18n="workspace.localHint">数据和 Cookie 仅保存在当前设备</span></div>
+</aside>
+<main class="app-main">
 <div class="wrap">
   <header>
     <div class="logo">
@@ -156,7 +237,21 @@
     <button class="header-btn" id="uiLangToggle">🌐 EN</button>
   </header>
 
-  <div class="card">
+  <section class="dashboard-intro" id="overview">
+    <div><h2 data-i18n="workspace.title">达人采集工作台</h2><p data-i18n="workspace.subtitle">配置、运行和管理 TikTok Shop 达人数据任务。</p></div>
+    <span class="ready-badge" data-i18n="workspace.ready">● 系统就绪</span>
+  </section>
+  <section class="metric-grid" aria-label="任务概览">
+    <div class="metric"><span data-i18n="workspace.state">当前状态</span><strong data-i18n="status.ready">就绪</strong><small data-i18n="workspace.stateHint">账号与环境正常</small></div>
+    <div class="metric"><span data-i18n="workspace.availableAccounts">可用账号</span><strong id="accountMetric">—</strong><small data-i18n="workspace.accountsHint">支持多账号并发</small></div>
+    <div class="metric"><span data-i18n="workspace.scrapeMode">抓取模式</span><strong data-i18n="workspace.full">完整</strong><small data-i18n="workspace.fullHint">含邮箱与 MCN</small></div>
+    <div class="metric"><span data-i18n="workspace.outputFormat">输出格式</span><strong>CSV</strong><small data-i18n="workspace.fieldsHint">字段可自定义</small></div>
+  </section>
+
+  <div class="workspace-grid">
+  <div class="workspace-column">
+
+  <div class="card" id="accounts">
     <h2><span class="step-num">1</span> <span data-i18n="step1.title">导入 Cookie</span> <span class="sel-all" id="addCookieBtn" data-i18n="step1.add">＋ 添加账号</span> <span class="sel-all" id="cookieGuideBtn" data-i18n="step1.guide" style="margin-left:8px">❓ 多账号指南</span></h2>
     <div class="cookie-zone" id="cookieZone">
       <div class="zone-label" data-i18n="step1.zone">将 <b>Cookie JSON 文件</b> 拖到此处，或直接 <b>粘贴</b> 到下方输入框</div>
@@ -199,7 +294,7 @@
     <div class="hint" style="margin-top:6px;padding-left:0" data-i18n="step2.regionHint">💡 选择达人所在的 TikTok Shop 站点。需使用对应站点店铺账号的 Cookie 登录，才能抓取该地区达人。</div>
   </div>
 
-  <div class="card">
+  <div class="card" id="targeting">
     <h2><span class="step-num">3</span> <span data-i18n="step3.title">选择抓取对象</span></h2>
     <div class="radio-group" style="margin-bottom:14px">
       <label><input type="radio" name="source" value="cat" checked> <span data-i18n="step3.sourceCat">🏷️ 按类目抓取</span></label>
@@ -222,7 +317,7 @@ https://www.tiktok.com/@makeup.lover'></textarea>
     </div>
   </div>
 
-  <div class="card">
+  <div class="card" id="exports">
     <h2><span class="step-num">4</span> <span data-i18n="step4.title">导出设置</span></h2>
     <div class="inline">
       <div>
@@ -270,7 +365,9 @@ https://www.tiktok.com/@makeup.lover'></textarea>
     </div>
   </div>
 
-  <div class="card">
+  </div>
+  <div class="workspace-column">
+  <div class="card" id="runCard">
     <div class="toolbar">
       <button class="btn btn-primary" id="btnStart" style="padding:11px 34px;font-size:15px" data-i18n="action.start">▶ 开始抓取</button>
       <button class="btn btn-secondary" id="btnTest" data-i18n="action.test">🔍 测试连接</button>
@@ -283,14 +380,18 @@ https://www.tiktok.com/@makeup.lover'></textarea>
     <div id="log" style="margin-top:14px"></div>
   </div>
 
-  <div class="card">
+  <div class="card" id="history">
     <h2><span class="step-num">5</span> <span data-i18n="step5.title">历史输出</span> <span class="sel-all" id="histRefresh" data-i18n="step5.refresh">刷新</span></h2>
     <div id="historyBox" style="max-height:220px;overflow-y:auto">
       <div style="color:var(--sub);font-size:13px;padding:10px" data-i18n="step5.empty">暂无历史记录</div>
     </div>
   </div>
+  </div>
+  </div>
 
   <footer><span id="footerVersion">v—</span> · <span data-i18n="footer.text">专为 TikTok Shop 卖家打造 · 请求间隔人性化 · 自动限流处理</span></footer>
+</div>
+</main>
 </div>
 
 <!-- 更新内容弹窗（可滚动查看完整更新说明 + 下载进度） -->
@@ -337,6 +438,27 @@ https://www.tiktok.com/@makeup.lover'></textarea>
 const I18N = {
   'app.title': { zh: 'TikTokShop达人抓取', en: 'TikTokShop Creator Scraper' },
   'app.subtitle': { zh: 'TikTok Shop 联盟达人数据 · 多账号并发', en: 'TikTok Shop Affiliate Creator Data · Multi-Account' },
+  'workspace.label': { zh: '工作区', en: 'Workspace' },
+  'workspace.overview': { zh: '概览', en: 'Overview' },
+  'workspace.accounts': { zh: '账号与环境', en: 'Accounts & Environment' },
+  'workspace.targets': { zh: '抓取对象', en: 'Scrape Targets' },
+  'workspace.exports': { zh: '导出配置', en: 'Export Setup' },
+  'workspace.monitor': { zh: '运行监控', en: 'Run Monitor' },
+  'workspace.history': { zh: '历史任务', en: 'Run History' },
+  'workspace.local': { zh: '● 本地运行', en: '● Runs locally' },
+  'workspace.localHint': { zh: '数据和 Cookie 仅保存在当前设备', en: 'Data and cookies stay on this device' },
+  'workspace.title': { zh: '达人采集工作台', en: 'Creator Collection Workspace' },
+  'workspace.subtitle': { zh: '配置、运行和管理 TikTok Shop 达人数据任务。', en: 'Configure, run, and manage TikTok Shop creator data jobs.' },
+  'workspace.ready': { zh: '● 系统就绪', en: '● System ready' },
+  'workspace.state': { zh: '当前状态', en: 'Current status' },
+  'workspace.stateHint': { zh: '账号与环境正常', en: 'Accounts and environment healthy' },
+  'workspace.availableAccounts': { zh: '可用账号', en: 'Available accounts' },
+  'workspace.accountsHint': { zh: '支持多账号并发', en: 'Multi-account concurrency' },
+  'workspace.scrapeMode': { zh: '抓取模式', en: 'Scrape mode' },
+  'workspace.full': { zh: '完整', en: 'Full' },
+  'workspace.fullHint': { zh: '含邮箱与 MCN', en: 'Includes email and MCN' },
+  'workspace.outputFormat': { zh: '输出格式', en: 'Output format' },
+  'workspace.fieldsHint': { zh: '字段可自定义', en: 'Customizable fields' },
   'status.ready': { zh: '就绪', en: 'Ready' },
   'status.running': { zh: '抓取中…', en: 'Scraping…' },
   'status.done': { zh: '完成', en: 'Done' },
@@ -688,7 +810,9 @@ function addCookie(source, data, name) {
 
 function renderCookieList() {
   const box = document.getElementById('cookieList');
-  if (!cookieList.length) { box.innerHTML = ''; return; }
+  const metric = document.getElementById('accountMetric');
+  if (metric) metric.textContent = String(cookieList.length);
+  if (!cookieList.length) { box.innerHTML = ''; renderRateLimit(); return; }
   const accLabel = uiLang === 'zh' ? '账号' : 'Account';
   box.innerHTML = cookieList.map((c, i) => `
     <div class="cookie-item">
