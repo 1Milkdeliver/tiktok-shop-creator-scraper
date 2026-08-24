@@ -260,7 +260,7 @@
   .fdrop-range input { width:56px;padding:3px 6px;border:1px solid var(--border);border-radius:5px;font-size:12px;outline:none; }
   .fdrop-range input:focus { border-color:var(--accent); }
   .fdrop-range span { color:var(--sub);font-size:11px; }
-  .fdrop-apply { border:none;background:var(--accent);color:#fff;border-radius:5px;font-size:11px;padding:3px 8px;cursor:pointer; }
+  .fdrop-apply { border:none;background:var(--accent);color:#fff;border-radius:5px;font-size:11px;padding:3px 8px;cursor:pointer;white-space:nowrap;flex:0 0 auto; }
   .fdrop-search { width:100%;box-sizing:border-box;padding:4px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;outline:none;margin-bottom:4px; }
   .fdrop-search:focus { border-color:var(--accent); }
   .creator-table-wrap { overflow:auto;max-height:calc(100vh - 330px);min-height:340px;border:0;border-radius:0; }
@@ -508,7 +508,7 @@
   </section>
 
   <section class="creator-page" id="creatorPage">
-    <div class="page-heading"><div><h2 data-i18n="creators.title">达人库</h2><p data-i18n="creators.subtitle">查询已抓取的数据，需要时再筛选导出。</p></div><div style="display:flex;gap:8px"><button class="btn btn-secondary" id="creatorContinueOpen" data-i18n="creators.continueScrape">➕ 继续抓取</button><button class="btn btn-secondary" id="creatorUpdateOpen" data-i18n="creators.updateData">更新达人数据</button><button class="btn btn-primary" data-go-page="tasks" data-i18n="creators.newTask">＋ 新建抓取任务</button></div></div>
+    <div class="page-heading"><div><h2 data-i18n="creators.title">达人库</h2><p data-i18n="creators.subtitle">查询已抓取的数据，需要时再筛选导出。</p></div><div style="display:flex;gap:8px;align-items:center"><button class="btn btn-primary" id="creatorContinueOpen" data-i18n="creators.continueScrape">➕ 继续抓取</button><button class="btn btn-secondary" id="creatorUpdateOpen" data-i18n="creators.updateData">更新达人数据</button></div></div>
     <div class="creator-dashboard" aria-label="Creator library dashboard">
       <div class="creator-dashboard-card"><span data-i18n="creators.dashboardTotal">达人总数</span><strong id="creatorDashTotal">—</strong><small data-i18n="creators.dashboardTotalHint">已自动去重</small></div>
       <div class="creator-dashboard-card"><span data-i18n="creators.dashboardEmail">含合作邮箱</span><strong id="creatorDashEmail">—</strong><small id="creatorDashEmailHint">—</small></div>
