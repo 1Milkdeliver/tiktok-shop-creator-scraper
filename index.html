@@ -125,11 +125,11 @@
   .cat-chips label:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-1px); }
   .cat-chips label:has(input:checked) { background: linear-gradient(135deg, rgba(0,113,227,.12), rgba(37,244,238,.12)); border-color: rgba(0,113,227,.4); color: var(--accent); font-weight: 600; }
   .cat-chips input { accent-color: var(--accent); }
-  .keyword-tools { display:grid;grid-template-columns:minmax(220px,1fr) auto;gap:10px;align-items:center;margin-bottom:12px; }
-  .keyword-search { position:relative; }
+  .keyword-tools { display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;margin-bottom:12px; }
+  .keyword-search { position:relative;flex:1 1 240px;min-width:180px; }
   .keyword-search input { padding-left:34px !important; }
   .keyword-search::before { content:'⌕';position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--sub);z-index:1; }
-  .keyword-actions { display:flex;align-items:center;gap:4px;white-space:nowrap; }
+  .keyword-actions { display:flex;align-items:center;gap:4px;white-space:nowrap;flex:0 0 auto;margin-left:auto; }
   .keyword-summary { color:var(--sub);font-size:12px;margin-right:4px; }
   input[type=text] { width: 100%; padding: 10px 13px; border: 1px solid var(--border); border-radius: 11px; font-size: 14px; background: #fff; outline: none; transition: .15s; font-family: inherit; }
   input[type=text]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,113,227,.13); }
@@ -251,6 +251,26 @@
   .creator-column-grid { display:grid;grid-template-columns:1fr 1fr;gap:2px; }
   .creator-column-grid label { display:flex;align-items:center;gap:7px;min-height:30px;padding:4px 6px;border-radius:4px;font-size:12px;cursor:pointer; }
   .creator-column-grid label:hover { background:#f6f8fa; }
+  /* dedicated two-level category picker panel */
+  .creator-cat-panel { border-top:1px solid var(--border);background:#fafbfc;padding:10px 16px 14px; }
+  .creator-cat-panel-head { display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px; }
+  .creator-cat-panel-head strong { font-size:13px;font-weight:650; }
+  .creator-cat-panel-sub { color:var(--sub);font-size:11.5px;flex:1 1 auto;min-width:150px; }
+  .creator-cat-panel-close { border:none;background:none;color:var(--sub);font-size:14px;cursor:pointer;padding:2px 6px;border-radius:6px; }
+  .creator-cat-panel-close:hover { background:#eef0f3;color:var(--danger); }
+  .creator-cat-panel-body { display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:4px 14px;max-height:260px;overflow:auto; }
+  .ccp-item { border-bottom:1px dashed #e4e7eb;padding:3px 0; }
+  .ccp-item-head { display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;cursor:pointer;min-height:28px; }
+  .ccp-item-head input { width:14px;height:14px;flex:0 0 auto; }
+  .ccp-item-head span { flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+  .ccp-expand { border:none;background:none;color:var(--sub);font-size:12px;cursor:pointer;padding:2px 6px;border-radius:5px;flex:0 0 auto; }
+  .ccp-expand:hover { background:#eef0f3;color:var(--accent); }
+  .ccp-children { padding:4px 0 6px 24px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:2px 10px; }
+  .ccp-child { display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-2);cursor:pointer;padding:3px 4px;border-radius:5px; }
+  .ccp-child:hover { background:#f6f8fa; }
+  .ccp-child input { width:13px;height:13px;flex:0 0 auto; }
+  .ccp-none { color:var(--sub);font-size:11.5px;padding:2px 0; }
+  #creatorCatToggle.active { background:rgba(0,113,227,.1);border-color:var(--accent);color:var(--accent);font-weight:600; }
   /* TikTok-style filter bar: one dropdown per field, horizontal layout */
   .creator-filterbar { display:flex;flex-wrap:wrap;gap:6px;align-items:center;flex:1 1 auto;min-width:0; }
   .fdrop { position:relative; }
@@ -556,6 +576,7 @@
         <div class="creator-search-wrap"><input id="creatorSearch" type="search" data-i18n-placeholder="creators.search" placeholder="搜索昵称、账号、ID 或邮箱"></div>
         <!-- TikTok-style filter bar: one dropdown per field, laid out horizontally -->
         <div class="creator-filterbar" id="creatorFilterBar"></div>
+        <button class="btn btn-secondary" id="creatorCatToggle" data-i18n="creators.catPanelBtn">🗂 类目筛选</button>
         <label class="check-label"><input id="creatorHasEmail" type="checkbox"> <span data-i18n="creators.hasEmail">仅有邮箱</span></label>
         <label class="check-label"><input id="creatorActiveOnly" type="checkbox"> <span data-i18n="creators.activeOnly">活跃达人</span></label>
         <button class="btn btn-secondary" id="creatorRefresh" data-i18n="creators.refresh">刷新</button>
@@ -563,6 +584,16 @@
       </div>
       <!-- selected filter chips: removable tags like TikTok -->
       <div class="creator-filter-chips" id="creatorFilterChips" style="display:none"></div>
+      <!-- dedicated two-level category picker (TikTok-backend style) -->
+      <div class="creator-cat-panel" id="creatorCatPanel" hidden>
+        <div class="creator-cat-panel-head">
+          <strong data-i18n="creators.catPanelTitle">类目筛选</strong>
+          <span class="creator-cat-panel-sub" data-i18n="creators.catPanelSub">勾选一级类目，可展开选择垂直类目（二级）</span>
+          <button type="button" class="btn-link" id="creatorCatPanelClear" data-i18n="creators.catPanelClear">清除</button>
+          <button type="button" class="creator-cat-panel-close" id="creatorCatPanelClose" aria-label="Close">✕</button>
+        </div>
+        <div class="creator-cat-panel-body" id="creatorCatPanelBody"></div>
+      </div>
       <div class="creator-table-tools">
         <div class="creator-table-tools-left"><strong data-i18n="creators.dataTable">达人数据</strong><span class="creator-result-label" id="creatorResultLabel">—</span></div>
         <div class="creator-table-tools-right">
@@ -856,6 +887,10 @@ const I18N = {
   'creators.columns': { zh: '管理字段', en: 'Manage columns' },
   'creators.columnsTitle': { zh: '显示字段', en: 'Visible columns' },
   'creators.allColumns': { zh: '全部显示', en: 'Show all' },
+  'creators.catPanelBtn': { zh: '🗂 类目筛选', en: '🗂 Category' },
+  'creators.catPanelTitle': { zh: '类目筛选', en: 'Category filter' },
+  'creators.catPanelSub': { zh: '勾选一级类目，可展开选择垂直类目（二级）', en: 'Check top-level categories; expand for vertical (2nd-level) categories' },
+  'creators.catPanelClear': { zh: '清除', en: 'Clear' },
   'creators.perPage': { zh: '每页', en: 'Per page' },
   'creators.dashboardTotal': { zh: '达人总数', en: 'Total creators' },
   'creators.dashboardTotalHint': { zh: '已自动去重', en: 'Automatically deduplicated' },
@@ -1040,6 +1075,8 @@ function applyI18n() {
   renderCats();
   if (typeof renderFields === 'function') renderFields();
   if (typeof renderFilterBar === 'function') renderFilterBar(); // re-label the filter bar
+  if (typeof updateCatPanelCount === 'function') updateCatPanelCount();
+  if (typeof renderCreatorCatPanel === 'function' && !document.getElementById('creatorCatPanel')?.hidden) renderCreatorCatPanel();
   if (typeof renderCreatorColumns === 'function' && document.getElementById('creatorColumnDrawer')?.classList.contains('open')) renderCreatorColumns();
 }
 function toggleUiLang() {
@@ -2287,8 +2324,111 @@ function resetFieldFilters() {
   filterState.forEach(s => { s.enum.clear(); s.numeric.clear(); s.custom.clear(); s.level1.clear(); s.level2.clear(); });
   renderFilterBar();
   renderFilterChips();
+  renderCreatorCatPanel();
   loadCreators();
 }
+
+// ── dedicated two-level category picker panel ──
+// Shares the hierarchy filterState (level1 = top category, level2 = vertical),
+// so selections here and in the filter-bar dropdown stay in sync.
+const creatorCatExpanded = new Set(); // top categories currently expanded
+async function renderCreatorCatPanel() {
+  const panel = document.getElementById('creatorCatPanel');
+  const body = document.getElementById('creatorCatPanelBody');
+  if (!panel || !body) return;
+  const hier = FILTER_DEFS.find(d => d.type === 'hierarchy');
+  if (!hier) return;
+  const st = filterState.get(hier.key);
+  // load options once (shared cache with the filter bar)
+  if (!filterOptionsCache[hier.level1]) {
+    try { const r = await window.api.creatorFilterOptions(hier.level1); filterOptionsCache[hier.level1] = r.ok ? r.options : []; } catch (e) { filterOptionsCache[hier.level1] = []; }
+  }
+  if (!filterOptionsCache[hier.level2]) {
+    try { const r = await window.api.creatorFilterOptions(hier.level2); filterOptionsCache[hier.level2] = r.ok ? r.options : []; } catch (e) { filterOptionsCache[hier.level2] = []; }
+  }
+  const l1 = filterOptionsCache[hier.level1] || [];
+  const l2 = filterOptionsCache[hier.level2] || [];
+  body.innerHTML = '';
+  if (!l1.length) {
+    const empty = document.createElement('div'); empty.className = 'fdrop-empty';
+    empty.textContent = uiLang === 'zh' ? '（暂无类目数据）' : '(no categories yet)';
+    body.appendChild(empty);
+    return;
+  }
+  l1.forEach(cat => {
+    const row = document.createElement('div'); row.className = 'ccp-item';
+    const head = document.createElement('label'); head.className = 'ccp-item-head';
+    const cb = document.createElement('input'); cb.type = 'checkbox';
+    const val = String(cat);
+    cb.checked = st.level1.has(val);
+    cb.onchange = () => {
+      cb.checked ? st.level1.add(val) : st.level1.delete(val);
+      renderFilterChips(); renderFilterBar(); updateCatPanelCount(); loadCreators();
+    };
+    const text = document.createElement('span'); text.textContent = val;
+    const expand = document.createElement('button'); expand.type = 'button'; expand.className = 'ccp-expand';
+    expand.textContent = '▸';
+    expand.onclick = e => {
+      e.preventDefault(); e.stopPropagation();
+      if (creatorCatExpanded.has(val)) creatorCatExpanded.delete(val); else creatorCatExpanded.add(val);
+      renderCreatorCatPanel();
+    };
+    head.append(cb, text, expand);
+    row.appendChild(head);
+    // vertical (2nd-level) children for this top category
+    if (creatorCatExpanded.has(val)) {
+      const childBox = document.createElement('div'); childBox.className = 'ccp-children';
+      l2.forEach(v => {
+        const label = document.createElement('label'); label.className = 'ccp-child';
+        const ccb = document.createElement('input'); ccb.type = 'checkbox';
+        const vv = String(v);
+        ccb.checked = st.level2.has(vv);
+        ccb.onchange = () => {
+          ccb.checked ? st.level2.add(vv) : st.level2.delete(vv);
+          renderFilterChips(); renderFilterBar(); updateCatPanelCount(); loadCreators();
+        };
+        const span = document.createElement('span'); span.textContent = vv;
+        label.append(ccb, span); childBox.appendChild(label);
+      });
+      if (!l2.length) {
+        const none = document.createElement('div'); none.className = 'ccp-none';
+        none.textContent = uiLang === 'zh' ? '（暂无垂直类目数据）' : '(no vertical data yet)';
+        childBox.appendChild(none);
+      }
+      row.appendChild(childBox);
+    }
+    body.appendChild(row);
+  });
+  updateCatPanelCount();
+}
+function updateCatPanelCount() {
+  const hier = FILTER_DEFS.find(d => d.type === 'hierarchy');
+  if (!hier) return;
+  const st = filterState.get(hier.key);
+  const btn = document.getElementById('creatorCatToggle');
+  if (btn) {
+    const n = st.level1.size + st.level2.size;
+    btn.textContent = (uiLang === 'zh' ? '🗂 类目筛选' : '🗂 Category') + (n ? ` (${n})` : '');
+    btn.classList.toggle('active', n > 0);
+  }
+}
+function toggleCreatorCatPanel(open) {
+  const panel = document.getElementById('creatorCatPanel');
+  if (!panel) return;
+  panel.hidden = !open;
+  if (open) renderCreatorCatPanel();
+}
+// ── event wiring for the category panel ──
+document.getElementById('creatorCatToggle').onclick = () => {
+  const panel = document.getElementById('creatorCatPanel');
+  toggleCreatorCatPanel(panel.hidden);
+};
+document.getElementById('creatorCatPanelClose').onclick = () => toggleCreatorCatPanel(false);
+document.getElementById('creatorCatPanelClear').onclick = () => {
+  const hier = FILTER_DEFS.find(d => d.type === 'hierarchy');
+  if (hier) { const st = filterState.get(hier.key); st.level1.clear(); st.level2.clear(); }
+  renderFilterBar(); renderFilterChips(); updateCatPanelCount(); loadCreators();
+};
 
 async function loadCreators() {
   const body = document.getElementById('creatorRows');
