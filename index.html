@@ -245,6 +245,22 @@
   .fdrop-option { display:flex;align-items:center;gap:7px;padding:5px 6px;border-radius:5px;font-size:12px;cursor:pointer; }
   .fdrop-option:hover { background:#f6f8fa; }
   .fdrop-option input { width:14px;height:14px; }
+  /* selected-filter chips (TikTok-style removable tags) */
+  .creator-filter-chips { display:flex;flex-wrap:wrap;gap:6px;padding:8px 16px;background:#fafbfc;border-top:1px solid #eef0f3; }
+  .fchip { display:inline-flex;align-items:center;gap:5px;padding:3px 8px 3px 10px;border-radius:14px;background:rgba(0,113,227,.1);border:1px solid rgba(0,113,227,.25);color:var(--accent);font-size:11.5px;font-weight:500; }
+  .fchip b { font-weight:600; }
+  .fchip button { border:none;background:none;color:inherit;cursor:pointer;font-size:13px;line-height:1;padding:0 2px;opacity:.7; }
+  .fchip button:hover { opacity:1; }
+  .fchip-reset { border:none;background:none;color:var(--sub);font-size:11.5px;cursor:pointer;text-decoration:underline;padding:2px 4px; }
+  .fchip-reset:hover { color:var(--danger); }
+  /* min/max inputs + search inside dropdowns */
+  .fdrop-range { display:flex;align-items:center;gap:4px;padding:0 2px 6px;border-bottom:1px solid #eef0f3;margin-bottom:4px; }
+  .fdrop-range input { width:56px;padding:3px 6px;border:1px solid var(--border);border-radius:5px;font-size:12px;outline:none; }
+  .fdrop-range input:focus { border-color:var(--accent); }
+  .fdrop-range span { color:var(--sub);font-size:11px; }
+  .fdrop-apply { border:none;background:var(--accent);color:#fff;border-radius:5px;font-size:11px;padding:3px 8px;cursor:pointer; }
+  .fdrop-search { width:100%;box-sizing:border-box;padding:4px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;outline:none;margin-bottom:4px; }
+  .fdrop-search:focus { border-color:var(--accent); }
   .creator-table-wrap { overflow:auto;max-height:calc(100vh - 330px);min-height:340px;border:0;border-radius:0; }
   .creator-table { width:100%;border-collapse:collapse;min-width:820px;font-size:12px; }
   .creator-table th { position:sticky;top:0;background:#f7f8fa;color:var(--sub);text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap; }
@@ -516,6 +532,8 @@
         <button class="btn btn-secondary" id="creatorRefresh" data-i18n="creators.refresh">刷新</button>
         <button class="btn btn-primary" id="creatorExport" data-i18n="creators.export">⬇ 导出当前筛选</button>
       </div>
+      <!-- selected filter chips: removable tags like TikTok -->
+      <div class="creator-filter-chips" id="creatorFilterChips" style="display:none"></div>
       <div class="creator-table-tools">
         <div class="creator-table-tools-left"><strong data-i18n="creators.dataTable">达人数据</strong><span class="creator-result-label" id="creatorResultLabel">—</span></div>
         <div class="creator-table-tools-right">
@@ -1773,9 +1791,9 @@ const FILTER_DEFS = [
   { key: 'med_gmv_revenue', n: '总GMV', e: 'Total GMV', type: 'numeric', buckets: [[100000, null, '$100K+'], [10000, 100000, '$10K - $100K'], [1000, 10000, '$1K - $10K'], [null, 1000, '< $1K']] },
   { key: 'activity_status', n: '活跃状态', e: 'Activity', type: 'enum', fixed: ['active', 'inactive', 'unknown'] },
 ];
-// current selections: { key: { active: bool, enum: Set, numeric: Set } }
+// current selections: { key: { enum: Set, numeric: Set, custom: Set } }
 const filterState = new Map();
-FILTER_DEFS.forEach(f => filterState.set(f.key, { active: false, enum: new Set(), numeric: new Set() }));
+FILTER_DEFS.forEach(f => filterState.set(f.key, { enum: new Set(), numeric: new Set(), custom: new Set() }));
 let filterOptionsCache = {}; // key -> array of dynamic enum options (for category etc.)
 
 function showPage(page) {
@@ -1909,44 +1927,108 @@ async function renderFilterBar() {
     head.innerHTML = `<span>${name}</span>`;
     const clearBtn = document.createElement('button'); clearBtn.type = 'button'; clearBtn.textContent = uiLang === 'zh' ? '清除' : 'Clear';
     head.appendChild(clearBtn); menu.appendChild(head);
+
+    // numeric fields: min/max custom inputs + preset buckets
+    let searchInput = null;
+    if (def.type === 'numeric') {
+      const row = document.createElement('div'); row.className = 'fdrop-range';
+      const minIn = document.createElement('input'); minIn.type = 'number'; minIn.placeholder = uiLang === 'zh' ? '最小值' : 'Min';
+      const dash = document.createElement('span'); dash.textContent = '—';
+      const maxIn = document.createElement('input'); maxIn.type = 'number'; maxIn.placeholder = uiLang === 'zh' ? '最大值' : 'Max';
+      const apply = document.createElement('button'); apply.type = 'button'; apply.className = 'fdrop-apply'; apply.textContent = uiLang === 'zh' ? '应用' : 'Apply';
+      apply.onclick = () => {
+        const lo = minIn.value !== '' ? Number(minIn.value) : null;
+        const hi = maxIn.value !== '' ? Number(maxIn.value) : null;
+        if (lo != null || hi != null) {
+          const tag = `custom:${lo}:${hi}`;
+          [...st.custom].forEach(c => { if (c.tag === tag) st.custom.delete(c); });
+          st.custom.add({ lo, hi, tag });
+        }
+        minIn.value = ''; maxIn.value = '';
+        renderOptions(); renderFilterChips(); updateFilterBtn(btn, cnt, def, st); loadCreators();
+      };
+      row.append(minIn, dash, maxIn, apply); menu.appendChild(row);
+    } else if (def.type === 'enum' && !def.fixed && options.length > 8) {
+      searchInput = document.createElement('input');
+      searchInput.type = 'search'; searchInput.className = 'fdrop-search';
+      searchInput.placeholder = uiLang === 'zh' ? '搜索…' : 'Search…';
+      searchInput.oninput = () => renderOptions();
+      menu.appendChild(searchInput);
+    }
     const renderOptions = () => {
-      // remove old options (keep head)
       menu.querySelectorAll('.fdrop-option').forEach(el => el.remove());
       const selected = def.type === 'enum' ? st.enum : st.numeric;
-      const items = def.type === 'enum' ? options : def.buckets.map(b => ({ label: b[2], min: b[0], max: b[1] }));
+      let items = def.type === 'enum' ? options : def.buckets.map(b => ({ label: b[2], min: b[0], max: b[1] }));
+      if (searchInput) {
+        const q = searchInput.value.trim().toLowerCase();
+        if (q) items = items.filter(it => String(def.type === 'enum' ? it : it.label).toLowerCase().includes(q));
+      }
       (items || []).forEach(item => {
         const val = def.type === 'enum' ? String(item) : item.label;
         const label = document.createElement('label'); label.className = 'fdrop-option';
         const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = selected.has(val);
-        cb.onchange = () => { cb.checked ? selected.add(val) : selected.delete(val); updateFilterBtn(btn, cnt, def, st); };
+        cb.onchange = () => {
+          cb.checked ? selected.add(val) : selected.delete(val);
+          renderFilterChips(); updateFilterBtn(btn, cnt, def, st); loadCreators();
+        };
         const span = document.createElement('span'); span.textContent = val;
         label.append(cb, span); menu.appendChild(label);
       });
-      if (def.type === 'enum' && !def.fixed && !options.length) {
+      if (def.type === 'enum' && !def.fixed && !items.length) {
         const empty = document.createElement('div');
         empty.style.cssText = 'color:var(--sub);font-size:11px;padding:6px';
-        empty.textContent = uiLang === 'zh' ? '（暂无数据）' : '(no data yet)';
+        empty.textContent = uiLang === 'zh' ? '（无匹配项）' : '(no matches)';
         menu.appendChild(empty);
       }
     };
     renderOptions();
-    clearBtn.onclick = () => { def.type === 'enum' ? st.enum.clear() : st.numeric.clear(); renderOptions(); updateFilterBtn(btn, cnt, def, st); loadCreators(); };
+    clearBtn.onclick = () => { def.type === 'enum' ? st.enum.clear() : (st.numeric.clear(), st.custom.clear()); renderOptions(); renderFilterChips(); updateFilterBtn(btn, cnt, def, st); loadCreators(); };
     btn.onclick = (e) => { e.stopPropagation(); closeFilterDrops(); menu.classList.toggle('open'); btn.classList.toggle('active', menu.classList.contains('open')); openFilterDrop = menu.classList.contains('open') ? wrap : null; };
     wrap.append(btn, menu); bar.appendChild(wrap);
     updateFilterBtn(btn, cnt, def, st);
   }
+  renderFilterChips();
 }
 function updateFilterBtn(btn, cnt, def, st) {
-  const n = def.type === 'enum' ? st.enum.size : st.numeric.size;
+  const n = (def.type === 'enum' ? st.enum.size : st.numeric.size + st.custom.size);
   cnt.style.display = n ? '' : 'none';
   cnt.textContent = n;
   btn.classList.toggle('active', n > 0);
-  if (n > 0 && btn.lastChild !== cnt && cnt.textContent) { /* ensure count is last */ }
 }
 function closeFilterDrops() {
   document.querySelectorAll('.fdrop-menu.open').forEach(m => m.classList.remove('open'));
   document.querySelectorAll('.fdrop-btn.active').forEach(b => b.classList.remove('active'));
   openFilterDrop = null;
+}
+// TikTok-style removable chips for every active filter condition
+function renderFilterChips() {
+  const box = document.getElementById('creatorFilterChips');
+  if (!box) return;
+  const chips = [];
+  for (const def of FILTER_DEFS) {
+    const st = filterState.get(def.key);
+    const name = uiLang === 'zh' ? def.n : def.e;
+    for (const v of st.enum) chips.push({ def, label: `${name}: ${v}`, remove: () => st.enum.delete(v) });
+    for (const v of st.numeric) chips.push({ def, label: `${name}: ${v}`, remove: () => st.numeric.delete(v) });
+    for (const [lo, hi, tag] of st.custom.map(c => [c.lo, c.hi, c.tag])) {
+      const rangeLabel = (lo == null ? '' : lo) + ' — ' + (hi == null ? '∞' : hi);
+      chips.push({ def, label: `${name}: ${rangeLabel}`, remove: () => st.custom.delete([...st.custom].find(c => c.tag === tag)) });
+    }
+  }
+  if (!chips.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  box.style.display = 'flex';
+  box.innerHTML = '';
+  chips.forEach(chip => {
+    const el = document.createElement('span'); el.className = 'fchip';
+    const txt = document.createElement('span'); txt.textContent = chip.label;
+    const x = document.createElement('button'); x.type = 'button'; x.textContent = '✕'; x.title = uiLang === 'zh' ? '移除' : 'Remove';
+    x.onclick = () => { chip.remove(); renderFilterChips(); renderFilterBar(); loadCreators(); };
+    el.append(txt, x); box.appendChild(el);
+  });
+  const reset = document.createElement('button'); reset.type = 'button'; reset.className = 'fchip-reset';
+  reset.textContent = uiLang === 'zh' ? '重置全部' : 'Reset all';
+  reset.onclick = () => resetFieldFilters();
+  box.appendChild(reset);
 }
 document.addEventListener('click', (e) => { if (!e.target.closest('.fdrop')) closeFilterDrops(); });
 // Build the filters object passed to the DB query (fieldFilters + numericFieldFilters)
@@ -1957,19 +2039,21 @@ function buildFieldFilters() {
     const st = filterState.get(def.key);
     if (def.type === 'enum' && st.enum.size) {
       fieldFilters[def.key] = [...st.enum];
-    } else if (def.type === 'numeric' && st.numeric.size) {
+    } else if (def.type === 'numeric') {
       const ranges = [];
       for (const b of def.buckets) {
         if (st.numeric.has(b[2])) ranges.push([b[0], b[1]]);
       }
+      for (const c of st.custom) ranges.push([c.lo, c.hi]); // [min, max] custom input
       if (ranges.length) numericFieldFilters[def.key] = ranges;
     }
   }
   return { fieldFilters, numericFieldFilters };
 }
 function resetFieldFilters() {
-  filterState.forEach(s => { s.active = false; s.enum.clear(); s.numeric.clear(); });
+  filterState.forEach(s => { s.enum.clear(); s.numeric.clear(); s.custom.clear(); });
   renderFilterBar();
+  renderFilterChips();
   loadCreators();
 }
 
