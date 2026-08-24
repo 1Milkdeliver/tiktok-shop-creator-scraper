@@ -578,16 +578,16 @@
     <div style="margin-top:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;background:rgba(17,24,39,.03);border-radius:var(--radius-sm);border:1px solid rgba(17,24,39,.05)">
       <span style="font-size:13px;font-weight:600;color:var(--text-2)" data-i18n="step2.region">🌍 达人地区（Shop）</span>
       <select id="shopRegion">
-        <option value="US" selected>🇺🇸 US 美国</option>
-        <option value="UK">🇬🇧 UK 英国</option>
-        <option value="SG">🇸🇬 SG 新加坡</option>
-        <option value="MY">🇲🇾 MY 马来西亚</option>
-        <option value="TH">🇹🇭 TH 泰国</option>
-        <option value="VN">🇻🇳 VN 越南</option>
-        <option value="PH">🇵🇭 PH 菲律宾</option>
-        <option value="ID">🇮🇩 ID 印尼</option>
-        <option value="MX">🇲🇽 MX 墨西哥</option>
-        <option value="BR">🇧🇷 BR 巴西</option>
+        <option value="US" selected data-i18n="region.us">🇺🇸 US 美国</option>
+        <option value="UK" data-i18n="region.uk">🇬🇧 UK 英国</option>
+        <option value="SG" data-i18n="region.sg">🇸🇬 SG 新加坡</option>
+        <option value="MY" data-i18n="region.my">🇲🇾 MY 马来西亚</option>
+        <option value="TH" data-i18n="region.th">🇹🇭 TH 泰国</option>
+        <option value="VN" data-i18n="region.vn">🇻🇳 VN 越南</option>
+        <option value="PH" data-i18n="region.ph">🇵🇭 PH 菲律宾</option>
+        <option value="ID" data-i18n="region.id">🇮🇩 ID 印尼</option>
+        <option value="MX" data-i18n="region.mx">🇲🇽 MX 墨西哥</option>
+        <option value="BR" data-i18n="region.br">🇧🇷 BR 巴西</option>
       </select>
       <input type="text" id="shopRegionCustom" data-i18n-placeholder="step2.regionCustom" placeholder="或输入其他站点代码，如 ES / IT / DE" style="max-width:260px;padding:7px 12px;border:1px solid var(--border);border-radius:10px;font-size:13px">
     </div>
@@ -889,6 +889,16 @@ const I18N = {
   'step2.headless': { zh: 'Headless', en: 'Headless' },
   'step2.desc': { zh: '自动：优先连接常驻调试 Chrome(9222)，没有则开屏幕外真实窗口。Headless 模式兼容性有限，建议使用自动或真实窗口。', en: 'Auto: connects to debug Chrome(9222) first, otherwise opens an off-screen real window. Headless has limited compatibility; auto or real window is recommended.' },
   'step2.region': { zh: '🌍 达人地区（Shop）', en: '🌍 Creator Region (Shop)' },
+  'region.us': { zh: '🇺🇸 US 美国', en: '🇺🇸 US' },
+  'region.uk': { zh: '🇬🇧 UK 英国', en: '🇬🇧 UK' },
+  'region.sg': { zh: '🇸🇬 SG 新加坡', en: '🇸🇬 SG' },
+  'region.my': { zh: '🇲🇾 MY 马来西亚', en: '🇲🇾 MY' },
+  'region.th': { zh: '🇹🇭 TH 泰国', en: '🇹🇭 TH' },
+  'region.vn': { zh: '🇻🇳 VN 越南', en: '🇻🇳 VN' },
+  'region.ph': { zh: '🇵🇭 PH 菲律宾', en: '🇵🇭 PH' },
+  'region.id': { zh: '🇮🇩 ID 印尼', en: '🇮🇩 ID' },
+  'region.mx': { zh: '🇲🇽 MX 墨西哥', en: '🇲🇽 MX' },
+  'region.br': { zh: '🇧🇷 BR 巴西', en: '🇧🇷 BR' },
   'step2.regionCustom': { zh: '或输入其他站点代码，如 ES / IT / DE', en: 'or type another region code, e.g. ES / IT / DE' },
   'step2.regionHint': { zh: '💡 选择达人所在的 TikTok Shop 站点。需使用对应站点店铺账号的 Cookie 登录，才能抓取该地区达人。', en: '💡 Select the TikTok Shop region of the creators. You need cookies from a store account in that region to scrape its creators.' },
   'step3.title': { zh: '选择抓取对象', en: 'Choose Scrape Target' },
