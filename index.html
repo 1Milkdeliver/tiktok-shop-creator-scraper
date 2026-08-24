@@ -41,7 +41,6 @@
   .logo h1 { font-size: 21px; font-weight: 800; letter-spacing: -.025em; background: linear-gradient(120deg, #111827 30%, #0071e3 90%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
   .logo p { font-size: 12px; color: var(--sub); margin-top: 3px; font-weight: 400; }
   .status-pill { padding: 7px 16px; border-radius: 99px; font-size: 13px; font-weight: 600; background: var(--card); border: 1px solid var(--border); color: var(--sub); backdrop-filter: blur(12px); min-width: 110px; max-width: 260px; overflow: hidden; text-overflow: ellipsis; text-align: center; white-space: nowrap; transition: .2s; }
-  header .status-pill { flex: 0 1 auto; min-width: 0; }
   .status-pill.running { color: var(--accent); border-color: rgba(0,113,227,.35); background: rgba(0,113,227,.06); }
   .status-pill.done { color: var(--ok); border-color: rgba(22,163,74,.35); background: rgba(22,163,74,.06); }
   .status-pill.error { color: var(--danger); border-color: rgba(207,34,46,.35); background: rgba(207,34,46,.06); }
@@ -171,7 +170,10 @@
   /* Workspace redesign: keep the existing DOM/API contract while presenting it
      as a task-oriented desktop console. */
   body { background: #f5f6f8; background-image: none; }
-  .app-shell { min-height: 100vh; display: grid; grid-template-columns: 232px minmax(0, 1fr); }
+  /* The app refuses to shrink below this width: the single-row header and the
+     two-column console stay intact. A horizontal scrollbar appears instead of
+     wrapping/clipping if the OS ignores the window minWidth. */
+  .app-shell { min-height: 100vh; min-width: 1180px; display: grid; grid-template-columns: 232px minmax(0, 1fr); }
   .app-sidebar { position: sticky; top: 0; height: 100vh; padding: 22px 16px; background: #0f1219; color: #fff; display: flex; flex-direction: column; z-index: 20; }
   .sidebar-brand { display: flex; gap: 11px; align-items: center; padding: 2px 8px 24px; }
   .sidebar-brand img { width: 38px; height: 38px; border-radius: 11px; }
@@ -234,10 +236,18 @@
   .creator-table-tools { display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;background:#f6f8fa;border-bottom:1px solid var(--border); }
   .creator-table-tools-left,.creator-table-tools-right { display:flex;align-items:center;gap:8px;flex-wrap:wrap; }
   .creator-result-label { color:var(--sub);font-size:12.5px; }
-  .creator-columns { position:relative; }
-  .creator-column-menu { display:none;position:absolute;right:0;top:calc(100% + 6px);z-index:20;width:300px;max-height:390px;overflow:auto;padding:10px;background:#fff;border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow-lg); }
-  .creator-column-menu.open { display:block; }
-  .creator-column-menu-head { display:flex;align-items:center;justify-content:space-between;padding:2px 4px 8px;font-size:12px;font-weight:600; }
+  /* field manager: dedicated right-side drawer */
+  .creator-drawer-overlay { position:fixed;inset:0;background:rgba(17,24,39,.4);z-index:40; }
+  .creator-column-drawer { position:fixed;top:0;right:0;bottom:0;width:340px;max-width:88vw;background:#fff;border-left:1px solid var(--border);box-shadow:-8px 0 32px rgba(17,24,39,.18);z-index:41;display:flex;flex-direction:column;transform:translateX(105%);transition:transform .22s ease; }
+  .creator-column-drawer.open { transform:translateX(0); }
+  .creator-column-drawer-head { display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);font-size:14px;font-weight:650; }
+  .creator-drawer-close { border:none;background:none;font-size:16px;color:var(--sub);cursor:pointer;padding:4px 8px;border-radius:6px; }
+  .creator-drawer-close:hover { background:#f6f8fa;color:var(--danger); }
+  .creator-column-drawer-actions { display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid #eef0f3; }
+  .creator-column-drawer-count { color:var(--sub);font-size:12px; }
+  .creator-column-groups { flex:1;overflow-y:auto;padding:8px 12px 20px; }
+  .creator-column-group { margin-bottom:6px; }
+  .creator-column-group-head { font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.05em;padding:10px 6px 4px; }
   .creator-column-grid { display:grid;grid-template-columns:1fr 1fr;gap:2px; }
   .creator-column-grid label { display:flex;align-items:center;gap:7px;min-height:30px;padding:4px 6px;border-radius:4px;font-size:12px;cursor:pointer; }
   .creator-column-grid label:hover { background:#f6f8fa; }
@@ -408,13 +418,17 @@
   .metric strong,.creator-table td:nth-child(3),.creator-table td:nth-child(4),#appVersion { font-variant-numeric:tabular-nums; }
 
   /* Locale-stable layout: translated labels change, control positions do not. */
-  header { display:grid; grid-template-columns:minmax(190px,1fr) 96px 280px 140px 124px 74px; gap:8px; }
+  /* Single-row header: the window has a min-width (see body min-width below) so
+     every control always fits on one line — no wrapping, no edge clipping. */
+  header { display:flex; flex-wrap:nowrap; align-items:center; gap:8px 10px; }
   header > * { margin-left:0 !important; min-width:0; }
-  .header-btn { display:inline-flex;align-items:center;justify-content:center;text-align:center; }
-  #appVersion,#status { width:100%; }
-  #btnUpdate { width:140px; }
-  #btnGithub { width:124px; }
-  #uiLangToggle { width:74px; }
+  header .logo { flex:0 1 auto; min-width:150px; }
+  .header-btn { display:inline-flex;align-items:center;justify-content:center;text-align:center; white-space:nowrap; }
+  #appVersion { flex:0 0 auto; width:auto; min-width:74px; max-width:120px; padding:7px 12px; }
+  #status { flex:1 1 auto; min-width:110px; max-width:280px; }
+  #btnUpdate { flex:0 0 auto; width:auto; min-width:100px; padding:7px 14px; }
+  #btnGithub { flex:0 0 auto; width:auto; min-width:88px; padding:7px 14px; }
+  #uiLangToggle { flex:0 0 auto; width:auto; min-width:66px; padding:7px 12px; }
   #btnStart { width:148px; }
   #btnTest { width:132px; }
   #btnStop { width:156px; }
@@ -422,9 +436,6 @@
   .toolbar { column-gap:10px; }
   .sidebar-nav a span { white-space:nowrap; }
   html[lang="en"] .sidebar-nav a,html[lang="zh-CN"] .sidebar-nav a { min-height:50px; }
-  @media (max-width: 900px) {
-    header { grid-template-columns:minmax(140px,1fr) 96px 280px 140px 124px 74px; gap:6px; }
-  }
 
   /* Research-backed type scale and data-tool density. */
   body { font-size:14px; line-height:1.5; font-weight:400; font-synthesis:none; }
@@ -557,9 +568,22 @@
         <div class="creator-table-tools-right">
           <button class="btn btn-secondary" id="creatorReset" data-i18n="creators.reset">重置筛选</button>
           <button class="btn btn-secondary" id="creatorDensity" data-i18n="creators.compact">紧凑显示</button>
-          <div class="creator-columns"><button class="btn btn-secondary" id="creatorColumns" aria-expanded="false" data-i18n="creators.columns">管理字段</button><div class="creator-column-menu" id="creatorColumnMenu"><div class="creator-column-menu-head"><span data-i18n="creators.columnsTitle">显示字段</span><button class="btn-link" id="creatorColumnsAll" data-i18n="creators.allColumns">全部显示</button></div><div class="creator-column-grid" id="creatorColumnGrid"></div></div></div>
+          <button class="btn btn-secondary" id="creatorColumns" aria-expanded="false" data-i18n="creators.columns">管理字段</button>
         </div>
       </div>
+      <!-- field manager: dedicated right-side drawer (TikTok-backend style) -->
+      <div class="creator-drawer-overlay" id="creatorColumnOverlay" hidden></div>
+      <aside class="creator-column-drawer" id="creatorColumnDrawer" aria-hidden="true" role="dialog" aria-label="Manage columns">
+        <div class="creator-column-drawer-head">
+          <strong data-i18n="creators.columnsTitle">显示字段</strong>
+          <button type="button" class="creator-drawer-close" id="creatorColumnsClose" aria-label="Close">✕</button>
+        </div>
+        <div class="creator-column-drawer-actions">
+          <button type="button" class="btn-link" id="creatorColumnsAll" data-i18n="creators.allColumns">全部显示</button>
+          <span class="creator-column-drawer-count" id="creatorColumnCount"></span>
+        </div>
+        <div class="creator-column-groups" id="creatorColumnGroups"></div>
+      </aside>
       <div class="creator-table-wrap"><table class="creator-table"><thead><tr id="creatorHeadRow"></tr></thead><tbody id="creatorRows"></tbody></table></div>
       <div class="creator-pagination"><span id="creatorCount">0 位达人</span><div class="creator-pagination-controls"><label><span data-i18n="creators.perPage">每页</span> <select id="creatorPageSize"><option>25</option><option selected>50</option><option>100</option></select></label><span id="creatorPageInfo">1 / 1</span><button class="btn btn-secondary" id="creatorPrev" disabled aria-label="Previous">‹</button><button class="btn btn-secondary" id="creatorNext" disabled aria-label="Next">›</button></div></div>
     </div>
@@ -1016,6 +1040,7 @@ function applyI18n() {
   renderCats();
   if (typeof renderFields === 'function') renderFields();
   if (typeof renderFilterBar === 'function') renderFilterBar(); // re-label the filter bar
+  if (typeof renderCreatorColumns === 'function' && document.getElementById('creatorColumnDrawer')?.classList.contains('open')) renderCreatorColumns();
 }
 function toggleUiLang() {
   uiLang = uiLang === 'zh' ? 'en' : 'zh';
@@ -1993,17 +2018,48 @@ function renderCreatorHead() {
   });
 }
 
+// Column groups for the field-manager drawer (display-oriented grouping)
+const COLUMN_GROUPS = [
+  { key: 'basic', zh: '基础信息', en: 'Basic Info', fields: ['handle', 'nickname', 'creator_oecuid', 'selection_region', 'follower_cnt', 'last_publish_time'] },
+  { key: 'sales', zh: '带货数据', en: 'Sales Data', fields: ['category', 'med_gmv_revenue', 'med_gmv_revenue_range', 'video_gmv', 'live_gmv', 'units_sold', 'units_sold_range', 'pps_score'] },
+  { key: 'content', zh: '内容表现', en: 'Content', fields: ['video_avg_view_cnt', 'video_play_cnt_med', 'video_engagement', 'ec_video_engagement', 'ec_video_gpm', 'ec_live_gpm', 'ec_live_avg_uv', 'is_fast_growing'] },
+  { key: 'audience', zh: '粉丝画像', en: 'Audience', fields: ['top_follower_ages', 'top_follower_gender'] },
+  { key: 'contact', zh: '联系方式', en: 'Contact', fields: ['简介', '合作邮箱', 'MCN机构'] },
+  { key: 'extra', zh: '其他', en: 'Other', fields: ['has_collaborated', 'creator_permission_tag', 'is_live_auction', '垂直类目', 'last_refreshed_at'] },
+];
 function renderCreatorColumns() {
-  const grid = document.getElementById('creatorColumnGrid');
-  const columns = [...FIELDS, { k:'last_refreshed_at', n:'最近更新', e:'Last updated' }].filter(f => !LIBRARY_SKIP.has(f.k));
-  grid.innerHTML = '';
-  columns.forEach((field, index) => {
-    const label = document.createElement('label');
-    const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.checked = !hiddenCreatorColumns.has(field.k); checkbox.disabled = field.k === 'handle'; // only handle is always frozen
-    checkbox.onchange = () => { checkbox.checked ? hiddenCreatorColumns.delete(field.k) : hiddenCreatorColumns.add(field.k); renderCreatorHead(); document.querySelectorAll(`[data-field="${field.k}"]`).forEach(cell => cell.hidden = hiddenCreatorColumns.has(field.k)); };
-    const text = document.createElement('span'); text.textContent = uiLang === 'zh' ? field.n : field.e;
-    label.append(checkbox, text); grid.appendChild(label);
-  });
+  const box = document.getElementById('creatorColumnGroups');
+  if (!box) return;
+  const allFields = [...FIELDS, { k: 'last_refreshed_at', n: '最近更新', e: 'Last updated' }].filter(f => !LIBRARY_SKIP.has(f.k));
+  const byKey = new Map(allFields.map(f => [f.k, f]));
+  box.innerHTML = '';
+  let visibleCount = 0;
+  for (const group of COLUMN_GROUPS) {
+    const fields = group.fields.map(k => byKey.get(k)).filter(Boolean);
+    if (!fields.length) continue;
+    const g = document.createElement('div'); g.className = 'creator-column-group';
+    const head = document.createElement('div'); head.className = 'creator-column-group-head';
+    head.textContent = uiLang === 'zh' ? group.zh : group.en;
+    g.appendChild(head);
+    const grid = document.createElement('div'); grid.className = 'creator-column-grid';
+    fields.forEach(field => {
+      const label = document.createElement('label');
+      const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.checked = !hiddenCreatorColumns.has(field.k); checkbox.disabled = field.k === 'handle';
+      if (checkbox.checked) visibleCount++;
+      checkbox.onchange = () => { checkbox.checked ? hiddenCreatorColumns.delete(field.k) : hiddenCreatorColumns.add(field.k); renderCreatorHead(); document.querySelectorAll(`[data-field="${field.k}"]`).forEach(cell => cell.hidden = hiddenCreatorColumns.has(field.k)); updateColumnCount(); };
+      const text = document.createElement('span'); text.textContent = uiLang === 'zh' ? field.n : field.e;
+      label.append(checkbox, text); grid.appendChild(label);
+    });
+    g.appendChild(grid); box.appendChild(g);
+  }
+  updateColumnCount();
+}
+function updateColumnCount() {
+  const el = document.getElementById('creatorColumnCount');
+  if (!el) return;
+  const total = [...FIELDS, { k: 'last_refreshed_at' }].filter(f => !LIBRARY_SKIP.has(f.k)).length;
+  const visible = total - hiddenCreatorColumns.size;
+  el.textContent = uiLang === 'zh' ? `${visible} / ${total} 显示` : `${visible} / ${total} shown`;
 }
 
 // ── TikTok-style filter bar: one dropdown per field ──
@@ -2328,9 +2384,26 @@ document.getElementById('creatorExport').onclick = async () => {
 };
 document.getElementById('creatorReset').onclick = () => { document.getElementById('creatorSearch').value = ''; document.getElementById('creatorHasEmail').checked = false; document.getElementById('creatorActiveOnly').checked = false; resetFieldFilters(); creatorOffset = 0; loadCreators(); };
 document.getElementById('creatorDensity').onclick = event => { const compact = document.querySelector('.creator-table').classList.toggle('compact'); event.currentTarget.textContent = I18N[compact ? 'creators.comfortable' : 'creators.compact'][uiLang]; };
-document.getElementById('creatorColumns').onclick = event => { const menu = document.getElementById('creatorColumnMenu'); const open = menu.classList.toggle('open'); event.currentTarget.setAttribute('aria-expanded', String(open)); renderCreatorColumns(); };
+// ── field manager drawer (open/close) ──
+function setColumnDrawer(open) {
+  const drawer = document.getElementById('creatorColumnDrawer');
+  const overlay = document.getElementById('creatorColumnOverlay');
+  const btn = document.getElementById('creatorColumns');
+  if (!drawer || !overlay) return;
+  drawer.classList.toggle('open', !!open);
+  overlay.hidden = !open;
+  drawer.setAttribute('aria-hidden', String(!open));
+  if (btn) btn.setAttribute('aria-expanded', String(!!open));
+  if (open) renderCreatorColumns();
+}
+document.getElementById('creatorColumns').onclick = () => {
+  const drawer = document.getElementById('creatorColumnDrawer');
+  setColumnDrawer(!drawer.classList.contains('open'));
+};
+document.getElementById('creatorColumnsClose').onclick = () => setColumnDrawer(false);
+document.getElementById('creatorColumnOverlay').onclick = () => setColumnDrawer(false);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') setColumnDrawer(false); });
 document.getElementById('creatorColumnsAll').onclick = () => { hiddenCreatorColumns.clear(); renderCreatorColumns(); renderCreatorHead(); document.querySelectorAll('.creator-table [data-field]').forEach(cell => cell.hidden = false); };
-document.addEventListener('click', event => { if (!event.target.closest('.creator-columns')) { document.getElementById('creatorColumnMenu').classList.remove('open'); document.getElementById('creatorColumns').setAttribute('aria-expanded','false'); } });
 document.getElementById('creatorHasEmail').onchange = () => { creatorOffset = 0; loadCreators(); };
 document.getElementById('creatorActiveOnly').onchange = () => { creatorOffset = 0; loadCreators(); };
 document.getElementById('creatorSearch').oninput = () => {

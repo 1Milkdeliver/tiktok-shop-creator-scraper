@@ -493,8 +493,12 @@ ipcMain.handle('get-version', () => ({ version: require('./package.json').versio
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 980,
+    width: 1200,
     height: 860,
+    // min width keeps the single-row header (version/status/buttons) fully
+    // visible — the app refuses to shrink below it instead of clipping.
+    minWidth: 1180,
+    minHeight: 640,
     title: 'TikTokShop达人抓取工具',
     icon: path.join(__dirname, 'build', 'icon.ico'),
     autoHideMenuBar: true,
