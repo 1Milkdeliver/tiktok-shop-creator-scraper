@@ -160,7 +160,7 @@ function recordHistory(entry) {
     details: entry.details || 0,
     type: entry.type || 'scrape', // 'scrape' = run export, 'export' = manual filtered export
     time: new Date().toLocaleString(),
-    config: entry.config ? {
+    config: entry.type === 'export' ? (entry.config || null) : entry.config ? {
       keywords: entry.config.keywords || [],
       shopRegion: entry.config.shopRegion || 'US',
       detail: !!entry.config.detail,
@@ -248,11 +248,73 @@ ipcMain.handle('creator-db-export', async (event, payload) => {
     if (String(format).toLowerCase() === 'xlsx') await exportXlsx(outPath, out, Object.keys(out[0] || {}));
     else await exportCsv(outPath, out, Object.keys(out[0] || {}));
     // record manual filtered exports in history (type = 'export') so the user
-    // can see/delete them separately from scrape-run exports
+    // can see/delete/update them separately from scrape-run exports. The
+    // filters are stored so "update" can re-export with fresh library data.
     try {
-      recordHistory({ outPath, rows: out.length, creators: out.length, details: 0, type: 'export' });
+      recordHistory({
+        outPath, rows: out.length, creators: out.length, details: 0, type: 'export',
+        config: {
+          exportFilters: filters || {}, exportFormat: String(format).toLowerCase(),
+          exportFields: Array.isArray(fields) ? fields : null, exportHeaderLang: String(headerLang || 'zh'),
+        },
+      });
     } catch (e) { }
     return { ok: true, outPath, rows: out.length };
+  } catch (e) { return { ok: false, error: e.message }; }
+});
+
+// Re-export a manual export file with the freshest library data, overwriting it.
+// The history entry's stored filters determine the scope.
+ipcMain.handle('update-export-file', async (event, filePath) => {
+  try {
+    const entry = (appData.history || []).find(h => path.resolve(h.outPath || '') === path.resolve(String(filePath || '')));
+    if (!entry || entry.type !== 'export') return { ok: false, error: '未找到对应的导出记录' };
+    const cfg = entry.config || {};
+    const filters = cfg.exportFilters || {};
+    const format = cfg.exportFormat || 'csv';
+    const fields = cfg.exportFields || null;
+    const headerLang = cfg.exportHeaderLang || 'zh';
+    // reuse the export handler logic against the same output path
+    const { exportCsv, exportXlsx, ensureDir } = require('./lib/exporter');
+    const FIELD_LABELS = {
+      handle: { zh: '达人主页', en: 'Creator Page' }, nickname: { zh: '昵称', en: 'Nickname' }, creator_oecuid: { zh: '达人ID', en: 'Creator ID' },
+      avatar: { zh: '头像', en: 'Avatar' }, selection_region: { zh: '地区', en: 'Region' }, follower_cnt: { zh: '粉丝数', en: 'Followers' },
+      category: { zh: '类目', en: 'Category' }, med_gmv_revenue: { zh: '总GMV', en: 'Total GMV' }, med_gmv_revenue_range: { zh: 'GMV区间', en: 'GMV Range' },
+      video_gmv: { zh: '视频GMV', en: 'Video GMV' }, live_gmv: { zh: '直播GMV', en: 'Live GMV' }, units_sold: { zh: '销量', en: 'Units Sold' },
+      units_sold_range: { zh: '销量区间', en: 'Units Sold Range' }, video_avg_view_cnt: { zh: '平均视频观看', en: 'Avg Video Views' },
+      video_play_cnt_med: { zh: '视频中位观看', en: 'Median Video Views' }, video_engagement: { zh: '视频互动量', en: 'Video Engagement' },
+      ec_video_engagement: { zh: '电商视频互动', en: 'E-comm Video Engagement' }, ec_video_gpm: { zh: '电商GPM', en: 'E-comm GPM' },
+      ec_live_gpm: { zh: '直播GPM', en: 'Live GPM' }, ec_live_avg_uv: { zh: '电商平均UV', en: 'E-comm Avg UV' },
+      top_follower_ages: { zh: '粉丝年龄段', en: 'Audience Ages' }, top_follower_gender: { zh: '粉丝性别分布', en: 'Audience Gender' },
+      pps_score: { zh: 'PPS评分', en: 'PPS Score' }, is_fast_growing: { zh: '快速增长', en: 'Fast Growing' }, has_collaborated: { zh: '已合作', en: 'Collaborated' },
+      creator_permission_tag: { zh: '达人类目权限', en: 'Category Permission' }, is_live_auction: { zh: '直播拍卖', en: 'Live Auction' },
+      '简介': { zh: '简介', en: 'Bio' }, '合作邮箱': { zh: '合作邮箱', en: 'Contact Email' }, 'MCN机构': { zh: 'MCN机构', en: 'MCN Agency' },
+      last_publish_time: { zh: '最后发布时间', en: 'Last Published' }, activity_status: { zh: '活跃状态', en: 'Activity Status' }, activity_reason: { zh: '判断原因', en: 'Activity Reason' },
+      last_refreshed_at: { zh: '最近更新', en: 'Last Updated' },
+    };
+    const label = k => (FIELD_LABELS[k] && FIELD_LABELS[k][headerLang]) || k;
+    const rows = [];
+    let offset = 0;
+    const pageSize = 500;
+    for (;;) {
+      const page = await creatorDb.listCreators({ ...filters, limit: pageSize, offset, sortBy: filters.sortBy || 'last_refreshed_at', sortDirection: filters.sortDirection || 'desc' });
+      rows.push(...(page.rows || []));
+      if (!page.rows || page.rows.length < pageSize) break;
+      if (offset > 20000) break;
+      offset += pageSize;
+    }
+    const known = Object.keys(FIELD_LABELS);
+    const pick = (Array.isArray(fields) && fields.length) ? fields : known.filter(k => rows.some(r => r[k] !== undefined && r[k] !== null && r[k] !== ''));
+    const out = rows.map(r => { const o = {}; for (const k of pick) o[label(k)] = r[k] ?? ''; return o; });
+    if (!out.length) return { ok: false, error: '筛选条件下没有数据可更新', rows: 0 };
+    ensureDir(entry.outPath);
+    if (format === 'xlsx') await exportXlsx(entry.outPath, out, Object.keys(out[0] || {}));
+    else await exportCsv(entry.outPath, out, Object.keys(out[0] || {}));
+    // refresh the history entry's row count + timestamp
+    entry.rows = out.length;
+    entry.time = new Date().toLocaleString();
+    saveAppData();
+    return { ok: true, outPath: entry.outPath, rows: out.length, history: appData.history || [] };
   } catch (e) { return { ok: false, error: e.message }; }
 });
 

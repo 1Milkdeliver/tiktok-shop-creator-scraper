@@ -680,7 +680,7 @@ https://www.tiktok.com/@makeup.lover'></textarea>
     <div class="toolbar">
       <button class="btn btn-primary" id="btnStart" style="padding:11px 34px;font-size:15px" data-i18n="action.start">开始抓取</button>
       <button class="btn btn-secondary" id="btnTest" data-i18n="action.test">测试连接</button>
-      <button class="btn btn-danger" id="btnStop" disabled data-i18n="action.stop">结束并导出</button>
+      <button class="btn btn-danger" id="btnStop" disabled data-i18n="action.stop">结束</button>
       <button class="btn btn-secondary" id="btnExit" data-i18n="action.exit">退出</button>
     </div>
     <div class="hint" id="statusDetail" role="status" aria-live="polite" style="margin-top:10px;font-size:13px;color:var(--accent)"></div>
@@ -907,7 +907,7 @@ const I18N = {
   'action.pause': { zh: '暂停', en: 'Pause' },
   'action.resume': { zh: '继续', en: 'Resume' },
   'action.cancel': { zh: '取消', en: 'Cancel' },
-  'action.stop': { zh: '结束并导出', en: 'Finish and export' },
+  'action.stop': { zh: '结束', en: 'Stop' },
   'action.exit': { zh: '退出', en: 'Exit' },
   'action.update': { zh: '检查更新', en: 'Check for updates' },
   'action.github': { zh: 'GitHub 项目', en: 'GitHub project' },
@@ -1585,7 +1585,7 @@ document.getElementById('btnStart').onclick = async () => {
   const updateFields = [...new Set(selectedUpdateGroups.flatMap(group => UPDATE_FIELD_GROUPS[group] || []))];
   const detailKeys = new Set(FIELDS.filter(field => field.detail).map(field => field.k));
   const detail = scrapeMode === 'full' && updateFields.some(field => detailKeys.has(field));
-  const cfg = { pastedCookies: cookieList.map(c => c.data), mode, format, headerLang, outPath, detail, dedupe, creatorInput: source === 'list' && creatorInput.length ? creatorInput : null, keywords: kws, fields, updateFields, shopRegion };
+  const cfg = { pastedCookies: cookieList.map(c => c.data), mode, format, headerLang, outPath, detail, dedupe, creatorInput: source === 'list' && creatorInput.length ? creatorInput : null, keywords: kws, fields, updateFields, shopRegion, autoExport: false };
   syncMainButton('pause', { disabled: true });
   document.getElementById('btnStop').disabled = false;
   document.getElementById('resultBox').style.display = 'none';
@@ -1672,7 +1672,7 @@ async function renderHistory(history) {
       <span class="hist-actions" style="display:flex;gap:4px;flex-shrink:0">
         <button class="hist-btn" data-act="open" title="${uiLang === 'zh' ? '打开文件' : 'Open file'}">📂 ${uiLang === 'zh' ? '打开' : 'Open'}</button>
         <button class="hist-btn" data-act="folder" title="${uiLang === 'zh' ? '打开所在文件夹' : 'Open folder'}">📁 ${uiLang === 'zh' ? '文件夹' : 'Folder'}</button>
-        ${isExport ? '' : `<button class="hist-btn" data-act="continue" title="${uiLang === 'zh' ? '继续抓取：仅新增未抓过的达人' : 'Continue: only add new creators'}">🔼 ${uiLang === 'zh' ? '继续' : 'Continue'}</button>
+        ${isExport ? `<button class="hist-btn" data-act="update" title="${uiLang === 'zh' ? '用最新达人库数据更新此导出文件' : 'Update this export with the latest library data'}">🔄 ${uiLang === 'zh' ? '更新' : 'Update'}</button>` : `<button class="hist-btn" data-act="continue" title="${uiLang === 'zh' ? '继续抓取：仅新增未抓过的达人' : 'Continue: only add new creators'}">🔼 ${uiLang === 'zh' ? '继续' : 'Continue'}</button>
         <button class="hist-btn" data-act="refresh" title="${uiLang === 'zh' ? '刷新：重新抓取全部达人并覆盖' : 'Refresh: re-scrape all and overwrite'}">🔄 ${uiLang === 'zh' ? '重抓' : 'Refresh'}</button>`}
         <button class="hist-btn hist-del" data-act="del" title="${uiLang === 'zh' ? '删除文件' : 'Delete file'}">🗑 ${uiLang === 'zh' ? '删除' : 'Delete'}</button>
       </span>
@@ -1702,6 +1702,15 @@ async function renderHistory(history) {
         const r = await window.api.deleteHistoryFile(entry.outPath);
         if (!r.ok) { alert(r.error || I18N['hist.delFail'][uiLang]); return; }
         renderHistory(r.history || []);
+      } else if (act === 'update') {
+        // re-export this file with the freshest library data (overwrites it)
+        if (!confirm(uiLang === 'zh'
+          ? `用最新达人库数据更新这个导出文件吗？\n\n${entry.outPath}\n\n⚠️ 将覆盖原文件内容。`
+          : `Update this export with the latest library data?\n\n${entry.outPath}\n\n⚠️ The file will be overwritten.`)) return;
+        const r = await window.api.updateExportFile(entry.outPath);
+        if (!r.ok) { alert(r.error || (uiLang === 'zh' ? '更新失败' : 'Update failed')); return; }
+        alert(uiLang === 'zh' ? `✅ 已更新 ${r.rows} 行 → ${r.outPath}` : `✅ Updated ${r.rows} rows → ${r.outPath}`);
+        if (r.history) renderHistory(r.history);
       } else if (act === 'continue' || act === 'refresh') {
         const isCont = act === 'continue';
         const msg = uiLang === 'zh'
