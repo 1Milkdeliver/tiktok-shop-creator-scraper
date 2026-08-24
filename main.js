@@ -224,7 +224,7 @@ ipcMain.handle('creator-db-export', async (event, payload) => {
       top_follower_ages: { zh: '粉丝年龄段', en: 'Audience Ages' }, top_follower_gender: { zh: '粉丝性别分布', en: 'Audience Gender' },
       pps_score: { zh: 'PPS评分', en: 'PPS Score' }, is_fast_growing: { zh: '快速增长', en: 'Fast Growing' }, has_collaborated: { zh: '已合作', en: 'Collaborated' },
       creator_permission_tag: { zh: '达人类目权限', en: 'Category Permission' }, is_live_auction: { zh: '直播拍卖', en: 'Live Auction' },
-      '简介': { zh: '简介', en: 'Bio' }, '合作邮箱': { zh: '合作邮箱', en: 'Contact Email' }, 'MCN机构': { zh: 'MCN机构', en: 'MCN Agency' },
+      '简介': { zh: '简介', en: 'Bio' }, '合作邮箱': { zh: '合作邮箱', en: 'Contact Email' }, 'MCN机构': { zh: 'MCN机构', en: 'MCN Agency' }, '垂直类目': { zh: '垂直类目', en: 'Vertical Category' },
       last_publish_time: { zh: '最后发布时间', en: 'Last Published' }, activity_status: { zh: '活跃状态', en: 'Activity Status' }, activity_reason: { zh: '判断原因', en: 'Activity Reason' },
       last_refreshed_at: { zh: '最近更新', en: 'Last Updated' },
     };
@@ -289,7 +289,7 @@ ipcMain.handle('update-export-file', async (event, filePath) => {
       top_follower_ages: { zh: '粉丝年龄段', en: 'Audience Ages' }, top_follower_gender: { zh: '粉丝性别分布', en: 'Audience Gender' },
       pps_score: { zh: 'PPS评分', en: 'PPS Score' }, is_fast_growing: { zh: '快速增长', en: 'Fast Growing' }, has_collaborated: { zh: '已合作', en: 'Collaborated' },
       creator_permission_tag: { zh: '达人类目权限', en: 'Category Permission' }, is_live_auction: { zh: '直播拍卖', en: 'Live Auction' },
-      '简介': { zh: '简介', en: 'Bio' }, '合作邮箱': { zh: '合作邮箱', en: 'Contact Email' }, 'MCN机构': { zh: 'MCN机构', en: 'MCN Agency' },
+      '简介': { zh: '简介', en: 'Bio' }, '合作邮箱': { zh: '合作邮箱', en: 'Contact Email' }, 'MCN机构': { zh: 'MCN机构', en: 'MCN Agency' }, '垂直类目': { zh: '垂直类目', en: 'Vertical Category' },
       last_publish_time: { zh: '最后发布时间', en: 'Last Published' }, activity_status: { zh: '活跃状态', en: 'Activity Status' }, activity_reason: { zh: '判断原因', en: 'Activity Reason' },
       last_refreshed_at: { zh: '最近更新', en: 'Last Updated' },
     };

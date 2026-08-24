@@ -1220,7 +1220,7 @@ const FIELDS = [
   { k: 'top_follower_ages', n: '粉丝年龄段', e: 'Audience Ages' }, { k: 'top_follower_gender', n: '粉丝性别分布', e: 'Audience Gender' },
   { k: 'pps_score', n: 'PPS评分', e: 'PPS Score' }, { k: 'is_fast_growing', n: '快速增长', e: 'Fast Growing' }, { k: 'has_collaborated', n: '已合作', e: 'Collaborated' },
   { k: 'creator_permission_tag', n: '达人类目权限', e: 'Category Permission' }, { k: 'is_live_auction', n: '直播拍卖', e: 'Live Auction' },
-  { k: '简介', n: '简介', e: 'Bio', detail: true }, { k: '合作邮箱', n: '合作邮箱', e: 'Contact Email', detail: true }, { k: 'MCN机构', n: 'MCN机构', e: 'MCN Agency', detail: true },
+  { k: '简介', n: '简介', e: 'Bio', detail: true }, { k: '合作邮箱', n: '合作邮箱', e: 'Contact Email', detail: true }, { k: 'MCN机构', n: 'MCN机构', e: 'MCN Agency', detail: true }, { k: '垂直类目', n: '垂直类目', e: 'Vertical Category', detail: true },
   { k: 'last_publish_time', n: '最后发布时间', e: 'Last Published' }, { k: 'activity_status', n: '活跃状态', e: 'Activity Status' }, { k: 'activity_reason', n: '判断原因', e: 'Activity Reason' },
 ];
 const UPDATE_FIELD_GROUPS = {
@@ -1822,6 +1822,7 @@ const LIBRARY_SKIP = new Set(['avatar']);
 const FILTER_DEFS = [
   { key: 'selection_region', n: '地区', e: 'Region', type: 'enum', fixed: ['US', 'UK', 'SG', 'MY', 'TH', 'VN', 'PH', 'ID', 'MX', 'BR'] },
   { key: 'category', n: '类目', e: 'Category', type: 'enum' },
+  { key: '垂直类目', n: '垂直类目', e: 'Vertical', type: 'enum' },
   { key: 'top_follower_ages', n: '粉丝年龄段', e: 'Ages', type: 'enum', fixed: ['18-24', '25-34', '35-44', '45-54', '55+'] },
   { key: 'top_follower_gender', n: '粉丝性别', e: 'Gender', type: 'enum', fixed: ['Female', 'Male'] },
   { key: 'pps_score', n: 'PPS评分', e: 'PPS Score', type: 'numeric', buckets: [[4.5, null, '4.5+'], [4, 4.5, '4 - 4.5'], [3.5, 4, '3.5 - 4'], [null, 3.5, '< 3.5']] },
