@@ -845,8 +845,11 @@ ipcMain.handle('scrape-status', () => ({
 // IPC: pause
 ipcMain.handle('pause-scrape', () => { runner.pause(); return { ok: true }; });
 
-// IPC: resume
-ipcMain.handle('resume-scrape', () => { runner.resume(); return { ok: true }; });
+// IPC: resume (refresh session pages first so any captcha/error page is cleared)
+ipcMain.handle('resume-scrape', async () => {
+  await runner.resumeWithRefresh();
+  return { ok: true };
+});
 
 // IPC: stop
 ipcMain.handle('stop-scrape', () => { runner.stop(); return { ok: true }; });
