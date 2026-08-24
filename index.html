@@ -217,7 +217,8 @@
   .creator-dashboard-card strong { display:block;margin-top:5px;font-size:20px;line-height:28px;font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
   .creator-dashboard-card small { display:block;margin-top:2px;color:var(--sub);font-size:11.5px;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
   .creator-toolbar { display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border); }
-  .creator-toolbar input,.creator-toolbar select { width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:9px;background:#fff; }
+  .creator-toolbar input[type=text],.creator-toolbar input[type=search],.creator-toolbar input[type=number],.creator-toolbar select { width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:9px;background:#fff; }
+  .creator-toolbar .check-label input[type=checkbox] { width:15px;height:15px;padding:0;flex:0 0 auto; }
   .creator-search-wrap { position:relative;flex:0 0 240px;min-width:180px; }
   .creator-search-wrap::before { content:'⌕';position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:18px;color:var(--sub);pointer-events:none; }
   .creator-search-wrap input { padding-left:34px; }
@@ -530,6 +531,7 @@
         <!-- TikTok-style filter bar: one dropdown per field, laid out horizontally -->
         <div class="creator-filterbar" id="creatorFilterBar"></div>
         <label class="check-label"><input id="creatorHasEmail" type="checkbox"> <span data-i18n="creators.hasEmail">仅有邮箱</span></label>
+        <label class="check-label"><input id="creatorActiveOnly" type="checkbox"> <span data-i18n="creators.activeOnly">活跃达人</span></label>
         <button class="btn btn-secondary" id="creatorRefresh" data-i18n="creators.refresh">刷新</button>
         <button class="btn btn-primary" id="creatorExport" data-i18n="creators.export">⬇ 导出当前筛选</button>
       </div>
@@ -806,6 +808,7 @@ const I18N = {
   'creators.category': { zh: '类目（如 Beauty）', en: 'Category (e.g. Beauty)' },
   'creators.export': { zh: '⬇ 导出当前筛选', en: '⬇ Export filtered' },
   'creators.hasEmail': { zh: '仅有邮箱', en: 'Email only' },
+  'creators.activeOnly': { zh: '活跃达人', en: 'Active only' },
   'creators.refresh': { zh: '刷新', en: 'Refresh' },
   'creators.dataTable': { zh: '达人数据', en: 'Creator data' },
   'creators.reset': { zh: '重置筛选', en: 'Reset filters' },
@@ -2106,6 +2109,7 @@ async function loadCreators() {
   const filters = {
     search: document.getElementById('creatorSearch').value.trim(),
     hasEmail: document.getElementById('creatorHasEmail').checked,
+    activityStatus: document.getElementById('creatorActiveOnly').checked ? 'active' : undefined,
     sortBy: creatorSort.key,
     sortDirection: creatorSort.direction,
     limit: creatorPageSize,
@@ -2167,6 +2171,7 @@ document.getElementById('creatorExport').onclick = async () => {
   const filters = {
     search: document.getElementById('creatorSearch').value.trim(),
     hasEmail: document.getElementById('creatorHasEmail').checked,
+    activityStatus: document.getElementById('creatorActiveOnly').checked ? 'active' : undefined,
     sortBy: creatorSort.key,
     sortDirection: creatorSort.direction,
     ...buildFieldFilters(),
@@ -2188,12 +2193,13 @@ document.getElementById('creatorExport').onclick = async () => {
   if (!r.ok) { alert(r.error || (uiLang === 'zh' ? '导出失败' : 'Export failed')); return; }
   alert(uiLang === 'zh' ? `✅ 已导出 ${r.rows} 行 → ${r.outPath}` : `✅ Exported ${r.rows} rows → ${r.outPath}`);
 };
-document.getElementById('creatorReset').onclick = () => { document.getElementById('creatorSearch').value = ''; document.getElementById('creatorHasEmail').checked = false; resetFieldFilters(); creatorOffset = 0; loadCreators(); };
+document.getElementById('creatorReset').onclick = () => { document.getElementById('creatorSearch').value = ''; document.getElementById('creatorHasEmail').checked = false; document.getElementById('creatorActiveOnly').checked = false; resetFieldFilters(); creatorOffset = 0; loadCreators(); };
 document.getElementById('creatorDensity').onclick = event => { const compact = document.querySelector('.creator-table').classList.toggle('compact'); event.currentTarget.textContent = I18N[compact ? 'creators.comfortable' : 'creators.compact'][uiLang]; };
 document.getElementById('creatorColumns').onclick = event => { const menu = document.getElementById('creatorColumnMenu'); const open = menu.classList.toggle('open'); event.currentTarget.setAttribute('aria-expanded', String(open)); renderCreatorColumns(); };
 document.getElementById('creatorColumnsAll').onclick = () => { hiddenCreatorColumns.clear(); renderCreatorColumns(); renderCreatorHead(); document.querySelectorAll('.creator-table [data-field]').forEach(cell => cell.hidden = false); };
 document.addEventListener('click', event => { if (!event.target.closest('.creator-columns')) { document.getElementById('creatorColumnMenu').classList.remove('open'); document.getElementById('creatorColumns').setAttribute('aria-expanded','false'); } });
 document.getElementById('creatorHasEmail').onchange = () => { creatorOffset = 0; loadCreators(); };
+document.getElementById('creatorActiveOnly').onchange = () => { creatorOffset = 0; loadCreators(); };
 document.getElementById('creatorSearch').oninput = () => {
   clearTimeout(creatorSearchTimer);
   creatorSearchTimer = setTimeout(() => { creatorOffset = 0; loadCreators(); }, 250);
