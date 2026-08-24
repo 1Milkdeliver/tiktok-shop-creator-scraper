@@ -869,6 +869,7 @@ ipcMain.handle('start-scrape', async (event, config) => {
       fields: config.fields && config.fields.length ? config.fields : null,
       updateFields: config.updateFields && config.updateFields.length ? config.updateFields : null,
       libraryUpdate: !!config.libraryUpdate,
+      autoExport: config.autoExport === false ? false : true, // scrape page: library only, no auto CSV
     };
     if (creatorDb) {
       // In "new only" mode, seed the runner's network-level dedupe set from
