@@ -231,16 +231,20 @@
   .creator-column-grid { display:grid;grid-template-columns:1fr 1fr;gap:2px; }
   .creator-column-grid label { display:flex;align-items:center;gap:7px;min-height:30px;padding:4px 6px;border-radius:4px;font-size:12px;cursor:pointer; }
   .creator-column-grid label:hover { background:#f6f8fa; }
-  /* multi-select filter panel */
-  .creator-filter-grid { display:grid;gap:8px; }
-  .creator-filter-field { border:1px solid #eef0f3;border-radius:6px;padding:7px 9px; }
-  .creator-filter-field > label { display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer; }
-  .creator-filter-field > label input[type=checkbox] { width:14px;height:14px; }
-  .creator-filter-options { display:none;margin-top:6px;max-height:150px;overflow:auto;background:#fafbfc;border-radius:5px;padding:4px 6px; }
-  .creator-filter-field.open .creator-filter-options { display:block; }
-  .creator-filter-options label { display:flex;align-items:center;gap:6px;padding:3px 2px;font-size:12px;cursor:pointer; }
-  .creator-filter-options label:hover { background:#f0f3f6; }
-  .creator-filter-count { margin-left:auto;color:var(--sub);font-size:11px;font-weight:400; }
+  /* TikTok-style filter bar: one dropdown per field, horizontal layout */
+  .creator-filterbar { display:flex;flex-wrap:wrap;gap:6px;align-items:center; }
+  .fdrop { position:relative; }
+  .fdrop-btn { display:flex;align-items:center;gap:5px;min-height:30px;padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text-2);font-size:12px;font-weight:500;cursor:pointer;transition:.12s; }
+  .fdrop-btn:hover { border-color:var(--accent);color:var(--accent); }
+  .fdrop-btn.active { background:rgba(0,113,227,.08);border-color:var(--accent);color:var(--accent);font-weight:600; }
+  .fdrop-btn .fcount { background:var(--accent);color:#fff;border-radius:9px;font-size:10px;padding:0 5px;line-height:14px; }
+  .fdrop-menu { display:none;position:absolute;top:calc(100% + 5px);left:0;z-index:30;min-width:170px;max-height:280px;overflow:auto;padding:6px;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow-lg); }
+  .fdrop-menu.open { display:block; }
+  .fdrop-menu-head { display:flex;align-items:center;justify-content:space-between;padding:2px 4px 6px;font-size:11px;font-weight:600;color:var(--sub);border-bottom:1px solid #eef0f3;margin-bottom:4px; }
+  .fdrop-menu-head button { border:none;background:none;color:var(--accent);font-size:11px;cursor:pointer;padding:0; }
+  .fdrop-option { display:flex;align-items:center;gap:7px;padding:5px 6px;border-radius:5px;font-size:12px;cursor:pointer; }
+  .fdrop-option:hover { background:#f6f8fa; }
+  .fdrop-option input { width:14px;height:14px; }
   .creator-table-wrap { overflow:auto;max-height:calc(100vh - 330px);min-height:340px;border:0;border-radius:0; }
   .creator-table { width:100%;border-collapse:collapse;min-width:820px;font-size:12px; }
   .creator-table th { position:sticky;top:0;background:#f7f8fa;color:var(--sub);text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap; }
@@ -506,13 +510,8 @@
     <div class="card creator-workbench">
       <div class="creator-toolbar">
         <div class="creator-search-wrap"><input id="creatorSearch" type="search" data-i18n-placeholder="creators.search" placeholder="搜索昵称、账号、ID 或邮箱"></div>
-        <div class="creator-columns" style="position:relative">
-          <button class="btn btn-secondary" id="creatorFilterBtn" aria-expanded="false" data-i18n="creators.filters">🔽 字段筛选</button>
-          <div class="creator-column-menu creator-filter-menu" id="creatorFilterMenu" style="min-width:320px">
-            <div class="creator-column-menu-head"><span data-i18n="creators.filtersTitle">按字段筛选（多选）</span><button class="btn-link" id="creatorFilterClear" data-i18n="creators.reset">重置</button></div>
-            <div class="creator-filter-grid" id="creatorFilterGrid"></div>
-          </div>
-        </div>
+        <!-- TikTok-style filter bar: one dropdown per field, laid out horizontally -->
+        <div class="creator-filterbar" id="creatorFilterBar"></div>
         <label class="check-label"><input id="creatorHasEmail" type="checkbox"> <span data-i18n="creators.hasEmail">仅有邮箱</span></label>
         <button class="btn btn-secondary" id="creatorRefresh" data-i18n="creators.refresh">刷新</button>
         <button class="btn btn-primary" id="creatorExport" data-i18n="creators.export">⬇ 导出当前筛选</button>
@@ -968,6 +967,7 @@ function applyI18n() {
   catLang = uiLang;
   renderCats();
   if (typeof renderFields === 'function') renderFields();
+  if (typeof renderFilterBar === 'function') renderFilterBar(); // re-label the filter bar
 }
 function toggleUiLang() {
   uiLang = uiLang === 'zh' ? 'en' : 'zh';
@@ -1885,10 +1885,11 @@ function renderCreatorColumns() {
   });
 }
 
-// ── multi-select filter panel ──
-async function renderFilterPanel() {
-  const grid = document.getElementById('creatorFilterGrid');
-  grid.innerHTML = '';
+// ── TikTok-style filter bar: one dropdown per field ──
+let openFilterDrop = null; // the currently open dropdown (its .fdrop element)
+async function renderFilterBar() {
+  const bar = document.getElementById('creatorFilterBar');
+  bar.innerHTML = '';
   for (const def of FILTER_DEFS) {
     const st = filterState.get(def.key);
     const name = uiLang === 'zh' ? def.n : def.e;
@@ -1900,57 +1901,60 @@ async function renderFilterPanel() {
       }
       options = filterOptionsCache[def.key];
     }
-    const field = document.createElement('div');
-    field.className = 'creator-filter-field' + (st.active ? ' open' : '');
-    const head = document.createElement('label');
-    const toggle = document.createElement('input'); toggle.type = 'checkbox'; toggle.checked = !!st.active;
-    toggle.onchange = () => { st.active = toggle.checked; field.classList.toggle('open', toggle.checked); collectFilterCounts(); };
-    const title = document.createElement('span'); title.textContent = name;
-    const count = document.createElement('span'); count.className = 'creator-filter-count'; count.dataset.for = def.key; count.textContent = '';
-    head.append(toggle, title, count);
-    const opts = document.createElement('div'); opts.className = 'creator-filter-options';
+    const wrap = document.createElement('div'); wrap.className = 'fdrop';
+    const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'fdrop-btn'; btn.textContent = name;
+    const cnt = document.createElement('span'); cnt.className = 'fcount'; cnt.style.display = 'none'; btn.appendChild(cnt);
+    const menu = document.createElement('div'); menu.className = 'fdrop-menu';
+    const head = document.createElement('div'); head.className = 'fdrop-menu-head';
+    head.innerHTML = `<span>${name}</span>`;
+    const clearBtn = document.createElement('button'); clearBtn.type = 'button'; clearBtn.textContent = uiLang === 'zh' ? '清除' : 'Clear';
+    head.appendChild(clearBtn); menu.appendChild(head);
     const renderOptions = () => {
-      opts.innerHTML = '';
+      // remove old options (keep head)
+      menu.querySelectorAll('.fdrop-option').forEach(el => el.remove());
       const selected = def.type === 'enum' ? st.enum : st.numeric;
       const items = def.type === 'enum' ? options : def.buckets.map(b => ({ label: b[2], min: b[0], max: b[1] }));
       (items || []).forEach(item => {
         const val = def.type === 'enum' ? String(item) : item.label;
-        const label = document.createElement('label');
+        const label = document.createElement('label'); label.className = 'fdrop-option';
         const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = selected.has(val);
-        cb.onchange = () => { cb.checked ? selected.add(val) : selected.delete(val); collectFilterCounts(); };
+        cb.onchange = () => { cb.checked ? selected.add(val) : selected.delete(val); updateFilterBtn(btn, cnt, def, st); };
         const span = document.createElement('span'); span.textContent = val;
-        label.append(cb, span); opts.appendChild(label);
+        label.append(cb, span); menu.appendChild(label);
       });
       if (def.type === 'enum' && !def.fixed && !options.length) {
-        opts.innerHTML = `<div style="color:var(--sub);font-size:11px;padding:4px">${uiLang === 'zh' ? '（暂无数据）' : '(no data yet)'}</div>`;
+        const empty = document.createElement('div');
+        empty.style.cssText = 'color:var(--sub);font-size:11px;padding:6px';
+        empty.textContent = uiLang === 'zh' ? '（暂无数据）' : '(no data yet)';
+        menu.appendChild(empty);
       }
     };
     renderOptions();
-    field.append(head, opts);
-    grid.appendChild(field);
+    clearBtn.onclick = () => { def.type === 'enum' ? st.enum.clear() : st.numeric.clear(); renderOptions(); updateFilterBtn(btn, cnt, def, st); loadCreators(); };
+    btn.onclick = (e) => { e.stopPropagation(); closeFilterDrops(); menu.classList.toggle('open'); btn.classList.toggle('active', menu.classList.contains('open')); openFilterDrop = menu.classList.contains('open') ? wrap : null; };
+    wrap.append(btn, menu); bar.appendChild(wrap);
+    updateFilterBtn(btn, cnt, def, st);
   }
-  collectFilterCounts();
 }
-function collectFilterCounts() {
-  for (const def of FILTER_DEFS) {
-    const st = filterState.get(def.key);
-    const el = document.querySelector(`.creator-filter-count[data-for="${def.key}"]`);
-    if (!el) continue;
-    const n = (def.type === 'enum' ? st.enum.size : st.numeric.size);
-    el.textContent = n ? `${n} 选` : '';
-    // badge on the filter button
-  }
-  const total = [...filterState.values()].filter(s => s.active && (s.enum.size || s.numeric.size)).length;
-  const btn = document.getElementById('creatorFilterBtn');
-  if (btn) btn.textContent = total ? `🔽 字段筛选（${total}）` : (uiLang === 'zh' ? '🔽 字段筛选' : '🔽 Filter by field');
+function updateFilterBtn(btn, cnt, def, st) {
+  const n = def.type === 'enum' ? st.enum.size : st.numeric.size;
+  cnt.style.display = n ? '' : 'none';
+  cnt.textContent = n;
+  btn.classList.toggle('active', n > 0);
+  if (n > 0 && btn.lastChild !== cnt && cnt.textContent) { /* ensure count is last */ }
 }
+function closeFilterDrops() {
+  document.querySelectorAll('.fdrop-menu.open').forEach(m => m.classList.remove('open'));
+  document.querySelectorAll('.fdrop-btn.active').forEach(b => b.classList.remove('active'));
+  openFilterDrop = null;
+}
+document.addEventListener('click', (e) => { if (!e.target.closest('.fdrop')) closeFilterDrops(); });
 // Build the filters object passed to the DB query (fieldFilters + numericFieldFilters)
 function buildFieldFilters() {
   const fieldFilters = {};
   const numericFieldFilters = {};
   for (const def of FILTER_DEFS) {
     const st = filterState.get(def.key);
-    if (!st.active) continue;
     if (def.type === 'enum' && st.enum.size) {
       fieldFilters[def.key] = [...st.enum];
     } else if (def.type === 'numeric' && st.numeric.size) {
@@ -1965,7 +1969,7 @@ function buildFieldFilters() {
 }
 function resetFieldFilters() {
   filterState.forEach(s => { s.active = false; s.enum.clear(); s.numeric.clear(); });
-  renderFilterPanel();
+  renderFilterBar();
   loadCreators();
 }
 
@@ -2043,7 +2047,7 @@ document.getElementById('creatorExport').onclick = async () => {
     ...buildFieldFilters(),
   };
   // confirm before exporting (let the user see the scope they are about to save)
-  const activeFilters = FILTER_DEFS.filter(d => { const st = filterState.get(d.key); return st && st.active && (st.enum.size || st.numeric.size); });
+  const activeFilters = FILTER_DEFS.filter(d => { const st = filterState.get(d.key); return st && (st.enum.size || st.numeric.size); });
   const scopeDesc = activeFilters.length
     ? activeFilters.map(d => { const st = filterState.get(d.key); const n = d.type === 'enum' ? st.enum.size : st.numeric.size; return `${uiLang === 'zh' ? d.n : d.e}: ${n} 项`; }).join('、')
     : (uiLang === 'zh' ? '无字段筛选（全部达人）' : 'no field filters (all creators)');
@@ -2063,9 +2067,7 @@ document.getElementById('creatorReset').onclick = () => { document.getElementByI
 document.getElementById('creatorDensity').onclick = event => { const compact = document.querySelector('.creator-table').classList.toggle('compact'); event.currentTarget.textContent = I18N[compact ? 'creators.comfortable' : 'creators.compact'][uiLang]; };
 document.getElementById('creatorColumns').onclick = event => { const menu = document.getElementById('creatorColumnMenu'); const open = menu.classList.toggle('open'); event.currentTarget.setAttribute('aria-expanded', String(open)); renderCreatorColumns(); };
 document.getElementById('creatorColumnsAll').onclick = () => { hiddenCreatorColumns.clear(); renderCreatorColumns(); renderCreatorHead(); document.querySelectorAll('.creator-table [data-field]').forEach(cell => cell.hidden = false); };
-document.addEventListener('click', event => { if (!event.target.closest('.creator-columns')) { document.getElementById('creatorColumnMenu').classList.remove('open'); document.getElementById('creatorColumns').setAttribute('aria-expanded','false'); document.getElementById('creatorFilterMenu').classList.remove('open'); document.getElementById('creatorFilterBtn').setAttribute('aria-expanded','false'); } });
-document.getElementById('creatorFilterBtn').onclick = event => { event.stopPropagation(); const menu = document.getElementById('creatorFilterMenu'); const open = menu.classList.toggle('open'); event.currentTarget.setAttribute('aria-expanded', String(open)); if (open) renderFilterPanel(); };
-document.getElementById('creatorFilterClear').onclick = () => { resetFieldFilters(); };
+document.addEventListener('click', event => { if (!event.target.closest('.creator-columns')) { document.getElementById('creatorColumnMenu').classList.remove('open'); document.getElementById('creatorColumns').setAttribute('aria-expanded','false'); } });
 document.getElementById('creatorHasEmail').onchange = () => { creatorOffset = 0; loadCreators(); };
 document.getElementById('creatorSearch').oninput = () => {
   clearTimeout(creatorSearchTimer);
@@ -2151,6 +2153,7 @@ document.getElementById('histRefresh').onclick = refreshAppData;
 
 poll();
 refreshAppData();
+renderFilterBar(); // TikTok-style filter bar (one dropdown per field)
 showPage(location.hash.slice(1) || 'overview');
 // load app version into header + footer
 window.api.getVersion().then(v => {
