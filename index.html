@@ -1282,10 +1282,38 @@ function cookieSummary(raw) {
   } catch (e) { return I18N['cookie.invalid'][uiLang]; }
 }
 
+// Extract a stable account identity from cookie JSON:
+// prefer sessionid, fall back to sid_guard / sid_tt / uid_tt. Used to detect
+// "same account, new cookie" so the old entry is replaced instead of duplicated.
+function cookieAccountKey(raw) {
+  try {
+    const arr = JSON.parse(raw.replace(/^\uFEFF/, ''));
+    if (!Array.isArray(arr)) return '';
+    const pick = (name) => {
+      const c = arr.find(x => x && x.name === name && x.value);
+      return c ? String(c.value) : '';
+    };
+    return pick('sessionid') || pick('sid_guard') || pick('sid_tt') || pick('uid_tt');
+  } catch (e) { return ''; }
+}
+
 function addCookie(source, data, name) {
   const sum = cookieSummary(data);
   if (sum === I18N['cookie.invalidJson'][uiLang] || sum === I18N['cookie.invalid'][uiLang]) {
     alert('Cookie: ' + sum);
+    return;
+  }
+  // same-account replacement: if the pasted cookies belong to an account we
+  // already have, update that entry instead of adding a duplicate
+  const key = cookieAccountKey(data);
+  const existingIdx = key ? cookieList.findIndex(c => cookieAccountKey(c.data) === key) : -1;
+  if (existingIdx >= 0) {
+    cookieList[existingIdx] = { source, data, name: cookieList[existingIdx].name || name || (uiLang === 'zh' ? `账号 ${existingIdx + 1}` : `Account ${existingIdx + 1}`) };
+    renderCookieList();
+    // clear paste box after successful replace
+    document.getElementById('cookieInput').value = '';
+    document.getElementById('fname').textContent = '';
+    alert(uiLang === 'zh' ? `✅ 已替换同账号的旧 Cookie（账号 ${existingIdx + 1}）` : `✅ Replaced the old cookie for this account (Account ${existingIdx + 1})`);
     return;
   }
   cookieList.push({ source, data, name: name || (uiLang === 'zh' ? `账号 ${cookieList.length + 1}` : `Account ${cookieList.length + 1}`) });
