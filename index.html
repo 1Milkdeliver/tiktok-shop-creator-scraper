@@ -94,6 +94,12 @@
   .btn-danger:disabled { background: #f0b3b0; box-shadow: none; cursor: not-allowed; filter: none; }
   .btn-secondary { background: rgba(17,24,39,.06); color: var(--text); }
   .btn-secondary:hover { background: rgba(17,24,39,.11); }
+  /* prominent run-state controls: pause (running) + stop (end) */
+  .btn-pause { background: linear-gradient(135deg, #f59e0b, #f97316); color: #fff; box-shadow: 0 2px 10px rgba(245,158,11,.4); }
+  .btn-pause:hover { filter: brightness(1.08); }
+  .btn-stop-active { background: linear-gradient(135deg, #dc2626, #ef4444); color: #fff !important; border-color: #dc2626 !important; box-shadow: 0 2px 14px rgba(220,38,38,.5); animation: stopPulse 1.6s ease-in-out infinite; }
+  .btn-stop-active:hover { background: linear-gradient(135deg, #b91c1c, #dc2626); filter: none; }
+  @keyframes stopPulse { 0%,100% { box-shadow: 0 2px 14px rgba(220,38,38,.35); } 50% { box-shadow: 0 2px 22px rgba(220,38,38,.7); } }
   .btn-link { background: none; border: none; color: var(--accent); font-size: 13px; font-weight: 500; cursor: pointer; padding: 5px 9px; border-radius: 8px; }
   .btn-link:hover { background: rgba(0,113,227,.09); }
   .header-btn { margin-left: 10px; font-size: 13px; font-weight: 600; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 7px 14px; color: var(--text-2); box-shadow: 0 1px 3px rgba(17,24,39,.05); transition: .15s; cursor: pointer; font-family: inherit; }
@@ -249,6 +255,11 @@
   .fdrop-option { display:flex;align-items:center;gap:7px;padding:5px 6px;border-radius:5px;font-size:12px;cursor:pointer; }
   .fdrop-option:hover { background:#f6f8fa; }
   .fdrop-option input { width:14px;height:14px; }
+  /* TikTok Shop style two-level category picker (hierarchy filter) */
+  .fdrop-hier-label { font-size:10.5px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.06em;padding:8px 6px 4px;border-top:1px solid #eef0f3; }
+  .fdrop-hier-list { max-height:150px;overflow:auto;padding:0 2px; }
+  .fdrop-hier-list2 .fdrop-option { padding-left:18px; }
+  .fdrop-empty { color:var(--sub);font-size:11px;padding:6px; }
   /* selected-filter chips (TikTok-style removable tags) */
   .creator-filter-chips { display:flex;flex-wrap:wrap;gap:6px;padding:8px 16px;background:#fafbfc;border-top:1px solid #eef0f3; }
   .fchip { display:inline-flex;align-items:center;gap:5px;padding:3px 8px 3px 10px;border-radius:14px;background:rgba(0,113,227,.1);border:1px solid rgba(0,113,227,.25);color:var(--accent);font-size:11.5px;font-weight:500; }
@@ -378,6 +389,9 @@
   .btn-secondary:hover,.header-btn:hover,.hist-btn:hover { color:#25292e; background:#eff2f5; border-color:rgba(31,35,40,.15); }
   .btn-danger { color:var(--danger); background:#f6f8fa; border:1px solid rgba(31,35,40,.15); box-shadow:0 1px 0 rgba(31,35,40,.04); }
   .btn-danger:hover { color:#fff; background:var(--danger); filter:none; }
+  /* running-state stop button: solid red + pulse, overrides the flat .btn-danger */
+  .btn-danger.btn-stop-active { color:#fff !important; background:linear-gradient(135deg,#dc2626,#ef4444) !important; border-color:#dc2626 !important; box-shadow:0 2px 14px rgba(220,38,38,.5); animation:stopPulse 1.6s ease-in-out infinite; }
+  .btn-danger.btn-stop-active:hover { background:linear-gradient(135deg,#b91c1c,#dc2626) !important; filter:none; }
   .btn:disabled { color:#8c959f; background:#f6f8fa; border-color:#d8dee4; box-shadow:none; opacity:.72; }
   :where(button,a,input,select,textarea,[tabindex]):focus-visible { outline:2px solid #0969da; outline-offset:2px; box-shadow:var(--focus-ring); }
   input[type=text],input[type=search],input[type=number],select#shopRegion,.creator-toolbar input,.creator-toolbar select,.cookie-zone textarea,#creatorInput { border-radius:6px !important; border-color:var(--border) !important; box-shadow:inset 0 1px 0 rgba(208,215,222,.2); }
@@ -394,7 +408,7 @@
   .metric strong,.creator-table td:nth-child(3),.creator-table td:nth-child(4),#appVersion { font-variant-numeric:tabular-nums; }
 
   /* Locale-stable layout: translated labels change, control positions do not. */
-  header { display:grid; grid-template-columns:minmax(190px,1fr) 64px 72px 140px 124px 74px; gap:8px; }
+  header { display:grid; grid-template-columns:minmax(190px,1fr) 96px 280px 140px 124px 74px; gap:8px; }
   header > * { margin-left:0 !important; min-width:0; }
   .header-btn { display:inline-flex;align-items:center;justify-content:center;text-align:center; }
   #appVersion,#status { width:100%; }
@@ -409,7 +423,7 @@
   .sidebar-nav a span { white-space:nowrap; }
   html[lang="en"] .sidebar-nav a,html[lang="zh-CN"] .sidebar-nav a { min-height:50px; }
   @media (max-width: 900px) {
-    header { grid-template-columns:minmax(140px,1fr) 64px 72px 140px 124px 74px; gap:6px; }
+    header { grid-template-columns:minmax(140px,1fr) 96px 280px 140px 124px 74px; gap:6px; }
   }
 
   /* Research-backed type scale and data-tool density. */
@@ -1534,15 +1548,14 @@ async function poll() {
     if (renderRateLimit && typeof renderRateLimit === 'function') renderRateLimit();
     const st = document.getElementById('status');
     const detail = document.getElementById('statusDetail');
-    const btnStop = document.getElementById('btnStop');
 
     if (j.running) {
-      btnStop.disabled = false;
+      setStopButtonActive(true);
       if (j.stopping) {
         // stopping: sessions wind down (list stopped; details finish for collected
         // creators). Button stays enabled so a 2nd click aborts the detail phase.
         syncMainButton('start', { disabled: true });
-        btnStop.disabled = false;
+        setStopButtonActive(true);
         startSpin(uiLang === 'zh' ? '⏹ 正在结束并导出' : '⏹ Finishing & exporting');
         detail.textContent = uiLang === 'zh' ? '正在完成当前请求并保存导出…' : 'Finishing current request and saving…';
       } else if (j.paused) {
@@ -1600,9 +1613,9 @@ async function poll() {
             : `⚠️ Auto-removed ${removedNames.length} confirmed-invalid account cookie(s) (redirected to login/blank page). Cookies merely expired-by-date but still working were kept.`);
         }
       }
-      showResult(j.result); detail.textContent = ''; syncMainButton('start', { disabled: false }); btnStop.disabled = true; lockOptions(false); refreshAppData();
+      showResult(j.result); detail.textContent = ''; syncMainButton('start', { disabled: false }); setStopButtonActive(false); lockOptions(false); refreshAppData();
     }
-    else if (j.result && !j.result.ok) { stopSpin(); setStatus(uiLang === 'zh' ? '❌ 出错' : '❌ Error', 'error'); detail.textContent = ''; syncMainButton('start', { disabled: false }); btnStop.disabled = true; lockOptions(false); }
+    else if (j.result && !j.result.ok) { stopSpin(); setStatus(uiLang === 'zh' ? '❌ 出错' : '❌ Error', 'error'); detail.textContent = ''; syncMainButton('start', { disabled: false }); setStopButtonActive(false); lockOptions(false); }
     renderLibraryUpdateProgress(j);
   } catch (e) { }
 }
@@ -1619,7 +1632,21 @@ function showResult(r) {
   box.style.background = '';
   box.style.borderColor = '';
   box.style.color = '';
-  box.innerHTML = (uiLang === 'zh' ? `✅ 抓取完成：${r.creators} 条达人${r.details ? ' + ' + r.details + ' 条详情' : ''}，共 ${r.rows} 行<br>📄 文件: ${r.outPath}` : `✅ Done: ${r.creators} creators${r.details ? ' + ' + r.details + ' details' : ''}, ${r.rows} rows total<br>📄 File: ${r.outPath}`);
+  // Library-only runs: show what was added vs updated. No file is written on
+  // the scrape page (export happens on demand), so the old "📄 文件" line is gone.
+  const db = r.database || {};
+  const inserted = Number(db.inserted) || 0;
+  const updated = Number(db.updated) || 0;
+  const detailText = r.details ? ` + ${r.details} 条详情` : '';
+  if (inserted || updated) {
+    box.innerHTML = uiLang === 'zh'
+      ? `✅ 抓取完成：${r.creators} 条达人${detailText}，已并入达人库<br>🆕 新增 ${inserted.toLocaleString()} 位 · 🔄 更新 ${updated.toLocaleString()} 位`
+      : `✅ Done: ${r.creators} creators${detailText}, merged into library<br>🆕 ${inserted.toLocaleString()} new · 🔄 ${updated.toLocaleString()} updated`;
+  } else {
+    box.innerHTML = uiLang === 'zh'
+      ? `✅ 抓取完成：${r.creators} 条达人${detailText}（已并入达人库）`
+      : `✅ Done: ${r.creators} creators${detailText} (merged into library)`;
+  }
 }
 
 // ── 三态主按钮：开始抓取 / 暂停 / 继续 ──
@@ -1633,8 +1660,17 @@ function syncMainButton(mode, opts) {
     resume: ['继续', 'Resume'],
   };
   btn.textContent = labels[mode][zh ? 0 : 1];
-  btn.className = 'btn ' + (mode === 'pause' ? 'btn-secondary' : 'btn-primary');
+  // pause mode gets a prominent amber style while a run is active
+  btn.className = 'btn ' + (mode === 'pause' ? 'btn-pause' : (mode === 'resume' ? 'btn-pause' : 'btn-primary'));
   if (opts && opts.disabled !== undefined) btn.disabled = opts.disabled;
+}
+
+// Toggle the stop button between idle (flat) and running (solid red + pulse)
+function setStopButtonActive(active) {
+  const btnStop = document.getElementById('btnStop');
+  if (!btnStop) return;
+  btnStop.classList.toggle('btn-stop-active', !!active);
+  btnStop.disabled = !active;
 }
 
 document.getElementById('btnStart').onclick = async () => {
@@ -1669,7 +1705,7 @@ document.getElementById('btnStart').onclick = async () => {
   const detail = scrapeMode === 'full' && updateFields.some(field => detailKeys.has(field));
   const cfg = { pastedCookies: cookieList.map(c => c.data), mode, format, headerLang, outPath, detail, dedupe, creatorInput: source === 'list' && creatorInput.length ? creatorInput : null, keywords: kws, fields, updateFields, shopRegion, autoExport: false };
   syncMainButton('pause', { disabled: true });
-  document.getElementById('btnStop').disabled = false;
+  setStopButtonActive(true);
   document.getElementById('resultBox').style.display = 'none';
   logEl.textContent = '';
   lastCount = 0;
@@ -1677,7 +1713,7 @@ document.getElementById('btnStart').onclick = async () => {
   lockOptions(true); // 抓取开始后锁定所有配置选项
   try {
     const j = await window.api.start(cfg);
-    if (j.error) { alert(I18N['alert.startFail'][uiLang] + ': ' + j.error); setStatus('❌ ' + j.error, 'error'); syncMainButton('start', { disabled: false }); document.getElementById('btnStop').disabled = true; lockOptions(false); }
+    if (j.error) { alert(I18N['alert.startFail'][uiLang] + ': ' + j.error); setStatus('❌ ' + j.error, 'error'); syncMainButton('start', { disabled: false }); setStopButtonActive(false); lockOptions(false); }
   } catch (e) { alert(I18N['alert.startFail'][uiLang] + ': ' + e.message); lockOptions(false); }
 };
 
@@ -1694,7 +1730,7 @@ function lockOptions(lock) {
 
 document.getElementById('btnStop').onclick = async () => {
   await window.api.stop();
-  document.getElementById('btnStop').disabled = true;
+  setStopButtonActive(false);
   syncMainButton('start', { disabled: true });
   setStatus(uiLang === 'zh' ? '⏹ 正在结束并导出…' : '⏹ Finishing & exporting…', '');
   document.getElementById('statusDetail').textContent = uiLang === 'zh' ? '正在完成当前请求并保存导出…' : 'Finishing current request and saving…';
@@ -1804,7 +1840,7 @@ async function renderHistory(history) {
         if (!r.ok) { alert(r.error || (uiLang === 'zh' ? '操作失败' : 'Action failed')); return; }
         // switch to running state (poll will pick up)
         setStatus(uiLang === 'zh' ? '⏳ 启动中…' : '⏳ Starting…', 'running');
-        document.getElementById('btnStop').disabled = false;
+        setStopButtonActive(true);
         lockOptions(true);
       }
     };
@@ -1844,8 +1880,10 @@ const LIBRARY_SKIP = new Set(['avatar']);
 // [min,max] (null = open) matched against the numeric value in raw_json.
 const FILTER_DEFS = [
   { key: 'selection_region', n: '地区', e: 'Region', type: 'enum', fixed: ['US', 'UK', 'SG', 'MY', 'TH', 'VN', 'PH', 'ID', 'MX', 'BR'] },
-  { key: 'category', n: '类目', e: 'Category', type: 'enum' },
-  { key: '垂直类目', n: '垂直类目', e: 'Vertical', type: 'enum' },
+  // TikTok Shop style two-level category: top-level category + vertical (2nd-level)
+  // category, shown in ONE dropdown (hierarchy). level1 = 'category' (DB enum),
+  // level2 = '垂直类目' (DB enum). Selection maps to separate DB fields.
+  { key: 'category', n: '类目', e: 'Category', type: 'hierarchy', level1: 'category', level2: '垂直类目' },
   { key: 'top_follower_ages', n: '粉丝年龄段', e: 'Ages', type: 'enum', fixed: ['18-24', '25-34', '35-44', '45-54', '55+'] },
   { key: 'top_follower_gender', n: '粉丝性别', e: 'Gender', type: 'enum', fixed: ['Female', 'Male'] },
   { key: 'pps_score', n: 'PPS评分', e: 'PPS Score', type: 'numeric', buckets: [[4.5, null, '4.5+'], [4, 4.5, '4 - 4.5'], [3.5, 4, '3.5 - 4'], [null, 3.5, '< 3.5']] },
@@ -1855,9 +1893,10 @@ const FILTER_DEFS = [
   { key: 'med_gmv_revenue', n: '总GMV', e: 'Total GMV', type: 'numeric', buckets: [[100000, null, '$100K+'], [10000, 100000, '$10K - $100K'], [1000, 10000, '$1K - $10K'], [null, 1000, '< $1K']] },
   { key: 'activity_status', n: '活跃状态', e: 'Activity', type: 'enum', fixed: ['active', 'inactive', 'unknown'] },
 ];
-// current selections: { key: { enum: Set, numeric: Set, custom: Set } }
+// current selections: { key: { enum: Set, numeric: Set, custom: Set, level1: Set, level2: Set } }
+// hierarchy fields use level1 (top category) + level2 (vertical category)
 const filterState = new Map();
-FILTER_DEFS.forEach(f => filterState.set(f.key, { enum: new Set(), numeric: new Set(), custom: new Set() }));
+FILTER_DEFS.forEach(f => filterState.set(f.key, { enum: new Set(), numeric: new Set(), custom: new Set(), level1: new Set(), level2: new Set() }));
 let filterOptionsCache = {}; // key -> array of dynamic enum options (for category etc.)
 
 function showPage(page) {
@@ -1983,6 +2022,18 @@ async function renderFilterBar() {
       }
       options = filterOptionsCache[def.key];
     }
+    // hierarchy (two-level category): load level-1 (category) and level-2 (vertical)
+    let level1Options = [], level2Options = [];
+    if (def.type === 'hierarchy') {
+      if (!filterOptionsCache[def.level1]) {
+        try { const r = await window.api.creatorFilterOptions(def.level1); filterOptionsCache[def.level1] = r.ok ? r.options : []; } catch (e) { filterOptionsCache[def.level1] = []; }
+      }
+      if (!filterOptionsCache[def.level2]) {
+        try { const r = await window.api.creatorFilterOptions(def.level2); filterOptionsCache[def.level2] = r.ok ? r.options : []; } catch (e) { filterOptionsCache[def.level2] = []; }
+      }
+      level1Options = filterOptionsCache[def.level1];
+      level2Options = filterOptionsCache[def.level2];
+    }
     const wrap = document.createElement('div'); wrap.className = 'fdrop';
     const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'fdrop-btn'; btn.textContent = name;
     const cnt = document.createElement('span'); cnt.className = 'fcount'; cnt.style.display = 'none'; btn.appendChild(cnt);
@@ -2018,6 +2069,52 @@ async function renderFilterBar() {
       searchInput.placeholder = uiLang === 'zh' ? '搜索…' : 'Search…';
       searchInput.oninput = () => renderOptions();
       menu.appendChild(searchInput);
+    } else if (def.type === 'hierarchy') {
+      // TikTok Shop style two-level category picker in one dropdown:
+      //  ── 一级类目 ──   (top-level categories, multi-select)
+      //  Beauty & Personal Care ☑
+      //  ── 垂直类目（二级）──  (vertical categories, indented, multi-select)
+      //    beauty_self_care ☐
+      const l1Label = document.createElement('div'); l1Label.className = 'fdrop-hier-label'; l1Label.textContent = uiLang === 'zh' ? '一级类目' : 'Top category';
+      menu.appendChild(l1Label);
+      const l1Box = document.createElement('div'); l1Box.className = 'fdrop-hier-list';
+      (level1Options || []).forEach(v => {
+        const label = document.createElement('label'); label.className = 'fdrop-option';
+        const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = st.level1.has(String(v));
+        cb.onchange = () => {
+          const val = String(v);
+          cb.checked ? st.level1.add(val) : st.level1.delete(val);
+          renderFilterChips(); updateFilterBtn(btn, cnt, def, st); loadCreators();
+        };
+        const span = document.createElement('span'); span.textContent = v;
+        label.append(cb, span); l1Box.appendChild(label);
+      });
+      menu.appendChild(l1Box);
+      if (!level1Options.length) {
+        const empty = document.createElement('div'); empty.className = 'fdrop-empty';
+        empty.textContent = uiLang === 'zh' ? '（无匹配项）' : '(no matches)';
+        menu.appendChild(empty);
+      }
+      const l2Label = document.createElement('div'); l2Label.className = 'fdrop-hier-label'; l2Label.textContent = uiLang === 'zh' ? '垂直类目（二级）' : 'Vertical category';
+      menu.appendChild(l2Label);
+      const l2Box = document.createElement('div'); l2Box.className = 'fdrop-hier-list fdrop-hier-list2';
+      (level2Options || []).forEach(v => {
+        const label = document.createElement('label'); label.className = 'fdrop-option';
+        const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = st.level2.has(String(v));
+        cb.onchange = () => {
+          const val = String(v);
+          cb.checked ? st.level2.add(val) : st.level2.delete(val);
+          renderFilterChips(); updateFilterBtn(btn, cnt, def, st); loadCreators();
+        };
+        const span = document.createElement('span'); span.textContent = v;
+        label.append(cb, span); l2Box.appendChild(label);
+      });
+      menu.appendChild(l2Box);
+      if (!level2Options.length) {
+        const empty = document.createElement('div'); empty.className = 'fdrop-empty';
+        empty.textContent = uiLang === 'zh' ? '（暂无垂直类目数据，更新达人数据后出现）' : '(no vertical data yet — refresh creators to populate)';
+        menu.appendChild(empty);
+      }
     }
     const renderOptions = () => {
       menu.querySelectorAll('.fdrop-option').forEach(el => el.remove());
@@ -2046,7 +2143,12 @@ async function renderFilterBar() {
       }
     };
     renderOptions();
-    clearBtn.onclick = () => { def.type === 'enum' ? st.enum.clear() : (st.numeric.clear(), st.custom.clear()); renderOptions(); renderFilterChips(); updateFilterBtn(btn, cnt, def, st); loadCreators(); };
+    clearBtn.onclick = () => {
+      if (def.type === 'hierarchy') { st.level1.clear(); st.level2.clear(); }
+      else if (def.type === 'enum') st.enum.clear();
+      else { st.numeric.clear(); st.custom.clear(); }
+      renderOptions(); renderFilterChips(); updateFilterBtn(btn, cnt, def, st); loadCreators();
+    };
     btn.onclick = (e) => { e.stopPropagation(); closeFilterDrops(); menu.classList.toggle('open'); btn.classList.toggle('active', menu.classList.contains('open')); openFilterDrop = menu.classList.contains('open') ? wrap : null; };
     wrap.append(btn, menu); bar.appendChild(wrap);
     updateFilterBtn(btn, cnt, def, st);
@@ -2054,7 +2156,7 @@ async function renderFilterBar() {
   renderFilterChips();
 }
 function updateFilterBtn(btn, cnt, def, st) {
-  const n = (def.type === 'enum' ? st.enum.size : st.numeric.size + st.custom.size);
+  const n = def.type === 'hierarchy' ? st.level1.size + st.level2.size : (def.type === 'enum' ? st.enum.size : st.numeric.size + st.custom.size);
   cnt.style.display = n ? '' : 'none';
   cnt.textContent = n;
   btn.classList.toggle('active', n > 0);
@@ -2072,6 +2174,13 @@ function renderFilterChips() {
   for (const def of FILTER_DEFS) {
     const st = filterState.get(def.key);
     const name = uiLang === 'zh' ? def.n : def.e;
+    if (def.type === 'hierarchy') {
+      const l1Name = uiLang === 'zh' ? '类目' : 'Category';
+      const l2Name = uiLang === 'zh' ? '垂直类目' : 'Vertical';
+      for (const v of st.level1) chips.push({ def, label: `${l1Name}: ${v}`, remove: () => st.level1.delete(v) });
+      for (const v of st.level2) chips.push({ def, label: `${l2Name}: ${v}`, remove: () => st.level2.delete(v) });
+      continue;
+    }
     for (const v of st.enum) chips.push({ def, label: `${name}: ${v}`, remove: () => st.enum.delete(v) });
     for (const v of st.numeric) chips.push({ def, label: `${name}: ${v}`, remove: () => st.numeric.delete(v) });
     for (const [lo, hi, tag] of [...st.custom].map(c => [c.lo, c.hi, c.tag])) {
@@ -2101,7 +2210,11 @@ function buildFieldFilters() {
   const numericFieldFilters = {};
   for (const def of FILTER_DEFS) {
     const st = filterState.get(def.key);
-    if (def.type === 'enum' && st.enum.size) {
+    if (def.type === 'hierarchy') {
+      // level-1 selections filter the 'category' DB field; level-2 filter '垂直类目'
+      if (st.level1.size) fieldFilters[def.level1] = [...st.level1];
+      if (st.level2.size) fieldFilters[def.level2] = [...st.level2];
+    } else if (def.type === 'enum' && st.enum.size) {
       fieldFilters[def.key] = [...st.enum];
     } else if (def.type === 'numeric') {
       const ranges = [];
@@ -2115,7 +2228,7 @@ function buildFieldFilters() {
   return { fieldFilters, numericFieldFilters };
 }
 function resetFieldFilters() {
-  filterState.forEach(s => { s.enum.clear(); s.numeric.clear(); s.custom.clear(); });
+  filterState.forEach(s => { s.enum.clear(); s.numeric.clear(); s.custom.clear(); s.level1.clear(); s.level2.clear(); });
   renderFilterBar();
   renderFilterChips();
   loadCreators();
@@ -2251,6 +2364,39 @@ document.getElementById('creatorUpdateOpen').onclick = prepareLibraryUpdate;
 // ── continue scraping: add NEW creators to the library ──
 // Uses the last scrape's keywords/region, skips creators already in the library
 // (dedupe via existingIds), and fills the library only (no auto CSV export).
+// Syncs the task page controls to the configuration being run so the UI shows
+// the same mode/scope/keywords/region the runner actually uses.
+function syncTaskPageFromConfig(cfg, { source = 'cat' } = {}) {
+  // 抓取对象 source
+  document.querySelectorAll('input[name=source]').forEach(r => r.checked = r.value === source);
+  document.getElementById('sourceCat').style.display = source === 'cat' ? '' : 'none';
+  document.getElementById('sourceList').style.display = source === 'list' ? '' : 'none';
+  // 抓取模式（快速/完整）
+  document.querySelectorAll('input[name=scrapeMode]').forEach(r => r.checked = (r.value === 'full') === !!cfg.detail);
+  // 抓取范围（只抓新的 / 全部重抓）
+  document.querySelectorAll('input[name=dedupeMode]').forEach(r => r.checked = r.value === (cfg.dedupe === false ? 'refresh' : 'dedupe'));
+  // 浏览器模式 + 导出格式 + 表头语言
+  document.querySelectorAll('input[name=mode]').forEach(r => r.checked = r.value === (cfg.mode || 'auto'));
+  document.querySelectorAll('input[name=format]').forEach(r => r.checked = r.value === (cfg.format || 'csv'));
+  document.querySelectorAll('input[name=headerLang]').forEach(r => r.checked = r.value === (cfg.headerLang || uiLang));
+  // 地区
+  const region = (cfg.shopRegion || 'US').toUpperCase();
+  const regionSel = document.getElementById('shopRegion');
+  const regionCustom = document.getElementById('shopRegionCustom');
+  if (regionSel && regionCustom) {
+    if ([...regionSel.options].some(o => o.value === region)) { regionSel.value = region; regionCustom.value = ''; }
+    else { regionCustom.value = region; }
+  }
+  // 关键词（按类目抓取时勾选对应关键词）
+  if (source === 'cat' && Array.isArray(cfg.keywords) && cfg.keywords.length) {
+    const kwSet = new Set(cfg.keywords);
+    const known = new Set(Object.values(CATS).flatMap(cat => cat.items.map(([k]) => k)));
+    // 只勾选已知关键词；未知的（自定义）保留在 selectedKeywords 供计数显示
+    selectedKeywords.clear();
+    for (const k of kwSet) selectedKeywords.add(k);
+    renderCats();
+  }
+}
 document.getElementById('creatorContinueOpen').onclick = async () => {
   if (!cookieList.length) { alert(uiLang === 'zh' ? '请先在“可用账号”中导入 Cookie。' : 'Import a cookie from Available accounts first.'); return; }
   const last = await window.api.getLastScrapeConfig().catch(() => null);
@@ -2276,10 +2422,12 @@ document.getElementById('creatorContinueOpen').onclick = async () => {
   };
   const result = await window.api.start(cfg);
   if (result.error) { alert(result.error); return; }
+  // reflect the real behavior on the task page: continue = only NEW creators
+  syncTaskPageFromConfig({ ...cfg, headerLang: uiLang, format: 'csv' });
   // switch to tasks page so the user sees the run
   showPage('tasks');
   setStatus(uiLang === 'zh' ? '⏳ 继续抓取启动中…' : '⏳ Continue scraping…', 'running');
-  document.getElementById('btnStop').disabled = false;
+  setStopButtonActive(true);
   lockOptions(true);
 };
 document.getElementById('libraryUpdateClose').onclick = () => { if (!libraryUpdateActive) document.getElementById('libraryUpdatePanel').classList.remove('open'); };
@@ -2290,6 +2438,8 @@ document.getElementById('libraryUpdateStart').onclick = async () => {
   const cfg = { pastedCookies:cookieList.map(cookie => cookie.data), mode:(document.querySelector('input[name=mode]:checked') || {}).value || 'auto', format:'csv', headerLang:uiLang, outPath:document.getElementById('outPath').value.trim() || './output', detail:true, dedupe:false, creatorInput:libraryUpdateIds, keywords:[], fields:FIELDS.map(field => field.k), updateFields, shopRegion:regionText, libraryUpdate:true };
   const result = await window.api.start(cfg);
   if (result.error) { document.getElementById('libraryUpdateMessage').textContent = result.error; return; }
+  // reflect real behavior: update = refresh existing creators (re-scrape all)
+  syncTaskPageFromConfig({ ...cfg, dedupe: false, detail: true, mode: cfg.mode || 'auto', format: 'csv', headerLang: uiLang }, { source: 'list' });
   libraryUpdateActive = true; libraryUpdateStartedAt = Date.now();
   document.getElementById('libraryUpdateStart').disabled = true;
   document.getElementById('libraryUpdatePause').style.display = '';

@@ -71,7 +71,10 @@
 | 🧹 Deduplication | List + detail double dedupe — the same creator is never collected twice |
 | 👥 Multi-account | Keyword sharding / same-keyword split — several cookies in parallel, 3×+ faster in tests |
 | 🛡️ Risk-control self-heal | Auto-switches to backup cookies + auto-resumes after cool-down — no babysitting |
-| ⏯️ Tri-state control | Pause / Resume / one-click **Finish & Export** anytime |
+| 🔄 Cookie auto-replace | Same-account cookies auto-replace old entries; confirmed-invalid cookies are cleaned up after a run |
+| 🗂️ Two-level category filter | TikTok-backend-style category picker: top-level category + vertical (2nd-level) category |
+| ✅ Quick filters | One-click "Email only" / "Active only" checkboxes, multi-field filters with removable chips |
+| ⏯️ Tri-state control | Pause / Resume / one-click **Finish & Export** (seconds-fast wind-down) |
 | 🛡️ Quit protection | Exiting during a scrape asks: Save & Export / Discard / Cancel |
 | 🌐 Bilingual UI | Chinese / English interface, field list and headers with one-click switch |
 | 🔄 Auto-update | Checks for new versions on startup, one-click update (differential download) |
@@ -86,7 +89,7 @@
 | Sales Data | total GMV, GMV range, video GMV, live GMV, units sold, units sold range, category |
 | Content Performance | avg/median video views, engagement, e-comm engagement, e-comm GPM, live GPM, e-comm avg UV |
 | Follower Profile | age distribution, gender split (%), PPS score, fast growing, collaborated, category permission, live auction |
-| Details (optional) | bio, collaboration email (auto-extracted), MCN agency, category |
+| Details (optional) | bio, collaboration email (auto-extracted), MCN agency, **vertical (2nd-level) category** |
 
 ## 📦 Install
 
@@ -130,8 +133,8 @@ The app needs your TikTok Shop Affiliate **login cookie** to access creator data
    - **New only (default)**: automatically skips already-scraped creators
    - **Re-scrape all**: re-scrapes everything and overwrites to refresh data
 5. **Export settings**: choose CSV or Excel, pick an output folder, check the fields to export (headers follow UI language)
-6. Click **▶ Start Scraping** — progress shows in the log below (Pause / Resume / one-click **Finish & Export** anytime)
-7. When done, the file is saved to your chosen folder: `达人数据-日期-时间.csv` / `.xlsx`
+6. Click **▶ Start Scraping** — progress shows in the log below (Pause / Resume / one-click **Finish & Export** with seconds-fast wind-down; running-state Pause/Stop buttons are highlighted amber/red)
+7. When done, the app shows **🆕 N new · 🔄 M updated**. The scrape page no longer writes a file automatically — data lives in the Creator Library; export a file from the Library / History when you need one
 
 > 🆕 **First time?** Click **🔍 Test** first to verify everything works with a 1-page trial scrape (isolated environment, no full run).
 
@@ -140,10 +143,14 @@ The app needs your TikTok Shop Affiliate **login cookie** to access creator data
 ### Step 3 — Creator Library (new in v1.2.0)
 
 - Switch to **📚 Creator Library** in the sidebar: every scraped creator is automatically stored in a local SQLite database (deduplicated)
-- Sort / filter by nickname, followers, GMV, sales, activity status (active / inactive / unknown)
+- Sort / filter by nickname, followers, GMV, sales, activity status; **TikTok-backend-style filter bar**: region, category (two-level: top + vertical), audience ages/gender, PPS score, units sold, avg views, followers, GMV, activity — multi-select with removable chips
+- One-click **Email only** / **Active only** checkboxes to shortlist partners
+- **➕ Continue scraping**: reuses the last keywords to collect NEW creators, skipping ones already in the library, merging results in
+- **Update creators**: re-scrapes the current filtered scope and refreshes the library (progress bar + remaining time + new/updated counts)
 - **Activity**: the app uses last-publish time, growth trend and GMV changes to flag creators that may have stopped or slowed down — quickly screen out "zombie creators" before outreach
-- Click **Refresh** to re-scrape the latest data into the library (with a progress bar + estimated remaining time)
 - Library data lives only on your machine — no external service involved
+
+> 💡 **Vertical category**: the 2nd-level category comes from each creator's `vertical_pro_category` tag and is only returned for some creators. Run "Update creators" (Full mode) to backfill it.
 
 ## ❓ FAQ
 
@@ -155,6 +162,12 @@ A: Request intervals are randomized (~6-15s) for stability. Full mode (details) 
 
 **Q: How do I use multiple accounts?**  
 A: Click "＋ Add Account" in the cookie area and paste multiple account cookies. The app scrapes concurrently with staggered starts.
+
+**Q: Will a new cookie for the same account be duplicated?**  
+A: No. Pasting a cookie that matches an existing account (same sessionid / sid_guard etc.) automatically replaces the old entry. Cookies confirmed invalid during a run (redirected to login/blank page) are auto-removed afterwards; cookies merely expired-by-date but still working are kept.
+
+**Q: "Detail timeout, skipped" in the log?**  
+A: v1.2.10 and earlier had a false-alarm bug: a "timeout" line was printed 90s after every successful detail fetch (nothing was actually lost). Fixed in v1.2.11 — the log only fires on a real timeout (and includes the creator ID).
 
 **Q: Interrupted mid-scrape?**  
 A: Restart the app and scrape again — it resumes automatically from the last checkpoint. If risk-control triggers, the app auto-switches to a backup cookie and auto-resumes after the cool-down — no babysitting.
