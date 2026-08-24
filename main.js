@@ -830,13 +830,8 @@ ipcMain.handle('start-scrape', async (event, config) => {
 
 // IPC: status
 ipcMain.handle('scrape-status', () => {
-  // total = sum of every session's collected creators (pre-dedupe). This is a
-  // running cumulative count and never decreases — with multiple sessions the
-  // per-session log totals would otherwise flicker up/down in the UI.
-  let total = 0;
-  for (const s of runner.sessions || []) total += (s.creators || []).length;
-  const ci = { ...(runner.currentInfo || {}) };
-  if (total > 0) ci.total = total;
+  // cumulative total across sessions + rolling speed (creators/minute) + phase
+  const ci = runner.updateRateInfo();
   return {
     running: runner.running,
     paused: runner.paused,

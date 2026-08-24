@@ -1493,7 +1493,16 @@ async function poll() {
         const info = j.currentInfo || {};
         const kwText = info.keyword ? (uiLang === 'zh' ? ` 正在抓取：${info.keyword}` : ` Scraping: ${info.keyword}`) : '';
         document.getElementById('status').className = 'status-pill running';
-        detail.textContent = (uiLang === 'zh' ? '抓取中' : 'Running') + SPINNER[spinIdx] + kwText + (info.total ? (uiLang === 'zh' ? `（已收集 ${info.total.toLocaleString()} 条）` : ` (${info.total.toLocaleString()} collected)`) : '');
+        // cumulative count + rolling speed + phase hint (detail is naturally slower)
+        let speedText = '';
+        if (info.ratePerMin > 0) {
+          speedText = uiLang === 'zh' ? ` · ${info.ratePerMin} 条/分钟` : ` · ${info.ratePerMin}/min`;
+        }
+        let phaseText = '';
+        if (info.phase === 'detail') {
+          phaseText = uiLang === 'zh' ? ' · 详情阶段（每个达人单独请求，速度较慢属正常）' : ' · details (one request per creator — slower is normal)';
+        }
+        detail.textContent = (uiLang === 'zh' ? '抓取中' : 'Running') + SPINNER[spinIdx] + kwText + (info.total ? (uiLang === 'zh' ? `（已收集 ${info.total.toLocaleString()} 条）` : ` (${info.total.toLocaleString()} collected)`) : '') + speedText + phaseText;
       }
     } else if (j.status === 'paused') {
       stopSpin();
