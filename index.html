@@ -216,11 +216,13 @@
   .creator-dashboard-card span { display:block;color:var(--sub);font-size:12px;line-height:18px; }
   .creator-dashboard-card strong { display:block;margin-top:5px;font-size:20px;line-height:28px;font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
   .creator-dashboard-card small { display:block;margin-top:2px;color:var(--sub);font-size:11.5px;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
-  .creator-toolbar { display:grid;grid-template-columns:minmax(250px,1fr) 120px 150px 140px 140px auto;gap:10px;padding:16px;border-bottom:1px solid var(--border); }
+  .creator-toolbar { display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border); }
   .creator-toolbar input,.creator-toolbar select { width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:9px;background:#fff; }
-  .creator-search-wrap { position:relative; }
+  .creator-search-wrap { position:relative;flex:0 0 240px;min-width:180px; }
   .creator-search-wrap::before { content:'⌕';position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:18px;color:var(--sub);pointer-events:none; }
   .creator-search-wrap input { padding-left:34px; }
+  .creator-toolbar .check-label { flex:0 0 auto; }
+  .creator-toolbar #creatorRefresh, .creator-toolbar #creatorExport { flex:0 0 auto; }
   .creator-table-tools { display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;background:#f6f8fa;border-bottom:1px solid var(--border); }
   .creator-table-tools-left,.creator-table-tools-right { display:flex;align-items:center;gap:8px;flex-wrap:wrap; }
   .creator-result-label { color:var(--sub);font-size:12.5px; }
@@ -232,7 +234,7 @@
   .creator-column-grid label { display:flex;align-items:center;gap:7px;min-height:30px;padding:4px 6px;border-radius:4px;font-size:12px;cursor:pointer; }
   .creator-column-grid label:hover { background:#f6f8fa; }
   /* TikTok-style filter bar: one dropdown per field, horizontal layout */
-  .creator-filterbar { display:flex;flex-wrap:wrap;gap:6px;align-items:center; }
+  .creator-filterbar { display:flex;flex-wrap:wrap;gap:6px;align-items:center;flex:1 1 auto;min-width:0; }
   .fdrop { position:relative; }
   .fdrop-btn { display:flex;align-items:center;gap:5px;min-height:30px;padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text-2);font-size:12px;font-weight:500;cursor:pointer;transition:.12s; }
   .fdrop-btn:hover { border-color:var(--accent);color:var(--accent); }
@@ -437,8 +439,7 @@
   #creatorRefresh { min-width:84px; }
   @media (max-width:1050px) {
     .creator-dashboard { grid-template-columns:repeat(3,minmax(0,1fr)); }
-    .creator-toolbar { grid-template-columns:minmax(240px,1fr) 120px 140px; }
-    .creator-toolbar .check-label,#creatorRefresh { justify-self:start; }
+    .creator-toolbar { flex-wrap:wrap; }
   }
   .overview-actions { display:grid;grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr);gap:14px; }
   .overview-actions .card { margin-bottom:0; }
