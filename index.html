@@ -2011,7 +2011,7 @@ function renderFilterChips() {
     const name = uiLang === 'zh' ? def.n : def.e;
     for (const v of st.enum) chips.push({ def, label: `${name}: ${v}`, remove: () => st.enum.delete(v) });
     for (const v of st.numeric) chips.push({ def, label: `${name}: ${v}`, remove: () => st.numeric.delete(v) });
-    for (const [lo, hi, tag] of st.custom.map(c => [c.lo, c.hi, c.tag])) {
+    for (const [lo, hi, tag] of [...st.custom].map(c => [c.lo, c.hi, c.tag])) {
       const rangeLabel = (lo == null ? '' : lo) + ' — ' + (hi == null ? '∞' : hi);
       chips.push({ def, label: `${name}: ${rangeLabel}`, remove: () => st.custom.delete([...st.custom].find(c => c.tag === tag)) });
     }
