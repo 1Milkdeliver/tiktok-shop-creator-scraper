@@ -40,7 +40,8 @@
   .logo-icon { width: 44px; height: 44px; border-radius: 13px; object-fit: cover; box-shadow: 0 2px 12px rgba(0,113,227,.4); }
   .logo h1 { font-size: 21px; font-weight: 800; letter-spacing: -.025em; background: linear-gradient(120deg, #111827 30%, #0071e3 90%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
   .logo p { font-size: 12px; color: var(--sub); margin-top: 3px; font-weight: 400; }
-  .status-pill { padding: 7px 16px; border-radius: 99px; font-size: 13px; font-weight: 600; background: var(--card); border: 1px solid var(--border); color: var(--sub); backdrop-filter: blur(12px); min-width: 110px; text-align: center; white-space: nowrap; transition: .2s; }
+  .status-pill { padding: 7px 16px; border-radius: 99px; font-size: 13px; font-weight: 600; background: var(--card); border: 1px solid var(--border); color: var(--sub); backdrop-filter: blur(12px); min-width: 110px; max-width: 260px; overflow: hidden; text-overflow: ellipsis; text-align: center; white-space: nowrap; transition: .2s; }
+  header .status-pill { flex: 0 1 auto; min-width: 0; }
   .status-pill.running { color: var(--accent); border-color: rgba(0,113,227,.35); background: rgba(0,113,227,.06); }
   .status-pill.done { color: var(--ok); border-color: rgba(22,163,74,.35); background: rgba(22,163,74,.06); }
   .status-pill.error { color: var(--danger); border-color: rgba(207,34,46,.35); background: rgba(207,34,46,.06); }
@@ -1678,7 +1679,6 @@ document.getElementById('btnStart').onclick = async () => {
     const j = await window.api.start(cfg);
     if (j.error) { alert(I18N['alert.startFail'][uiLang] + ': ' + j.error); setStatus('❌ ' + j.error, 'error'); syncMainButton('start', { disabled: false }); document.getElementById('btnStop').disabled = true; lockOptions(false); }
   } catch (e) { alert(I18N['alert.startFail'][uiLang] + ': ' + e.message); lockOptions(false); }
-  setInterval(poll, 1500);
 };
 
 // Lock/unlock all configuration controls while a scrape is running
@@ -2337,6 +2337,10 @@ async function refreshDatabaseMetrics() {
 document.getElementById('histRefresh').onclick = refreshAppData;
 
 poll();
+// Global status polling: one timer serves every scrape entry point (task page,
+// Creator Library "Continue scraping", "Update creators"). It must start at
+// page load so those library-driven runs also refresh status/log/progress.
+setInterval(poll, 1500);
 refreshAppData();
 renderFilterBar(); // TikTok-style filter bar (one dropdown per field)
 showPage(location.hash.slice(1) || 'overview');
