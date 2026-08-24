@@ -829,18 +829,27 @@ ipcMain.handle('start-scrape', async (event, config) => {
 });
 
 // IPC: status
-ipcMain.handle('scrape-status', () => ({
-  running: runner.running,
-  paused: runner.paused,
-  stopping: !!(runner.running && runner.stopped),
-  status: runner.status,
-  currentInfo: runner.currentInfo || {},
-  logs: runner.logs,
-  result: runner.result,
-  rateLimit: runner.rateLimit,
-  autoResumeAt: runner.autoResumeAt || null, // for the auto-continue countdown UI
-  update: updateState,
-}));
+ipcMain.handle('scrape-status', () => {
+  // total = sum of every session's collected creators (pre-dedupe). This is a
+  // running cumulative count and never decreases — with multiple sessions the
+  // per-session log totals would otherwise flicker up/down in the UI.
+  let total = 0;
+  for (const s of runner.sessions || []) total += (s.creators || []).length;
+  const ci = { ...(runner.currentInfo || {}) };
+  if (total > 0) ci.total = total;
+  return {
+    running: runner.running,
+    paused: runner.paused,
+    stopping: !!(runner.running && runner.stopped),
+    status: runner.status,
+    currentInfo: ci,
+    logs: runner.logs,
+    result: runner.result,
+    rateLimit: runner.rateLimit,
+    autoResumeAt: runner.autoResumeAt || null, // for the auto-continue countdown UI
+    update: updateState,
+  };
+});
 
 // IPC: pause
 ipcMain.handle('pause-scrape', () => { runner.pause(); return { ok: true }; });

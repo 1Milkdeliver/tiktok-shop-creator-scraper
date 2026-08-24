@@ -1493,7 +1493,7 @@ async function poll() {
         const info = j.currentInfo || {};
         const kwText = info.keyword ? (uiLang === 'zh' ? ` 正在抓取：${info.keyword}` : ` Scraping: ${info.keyword}`) : '';
         document.getElementById('status').className = 'status-pill running';
-        detail.textContent = (uiLang === 'zh' ? '抓取中' : 'Running') + SPINNER[spinIdx] + kwText + (info.total ? `（${info.total} 条）` : '');
+        detail.textContent = (uiLang === 'zh' ? '抓取中' : 'Running') + SPINNER[spinIdx] + kwText + (info.total ? (uiLang === 'zh' ? `（已收集 ${info.total.toLocaleString()} 条）` : ` (${info.total.toLocaleString()} collected)`) : '');
       }
     } else if (j.status === 'paused') {
       stopSpin();
