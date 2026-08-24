@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('api', {
   resume: () => ipcRenderer.invoke('resume-scrape'),
   stop: () => ipcRenderer.invoke('stop-scrape'),
   getAppData: () => ipcRenderer.invoke('get-app-data'),
+  getLastScrapeConfig: () => ipcRenderer.invoke('get-last-scrape-config'),
   clearCookies: () => ipcRenderer.invoke('clear-cookies'),
   creatorDbStats: () => ipcRenderer.invoke('creator-db-stats'),
   listCreators: (filters) => ipcRenderer.invoke('creator-db-list', filters),

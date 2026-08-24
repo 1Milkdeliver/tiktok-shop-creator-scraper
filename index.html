@@ -508,7 +508,7 @@
   </section>
 
   <section class="creator-page" id="creatorPage">
-    <div class="page-heading"><div><h2 data-i18n="creators.title">达人库</h2><p data-i18n="creators.subtitle">查询已抓取的数据，需要时再筛选导出。</p></div><div style="display:flex;gap:8px"><button class="btn btn-secondary" id="creatorUpdateOpen" data-i18n="creators.updateData">更新达人数据</button><button class="btn btn-primary" data-go-page="tasks" data-i18n="creators.newTask">＋ 新建抓取任务</button></div></div>
+    <div class="page-heading"><div><h2 data-i18n="creators.title">达人库</h2><p data-i18n="creators.subtitle">查询已抓取的数据，需要时再筛选导出。</p></div><div style="display:flex;gap:8px"><button class="btn btn-secondary" id="creatorContinueOpen" data-i18n="creators.continueScrape">➕ 继续抓取</button><button class="btn btn-secondary" id="creatorUpdateOpen" data-i18n="creators.updateData">更新达人数据</button><button class="btn btn-primary" data-go-page="tasks" data-i18n="creators.newTask">＋ 新建抓取任务</button></div></div>
     <div class="creator-dashboard" aria-label="Creator library dashboard">
       <div class="creator-dashboard-card"><span data-i18n="creators.dashboardTotal">达人总数</span><strong id="creatorDashTotal">—</strong><small data-i18n="creators.dashboardTotalHint">已自动去重</small></div>
       <div class="creator-dashboard-card"><span data-i18n="creators.dashboardEmail">含合作邮箱</span><strong id="creatorDashEmail">—</strong><small id="creatorDashEmailHint">—</small></div>
@@ -836,6 +836,7 @@ const I18N = {
   'creators.dashboardStorage': { zh: '数据库占用', en: 'Database size' },
   'creators.dashboardStorageHint': { zh: '仅本地结构化数据', en: 'Local structured data only' },
   'creators.updateData': { zh: '更新达人数据', en: 'Update creator data' },
+  'creators.continueScrape': { zh: '➕ 继续抓取', en: '➕ Continue scraping' },
   'creators.updateTitle': { zh: '更新达人数据', en: 'Update creator data' },
   'creators.updateHint': { zh: '复用达人库名单，更新当前地区和筛选范围，不重复搜索达人。', en: 'Reuse saved creator IDs and update the current region and filters without rediscovery.' },
   'creators.updateScope': { zh: '更新范围', en: 'Update scope' },
@@ -2210,6 +2211,40 @@ async function prepareLibraryUpdate() {
   document.getElementById('libraryUpdateStart').disabled = !cookieList.length || !libraryUpdateIds.length;
 }
 document.getElementById('creatorUpdateOpen').onclick = prepareLibraryUpdate;
+// ── continue scraping: add NEW creators to the library ──
+// Uses the last scrape's keywords/region, skips creators already in the library
+// (dedupe via existingIds), and fills the library only (no auto CSV export).
+document.getElementById('creatorContinueOpen').onclick = async () => {
+  if (!cookieList.length) { alert(uiLang === 'zh' ? '请先在“可用账号”中导入 Cookie。' : 'Import a cookie from Available accounts first.'); return; }
+  const last = await window.api.getLastScrapeConfig().catch(() => null);
+  const keywords = last && last.keywords && last.keywords.length ? last.keywords : null;
+  if (!keywords) { alert(uiLang === 'zh' ? '还没有抓取记录，请先在“新建抓取任务”中抓一次。' : 'No previous scrape found — run a new task first.'); return; }
+  const region = (last && last.shopRegion) || (document.getElementById('shopRegionCustom').value.trim() || document.getElementById('shopRegion').value || 'US').toUpperCase();
+  const detail = !!(last && last.detail !== undefined ? last.detail : true);
+  const mode = (last && last.mode) || 'auto';
+  const accounts = Math.max(1, cookieList.length);
+  const msg = uiLang === 'zh'
+    ? `继续抓取将按上次的关键词（${keywords.length} 个）搜索新增达人，跳过达人库已有的，结果自动并入达人库。\n\n地区：${region} · 关键词：${keywords.length} 个 · 账号：${cookieList.length} 个\n模式：${detail ? '完整（含邮箱/MCN）' : '快速'}\n\n确定继续吗？`
+    : `Continue will search ${keywords.length} keywords for NEW creators, skip ones already in the library, and merge results in.\n\nRegion: ${region} · Keywords: ${keywords.length} · Accounts: ${cookieList.length}\nMode: ${detail ? 'Full (incl. email/MCN)' : 'Fast'}\n\nContinue?`;
+  if (!confirm(msg)) return;
+  // dedupe against the whole library for this region
+  const existing = await window.api.listCreatorIds({ region, limit: 20000 }).catch(() => ({ ids: [] }));
+  const existingIds = (existing && existing.ids) || [];
+  const cfg = {
+    pastedCookies: cookieList.map(c => c.data),
+    mode, format: 'csv', headerLang: uiLang,
+    outPath: document.getElementById('outPath').value.trim() || './output',
+    detail, dedupe: true, existingIds, keywords, fields: FIELDS.map(f => f.k),
+    shopRegion: region, autoExport: false, libraryContinue: true,
+  };
+  const result = await window.api.start(cfg);
+  if (result.error) { alert(result.error); return; }
+  // switch to tasks page so the user sees the run
+  showPage('tasks');
+  setStatus(uiLang === 'zh' ? '⏳ 继续抓取启动中…' : '⏳ Continue scraping…', 'running');
+  document.getElementById('btnStop').disabled = false;
+  lockOptions(true);
+};
 document.getElementById('libraryUpdateClose').onclick = () => { if (!libraryUpdateActive) document.getElementById('libraryUpdatePanel').classList.remove('open'); };
 document.getElementById('libraryUpdateStart').onclick = async () => {
   if (!libraryUpdateIds.length || !cookieList.length) return;

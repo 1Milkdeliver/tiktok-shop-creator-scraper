@@ -177,6 +177,7 @@ function recordHistory(entry) {
 
 // IPC: remembered cookies + history + default out dir
 ipcMain.handle('get-app-data', () => ({ cookies: appData.cookies || [], history: appData.history || [], defaultOutDir: appData.outDir || OUT_DIR }));
+ipcMain.handle('get-last-scrape-config', () => appData.lastScrapeConfig || null);
 ipcMain.handle('clear-cookies', () => { appData.cookies = []; saveAppData(); return { ok: true }; });
 ipcMain.handle('creator-db-stats', async () => {
   if (!creatorDb) return { error: '本地达人库未初始化' };
@@ -869,7 +870,9 @@ ipcMain.handle('start-scrape', async (event, config) => {
       fields: config.fields && config.fields.length ? config.fields : null,
       updateFields: config.updateFields && config.updateFields.length ? config.updateFields : null,
       libraryUpdate: !!config.libraryUpdate,
+      libraryContinue: !!config.libraryContinue,
       autoExport: config.autoExport === false ? false : true, // scrape page: library only, no auto CSV
+      existingIds: Array.isArray(config.existingIds) ? config.existingIds : null,
     };
     if (creatorDb) {
       // In "new only" mode, seed the runner's network-level dedupe set from
@@ -878,6 +881,16 @@ ipcMain.handle('start-scrape', async (event, config) => {
       cfg.databaseJobId = await creatorDb.createScrapeJob(cfg);
       runner._currentJobId = cfg.databaseJobId;
     }
+    // remember the scrape configuration so the Creator Library can offer
+    // "Continue scraping" with the same keywords/region later
+    appData.lastScrapeConfig = {
+      keywords: cfg.keywords || [],
+      shopRegion: cfg.shopRegion || 'US',
+      detail: !!cfg.detail,
+      mode: cfg.mode || 'auto',
+      format: cfg.format || 'csv',
+    };
+    saveAppData();
     // remember cookies for next launch
     appData.cookies = pasted.slice();
     saveAppData();
