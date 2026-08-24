@@ -231,6 +231,16 @@
   .creator-column-grid { display:grid;grid-template-columns:1fr 1fr;gap:2px; }
   .creator-column-grid label { display:flex;align-items:center;gap:7px;min-height:30px;padding:4px 6px;border-radius:4px;font-size:12px;cursor:pointer; }
   .creator-column-grid label:hover { background:#f6f8fa; }
+  /* multi-select filter panel */
+  .creator-filter-grid { display:grid;gap:8px; }
+  .creator-filter-field { border:1px solid #eef0f3;border-radius:6px;padding:7px 9px; }
+  .creator-filter-field > label { display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer; }
+  .creator-filter-field > label input[type=checkbox] { width:14px;height:14px; }
+  .creator-filter-options { display:none;margin-top:6px;max-height:150px;overflow:auto;background:#fafbfc;border-radius:5px;padding:4px 6px; }
+  .creator-filter-field.open .creator-filter-options { display:block; }
+  .creator-filter-options label { display:flex;align-items:center;gap:6px;padding:3px 2px;font-size:12px;cursor:pointer; }
+  .creator-filter-options label:hover { background:#f0f3f6; }
+  .creator-filter-count { margin-left:auto;color:var(--sub);font-size:11px;font-weight:400; }
   .creator-table-wrap { overflow:auto;max-height:calc(100vh - 330px);min-height:340px;border:0;border-radius:0; }
   .creator-table { width:100%;border-collapse:collapse;min-width:820px;font-size:12px; }
   .creator-table th { position:sticky;top:0;background:#f7f8fa;color:var(--sub);text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap; }
@@ -496,13 +506,13 @@
     <div class="card creator-workbench">
       <div class="creator-toolbar">
         <div class="creator-search-wrap"><input id="creatorSearch" type="search" data-i18n-placeholder="creators.search" placeholder="搜索昵称、账号、ID 或邮箱"></div>
-        <select id="creatorRegion"><option value="" data-i18n="creators.allRegions">全部地区</option><option>US</option><option>UK</option><option>SG</option><option>MY</option><option>TH</option><option>VN</option><option>PH</option><option>ID</option><option>MX</option><option>BR</option></select>
-        <input id="creatorMinFollowers" type="number" min="0" data-i18n-placeholder="creators.minFollowers" placeholder="最低粉丝数">
-        <input id="creatorMaxFollowers" type="number" min="0" data-i18n-placeholder="creators.maxFollowers" placeholder="最高粉丝数">
-        <input id="creatorMinGmv" type="number" min="0" data-i18n-placeholder="creators.minGmv" placeholder="最低GMV($)">
-        <input id="creatorMaxGmv" type="number" min="0" data-i18n-placeholder="creators.maxGmv" placeholder="最高GMV($)">
-        <input id="creatorCategory" type="text" data-i18n-placeholder="creators.category" placeholder="类目（如 Beauty）">
-        <select id="creatorActivity"><option value="" data-i18n="creators.allActivity">全部活跃状态</option><option value="active" data-i18n="activity.active">活跃</option><option value="inactive" data-i18n="activity.inactive">不活跃</option><option value="unknown" data-i18n="activity.unknown">待判断</option></select>
+        <div class="creator-columns" style="position:relative">
+          <button class="btn btn-secondary" id="creatorFilterBtn" aria-expanded="false" data-i18n="creators.filters">🔽 字段筛选</button>
+          <div class="creator-column-menu creator-filter-menu" id="creatorFilterMenu" style="min-width:320px">
+            <div class="creator-column-menu-head"><span data-i18n="creators.filtersTitle">按字段筛选（多选）</span><button class="btn-link" id="creatorFilterClear" data-i18n="creators.reset">重置</button></div>
+            <div class="creator-filter-grid" id="creatorFilterGrid"></div>
+          </div>
+        </div>
         <label class="check-label"><input id="creatorHasEmail" type="checkbox"> <span data-i18n="creators.hasEmail">仅有邮箱</span></label>
         <button class="btn btn-secondary" id="creatorRefresh" data-i18n="creators.refresh">刷新</button>
         <button class="btn btn-primary" id="creatorExport" data-i18n="creators.export">⬇ 导出当前筛选</button>
@@ -1648,19 +1658,25 @@ async function renderHistory(history) {
     box.innerHTML = '<div style="color:var(--sub);font-size:13px;padding:10px">' + I18N['step5.empty'][uiLang] + '</div>';
     return;
   }
-  box.innerHTML = history.map((h, i) => `
+  box.innerHTML = history.map((h, i) => {
+    const isExport = h.type === 'export'; // manual filtered export (达人筛选-*)
+    const tag = isExport
+      ? (uiLang === 'zh' ? '<span style="color:var(--accent);flex-shrink:0;font-size:11px;border:1px solid rgba(0,113,227,.3);border-radius:10px;padding:1px 7px">导出</span>' : '<span style="color:var(--accent);flex-shrink:0;font-size:11px;border:1px solid rgba(0,113,227,.3);border-radius:10px;padding:1px 7px">Export</span>')
+      : '';
+    return `
     <div class="hist-row" data-i="${i}" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid rgba(0,0,0,.05);font-size:13px">
       <span style="color:var(--ok);flex-shrink:0">📄</span>
+      ${tag}
       <span class="hist-path" title="${h.outPath}" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h.outPath}</span>
       <span style="color:var(--sub);flex-shrink:0">${h.rows} ${uiLang === 'zh' ? '行' : 'rows'} · ${h.time}</span>
       <span class="hist-actions" style="display:flex;gap:4px;flex-shrink:0">
         <button class="hist-btn" data-act="open" title="${uiLang === 'zh' ? '打开文件' : 'Open file'}">📂 ${uiLang === 'zh' ? '打开' : 'Open'}</button>
         <button class="hist-btn" data-act="folder" title="${uiLang === 'zh' ? '打开所在文件夹' : 'Open folder'}">📁 ${uiLang === 'zh' ? '文件夹' : 'Folder'}</button>
-        <button class="hist-btn" data-act="continue" title="${uiLang === 'zh' ? '继续抓取：仅新增未抓过的达人' : 'Continue: only add new creators'}">🔼 ${uiLang === 'zh' ? '继续' : 'Continue'}</button>
-        <button class="hist-btn" data-act="refresh" title="${uiLang === 'zh' ? '刷新：重新抓取全部达人并覆盖' : 'Refresh: re-scrape all and overwrite'}">🔄 ${uiLang === 'zh' ? '重抓' : 'Refresh'}</button>
+        ${isExport ? '' : `<button class="hist-btn" data-act="continue" title="${uiLang === 'zh' ? '继续抓取：仅新增未抓过的达人' : 'Continue: only add new creators'}">🔼 ${uiLang === 'zh' ? '继续' : 'Continue'}</button>
+        <button class="hist-btn" data-act="refresh" title="${uiLang === 'zh' ? '刷新：重新抓取全部达人并覆盖' : 'Refresh: re-scrape all and overwrite'}">🔄 ${uiLang === 'zh' ? '重抓' : 'Refresh'}</button>`}
         <button class="hist-btn hist-del" data-act="del" title="${uiLang === 'zh' ? '删除文件' : 'Delete file'}">🗑 ${uiLang === 'zh' ? '删除' : 'Delete'}</button>
       </span>
-    </div>`).join('');
+    </div>`;}).join('');
   box.querySelectorAll('.hist-btn').forEach(btn => {
     btn.onclick = async (e) => {
       e.stopPropagation();
@@ -1674,7 +1690,15 @@ async function renderHistory(history) {
         const r = await window.api.openHistoryFolder(entry.outPath);
         if (!r.ok) alert(r.error || I18N['hist.folderFail'][uiLang]);
       } else if (act === 'del') {
-        if (!confirm(uiLang === 'zh' ? `确定删除文件吗？\n${entry.outPath}` : `Delete file?\n${entry.outPath}`)) return;
+        const isExport = entry.type === 'export';
+        const msg = uiLang === 'zh'
+          ? (isExport
+            ? `确定删除这个导出的文件吗？\n\n${entry.outPath}\n\n⚠️ 这只是导出的副本，删除不影响本地达人库的数据。`
+            : `确定删除文件吗？\n${entry.outPath}`)
+          : (isExport
+            ? `Delete this exported file?\n\n${entry.outPath}\n\n⚠️ This is only an exported copy — deleting it does NOT affect the creator library.`
+            : `Delete file?\n${entry.outPath}`);
+        if (!confirm(msg)) return;
         const r = await window.api.deleteHistoryFile(entry.outPath);
         if (!r.ok) { alert(r.error || I18N['hist.delFail'][uiLang]); return; }
         renderHistory(r.history || []);
@@ -1724,6 +1748,26 @@ const creatorSort = { key:'last_refreshed_at', direction:'desc' };
 // Avatar is an image URL — heavy and not meaningful in a table, so the library
 // never shows it (it isn't stored either). GPM/gender fields ARE shown as text.
 const LIBRARY_SKIP = new Set(['avatar']);
+
+// ── multi-select field filters ──
+// enum fields: values match raw_json text (LIKE). numeric fields: tuples
+// [min,max] (null = open) matched against the numeric value in raw_json.
+const FILTER_DEFS = [
+  { key: 'selection_region', n: '地区', e: 'Region', type: 'enum', fixed: ['US', 'UK', 'SG', 'MY', 'TH', 'VN', 'PH', 'ID', 'MX', 'BR'] },
+  { key: 'category', n: '类目', e: 'Category', type: 'enum' },
+  { key: 'top_follower_ages', n: '粉丝年龄段', e: 'Ages', type: 'enum', fixed: ['18-24', '25-34', '35-44', '45-54', '55+'] },
+  { key: 'top_follower_gender', n: '粉丝性别', e: 'Gender', type: 'enum', fixed: ['Female', 'Male'] },
+  { key: 'pps_score', n: 'PPS评分', e: 'PPS Score', type: 'numeric', buckets: [[4.5, null, '4.5+'], [4, 4.5, '4 - 4.5'], [3.5, 4, '3.5 - 4'], [null, 3.5, '< 3.5']] },
+  { key: 'units_sold', n: '销量', e: 'Units Sold', type: 'numeric', buckets: [[1000, null, '1K+'], [100, 1000, '100 - 1K'], [10, 100, '10 - 100'], [null, 10, '< 10']] },
+  { key: 'video_avg_view_cnt', n: '平均观看', e: 'Avg Views', type: 'numeric', buckets: [[100000, null, '100K+'], [10000, 100000, '10K - 100K'], [1000, 10000, '1K - 10K'], [null, 1000, '< 1K']] },
+  { key: 'follower_cnt', n: '粉丝数', e: 'Followers', type: 'numeric', buckets: [[1000000, null, '1M+'], [100000, 1000000, '100K - 1M'], [10000, 100000, '10K - 100K'], [1000, 10000, '1K - 10K'], [null, 1000, '< 1K']] },
+  { key: 'med_gmv_revenue', n: '总GMV', e: 'Total GMV', type: 'numeric', buckets: [[100000, null, '$100K+'], [10000, 100000, '$10K - $100K'], [1000, 10000, '$1K - $10K'], [null, 1000, '< $1K']] },
+  { key: 'activity_status', n: '活跃状态', e: 'Activity', type: 'enum', fixed: ['active', 'inactive', 'unknown'] },
+];
+// current selections: { key: { active: bool, enum: Set, numeric: Set } }
+const filterState = new Map();
+FILTER_DEFS.forEach(f => filterState.set(f.key, { active: false, enum: new Set(), numeric: new Set() }));
+let filterOptionsCache = {}; // key -> array of dynamic enum options (for category etc.)
 
 function showPage(page) {
   const allowed = ['overview', 'tasks', 'creators', 'exports'];
@@ -1832,6 +1876,90 @@ function renderCreatorColumns() {
   });
 }
 
+// ── multi-select filter panel ──
+async function renderFilterPanel() {
+  const grid = document.getElementById('creatorFilterGrid');
+  grid.innerHTML = '';
+  for (const def of FILTER_DEFS) {
+    const st = filterState.get(def.key);
+    const name = uiLang === 'zh' ? def.n : def.e;
+    // enum options: fixed list, or dynamic values from the DB (category etc.)
+    let options = def.fixed || [];
+    if (def.type === 'enum' && !def.fixed) {
+      if (!filterOptionsCache[def.key]) {
+        try { const r = await window.api.creatorFilterOptions(def.key); filterOptionsCache[def.key] = r.ok ? r.options : []; } catch (e) { filterOptionsCache[def.key] = []; }
+      }
+      options = filterOptionsCache[def.key];
+    }
+    const field = document.createElement('div');
+    field.className = 'creator-filter-field' + (st.active ? ' open' : '');
+    const head = document.createElement('label');
+    const toggle = document.createElement('input'); toggle.type = 'checkbox'; toggle.checked = !!st.active;
+    toggle.onchange = () => { st.active = toggle.checked; field.classList.toggle('open', toggle.checked); collectFilterCounts(); };
+    const title = document.createElement('span'); title.textContent = name;
+    const count = document.createElement('span'); count.className = 'creator-filter-count'; count.dataset.for = def.key; count.textContent = '';
+    head.append(toggle, title, count);
+    const opts = document.createElement('div'); opts.className = 'creator-filter-options';
+    const renderOptions = () => {
+      opts.innerHTML = '';
+      const selected = def.type === 'enum' ? st.enum : st.numeric;
+      const items = def.type === 'enum' ? options : def.buckets.map(b => ({ label: b[2], min: b[0], max: b[1] }));
+      (items || []).forEach(item => {
+        const val = def.type === 'enum' ? String(item) : item.label;
+        const label = document.createElement('label');
+        const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = selected.has(val);
+        cb.onchange = () => { cb.checked ? selected.add(val) : selected.delete(val); collectFilterCounts(); };
+        const span = document.createElement('span'); span.textContent = val;
+        label.append(cb, span); opts.appendChild(label);
+      });
+      if (def.type === 'enum' && !def.fixed && !options.length) {
+        opts.innerHTML = `<div style="color:var(--sub);font-size:11px;padding:4px">${uiLang === 'zh' ? '（暂无数据）' : '(no data yet)'}</div>`;
+      }
+    };
+    renderOptions();
+    field.append(head, opts);
+    grid.appendChild(field);
+  }
+  collectFilterCounts();
+}
+function collectFilterCounts() {
+  for (const def of FILTER_DEFS) {
+    const st = filterState.get(def.key);
+    const el = document.querySelector(`.creator-filter-count[data-for="${def.key}"]`);
+    if (!el) continue;
+    const n = (def.type === 'enum' ? st.enum.size : st.numeric.size);
+    el.textContent = n ? `${n} 选` : '';
+    // badge on the filter button
+  }
+  const total = [...filterState.values()].filter(s => s.active && (s.enum.size || s.numeric.size)).length;
+  const btn = document.getElementById('creatorFilterBtn');
+  if (btn) btn.textContent = total ? `🔽 字段筛选（${total}）` : (uiLang === 'zh' ? '🔽 字段筛选' : '🔽 Filter by field');
+}
+// Build the filters object passed to the DB query (fieldFilters + numericFieldFilters)
+function buildFieldFilters() {
+  const fieldFilters = {};
+  const numericFieldFilters = {};
+  for (const def of FILTER_DEFS) {
+    const st = filterState.get(def.key);
+    if (!st.active) continue;
+    if (def.type === 'enum' && st.enum.size) {
+      fieldFilters[def.key] = [...st.enum];
+    } else if (def.type === 'numeric' && st.numeric.size) {
+      const ranges = [];
+      for (const b of def.buckets) {
+        if (st.numeric.has(b[2])) ranges.push([b[0], b[1]]);
+      }
+      if (ranges.length) numericFieldFilters[def.key] = ranges;
+    }
+  }
+  return { fieldFilters, numericFieldFilters };
+}
+function resetFieldFilters() {
+  filterState.forEach(s => { s.active = false; s.enum.clear(); s.numeric.clear(); });
+  renderFilterPanel();
+  loadCreators();
+}
+
 async function loadCreators() {
   const body = document.getElementById('creatorRows');
   renderCreatorHead();
@@ -1839,18 +1967,12 @@ async function loadCreators() {
   body.innerHTML = `<tr><td colspan="${columnCount}" class="creator-empty">${uiLang === 'zh' ? '正在读取本地达人库…' : 'Loading creator library…'}</td></tr>`;
   const filters = {
     search: document.getElementById('creatorSearch').value.trim(),
-    region: document.getElementById('creatorRegion').value,
-    minFollowers: document.getElementById('creatorMinFollowers').value || undefined,
-    maxFollowers: document.getElementById('creatorMaxFollowers').value || undefined,
-    minGmv: document.getElementById('creatorMinGmv').value || undefined,
-    maxGmv: document.getElementById('creatorMaxGmv').value || undefined,
-    category: document.getElementById('creatorCategory').value || undefined,
     hasEmail: document.getElementById('creatorHasEmail').checked,
-    activityStatus: document.getElementById('creatorActivity').value,
     sortBy: creatorSort.key,
     sortDirection: creatorSort.direction,
     limit: creatorPageSize,
     offset: creatorOffset,
+    ...buildFieldFilters(),
   };
   const result = await window.api.listCreators(filters);
   body.innerHTML = '';
@@ -1906,17 +2028,20 @@ document.getElementById('creatorExport').onclick = async () => {
   const fields = checkedFields.length ? checkedFields : null;
   const filters = {
     search: document.getElementById('creatorSearch').value.trim(),
-    region: document.getElementById('creatorRegion').value,
-    minFollowers: document.getElementById('creatorMinFollowers').value || undefined,
-    maxFollowers: document.getElementById('creatorMaxFollowers').value || undefined,
-    minGmv: document.getElementById('creatorMinGmv').value || undefined,
-    maxGmv: document.getElementById('creatorMaxGmv').value || undefined,
-    category: document.getElementById('creatorCategory').value || undefined,
     hasEmail: document.getElementById('creatorHasEmail').checked,
-    activityStatus: document.getElementById('creatorActivity').value,
     sortBy: creatorSort.key,
     sortDirection: creatorSort.direction,
+    ...buildFieldFilters(),
   };
+  // confirm before exporting (let the user see the scope they are about to save)
+  const activeFilters = FILTER_DEFS.filter(d => { const st = filterState.get(d.key); return st && st.active && (st.enum.size || st.numeric.size); });
+  const scopeDesc = activeFilters.length
+    ? activeFilters.map(d => { const st = filterState.get(d.key); const n = d.type === 'enum' ? st.enum.size : st.numeric.size; return `${uiLang === 'zh' ? d.n : d.e}: ${n} 项`; }).join('、')
+    : (uiLang === 'zh' ? '无字段筛选（全部达人）' : 'no field filters (all creators)');
+  const formatLabel = format === 'xlsx' ? 'Excel' : 'CSV';
+  if (!confirm(uiLang === 'zh'
+    ? `确定导出当前筛选结果吗？\n\n筛选范围：${scopeDesc}\n搜索：${filters.search || '无'}\n格式：${formatLabel}\n字段：${fields ? fields.length + ' 项' : '全部'}\n\n输出：${outDir.replace(/[\\/]+$/, '')}\\达人筛选-日期-时间.${format}`
+    : `Export the current filtered result?\n\nScope: ${scopeDesc}\nSearch: ${filters.search || 'none'}\nFormat: ${formatLabel}\nFields: ${fields ? fields.length : 'all'}\n\nOutput: ${outDir.replace(/[\\/]+$/, '')}\\达人筛选-DATE-TIME.${format}`)) return;
   const pad = n => String(n).padStart(2, '0');
   const ts = new Date();
   const stamp = `${ts.getFullYear()}${pad(ts.getMonth() + 1)}${pad(ts.getDate())}-${pad(ts.getHours())}${pad(ts.getMinutes())}${pad(ts.getSeconds())}`;
@@ -1925,19 +2050,14 @@ document.getElementById('creatorExport').onclick = async () => {
   if (!r.ok) { alert(r.error || (uiLang === 'zh' ? '导出失败' : 'Export failed')); return; }
   alert(uiLang === 'zh' ? `✅ 已导出 ${r.rows} 行 → ${r.outPath}` : `✅ Exported ${r.rows} rows → ${r.outPath}`);
 };
-document.getElementById('creatorReset').onclick = () => { document.getElementById('creatorSearch').value = ''; document.getElementById('creatorRegion').value = ''; document.getElementById('creatorMinFollowers').value = ''; document.getElementById('creatorMaxFollowers').value = ''; document.getElementById('creatorMinGmv').value = ''; document.getElementById('creatorMaxGmv').value = ''; document.getElementById('creatorCategory').value = ''; document.getElementById('creatorActivity').value = ''; document.getElementById('creatorHasEmail').checked = false; creatorOffset = 0; loadCreators(); };
+document.getElementById('creatorReset').onclick = () => { document.getElementById('creatorSearch').value = ''; document.getElementById('creatorHasEmail').checked = false; resetFieldFilters(); creatorOffset = 0; loadCreators(); };
 document.getElementById('creatorDensity').onclick = event => { const compact = document.querySelector('.creator-table').classList.toggle('compact'); event.currentTarget.textContent = I18N[compact ? 'creators.comfortable' : 'creators.compact'][uiLang]; };
 document.getElementById('creatorColumns').onclick = event => { const menu = document.getElementById('creatorColumnMenu'); const open = menu.classList.toggle('open'); event.currentTarget.setAttribute('aria-expanded', String(open)); renderCreatorColumns(); };
 document.getElementById('creatorColumnsAll').onclick = () => { hiddenCreatorColumns.clear(); renderCreatorColumns(); renderCreatorHead(); document.querySelectorAll('.creator-table [data-field]').forEach(cell => cell.hidden = false); };
-document.addEventListener('click', event => { if (!event.target.closest('.creator-columns')) { document.getElementById('creatorColumnMenu').classList.remove('open'); document.getElementById('creatorColumns').setAttribute('aria-expanded','false'); } });
-document.getElementById('creatorRegion').onchange = () => { creatorOffset = 0; loadCreators(); };
+document.addEventListener('click', event => { if (!event.target.closest('.creator-columns')) { document.getElementById('creatorColumnMenu').classList.remove('open'); document.getElementById('creatorColumns').setAttribute('aria-expanded','false'); document.getElementById('creatorFilterMenu').classList.remove('open'); document.getElementById('creatorFilterBtn').setAttribute('aria-expanded','false'); } });
+document.getElementById('creatorFilterBtn').onclick = event => { event.stopPropagation(); const menu = document.getElementById('creatorFilterMenu'); const open = menu.classList.toggle('open'); event.currentTarget.setAttribute('aria-expanded', String(open)); if (open) renderFilterPanel(); };
+document.getElementById('creatorFilterClear').onclick = () => { resetFieldFilters(); };
 document.getElementById('creatorHasEmail').onchange = () => { creatorOffset = 0; loadCreators(); };
-document.getElementById('creatorMinFollowers').onchange = () => { creatorOffset = 0; loadCreators(); };
-document.getElementById('creatorMaxFollowers').onchange = () => { creatorOffset = 0; loadCreators(); };
-document.getElementById('creatorMinGmv').onchange = () => { creatorOffset = 0; loadCreators(); };
-document.getElementById('creatorMaxGmv').onchange = () => { creatorOffset = 0; loadCreators(); };
-document.getElementById('creatorCategory').oninput = () => { clearTimeout(creatorSearchTimer); creatorSearchTimer = setTimeout(() => { creatorOffset = 0; loadCreators(); }, 250); };
-document.getElementById('creatorActivity').onchange = () => { creatorOffset = 0; loadCreators(); };
 document.getElementById('creatorSearch').oninput = () => {
   clearTimeout(creatorSearchTimer);
   creatorSearchTimer = setTimeout(() => { creatorOffset = 0; loadCreators(); }, 250);
@@ -1953,8 +2073,8 @@ function formatUpdateDuration(seconds) {
 }
 async function prepareLibraryUpdate() {
   const panel = document.getElementById('libraryUpdatePanel'); panel.classList.add('open');
-  const region = document.getElementById('creatorRegion').value || (document.getElementById('shopRegionCustom').value.trim() || document.getElementById('shopRegion').value || 'US').toUpperCase();
-  const filters = { search:document.getElementById('creatorSearch').value.trim(), region, minFollowers:document.getElementById('creatorMinFollowers').value || undefined, maxFollowers:document.getElementById('creatorMaxFollowers').value || undefined, minGmv:document.getElementById('creatorMinGmv').value || undefined, maxGmv:document.getElementById('creatorMaxGmv').value || undefined, category:document.getElementById('creatorCategory').value || undefined, hasEmail:document.getElementById('creatorHasEmail').checked, activityStatus:document.getElementById('creatorActivity').value };
+  const region = (document.getElementById('shopRegionCustom').value.trim() || document.getElementById('shopRegion').value || 'US').toUpperCase();
+  const filters = { search:document.getElementById('creatorSearch').value.trim(), region, hasEmail:document.getElementById('creatorHasEmail').checked, ...buildFieldFilters() };
   const result = await window.api.listCreatorIds(filters);
   libraryUpdateIds = result?.ok ? result.ids : [];
   const accounts = Math.max(1, cookieList.length);
@@ -1969,7 +2089,7 @@ document.getElementById('creatorUpdateOpen').onclick = prepareLibraryUpdate;
 document.getElementById('libraryUpdateClose').onclick = () => { if (!libraryUpdateActive) document.getElementById('libraryUpdatePanel').classList.remove('open'); };
 document.getElementById('libraryUpdateStart').onclick = async () => {
   if (!libraryUpdateIds.length || !cookieList.length) return;
-  const regionText = document.getElementById('creatorRegion').value || (document.getElementById('shopRegionCustom').value.trim() || document.getElementById('shopRegion').value || 'US').toUpperCase();
+  const regionText = (document.getElementById('shopRegionCustom').value.trim() || document.getElementById('shopRegion').value || 'US').toUpperCase();
   const updateFields = [...new Set(Object.values(UPDATE_FIELD_GROUPS).flat())];
   const cfg = { pastedCookies:cookieList.map(cookie => cookie.data), mode:(document.querySelector('input[name=mode]:checked') || {}).value || 'auto', format:'csv', headerLang:uiLang, outPath:document.getElementById('outPath').value.trim() || './output', detail:true, dedupe:false, creatorInput:libraryUpdateIds, keywords:[], fields:FIELDS.map(field => field.k), updateFields, shopRegion:regionText, libraryUpdate:true };
   const result = await window.api.start(cfg);

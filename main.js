@@ -158,6 +158,7 @@ function recordHistory(entry) {
     rows: entry.rows || 0,
     creators: entry.creators || 0,
     details: entry.details || 0,
+    type: entry.type || 'scrape', // 'scrape' = run export, 'export' = manual filtered export
     time: new Date().toLocaleString(),
     config: entry.config ? {
       keywords: entry.config.keywords || [],
@@ -191,6 +192,11 @@ ipcMain.handle('creator-db-ids', async (event, filters) => {
   if (!creatorDb) return { error: '本地达人库未初始化', ids: [] };
   try { return { ok: true, ids: await creatorDb.listCreatorIds(filters || {}) }; }
   catch (e) { return { error: e.message, ids: [] }; }
+});
+ipcMain.handle('creator-db-options', async (event, key) => {
+  if (!creatorDb) return { error: '本地达人库未初始化', options: [] };
+  try { return { ok: true, options: await creatorDb.getFilterOptions(String(key || '')) }; }
+  catch (e) { return { error: e.message, options: [] }; }
 });
 ipcMain.handle('creator-db-jobs', async (event, filters) => {
   if (!creatorDb) return { error: '本地达人库未初始化', rows: [], total: 0 };
@@ -241,6 +247,11 @@ ipcMain.handle('creator-db-export', async (event, payload) => {
     ensureDir(outPath);
     if (String(format).toLowerCase() === 'xlsx') await exportXlsx(outPath, out, Object.keys(out[0] || {}));
     else await exportCsv(outPath, out, Object.keys(out[0] || {}));
+    // record manual filtered exports in history (type = 'export') so the user
+    // can see/delete them separately from scrape-run exports
+    try {
+      recordHistory({ outPath, rows: out.length, creators: out.length, details: 0, type: 'export' });
+    } catch (e) { }
     return { ok: true, outPath, rows: out.length };
   } catch (e) { return { ok: false, error: e.message }; }
 });
