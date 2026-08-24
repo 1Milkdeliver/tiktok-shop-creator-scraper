@@ -29,6 +29,23 @@ runner.onDone = (result) => {
     if (creatorDb && jobId) {
       creatorDb.finishScrapeJob(jobId, result).catch(e => writeLog('任务状态写入数据库失败: ' + e.message));
     }
+    // Auto-remove cookies that were CONFIRMED invalid during this run (landed
+    // on the login/blank page). Cookies merely "expired by date" but still
+    // working are NOT removed — the UI keeps them.
+    if (result && result.ok) {
+      const invalid = Array.isArray(result.invalidCookieIndexes) ? result.invalidCookieIndexes : [];
+      if (invalid.length && Array.isArray(appData.cookies) && appData.cookies.length) {
+        // remove from the highest index first so earlier indexes stay valid
+        const removed = [];
+        [...invalid].sort((a, b) => b - a).forEach(i => {
+          if (i >= 0 && i < appData.cookies.length) { removed.push(appData.cookies.splice(i, 1)[0]); }
+        });
+        if (removed.length) {
+          saveAppData();
+          writeLog(`已自动移除 ${removed.length} 个确认失效的账号 Cookie`);
+        }
+      }
+    }
     if (result && result.ok && !result.testMode) {
       runner._historyRecorded = true;
       // attach the run config so history entries can continue/refresh

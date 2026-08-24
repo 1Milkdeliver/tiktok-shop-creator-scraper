@@ -1580,7 +1580,27 @@ async function poll() {
       syncMainButton('resume', { disabled: false });
       setStatus(uiLang === 'zh' ? '⏸ 已暂停' : '⏸ Paused', '');
       detail.textContent = uiLang === 'zh' ? '已暂停' : 'Paused';
-    } else if (j.result && j.result.ok) { stopSpin(); setStatus(uiLang === 'zh' ? '✅ 完成' : '✅ Done', 'done'); showResult(j.result); detail.textContent = ''; syncMainButton('start', { disabled: false }); btnStop.disabled = true; lockOptions(false); refreshAppData(); }
+    } else if (j.result && j.result.ok) {
+      stopSpin(); setStatus(uiLang === 'zh' ? '✅ 完成' : '✅ Done', 'done');
+      // Auto-remove cookies that were CONFIRMED invalid during this run
+      // (landed on login/blank page). Cookies merely "expired by date" but
+      // still working are kept. doneAt guards against re-processing on polls.
+      const invIdx = Array.isArray(j.result.invalidCookieIndexes) ? j.result.invalidCookieIndexes : [];
+      if (invIdx.length && window._lastInvalidHandledAt !== j.result.doneAt) {
+        window._lastInvalidHandledAt = j.result.doneAt;
+        const removedNames = [];
+        [...invIdx].sort((a, b) => b - a).forEach(i => {
+          if (i >= 0 && i < cookieList.length) removedNames.push(cookieList.splice(i, 1)[0]);
+        });
+        if (removedNames.length) {
+          renderCookieList();
+          alert(uiLang === 'zh'
+            ? `⚠️ 已自动移除 ${removedNames.length} 个确认失效的账号 Cookie（跳转到登录页/空白页）。仅按日期显示过期但还能用的 Cookie 已保留。`
+            : `⚠️ Auto-removed ${removedNames.length} confirmed-invalid account cookie(s) (redirected to login/blank page). Cookies merely expired-by-date but still working were kept.`);
+        }
+      }
+      showResult(j.result); detail.textContent = ''; syncMainButton('start', { disabled: false }); btnStop.disabled = true; lockOptions(false); refreshAppData();
+    }
     else if (j.result && !j.result.ok) { stopSpin(); setStatus(uiLang === 'zh' ? '❌ 出错' : '❌ Error', 'error'); detail.textContent = ''; syncMainButton('start', { disabled: false }); btnStop.disabled = true; lockOptions(false); }
     renderLibraryUpdateProgress(j);
   } catch (e) { }
