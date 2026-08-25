@@ -275,18 +275,21 @@
   .creator-filter-panel { padding:10px 16px 4px;border-bottom:1px solid #eef0f3;background:#fff; }
   .creator-filter-tabs { display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px; }
   .creator-filter-label { font-size:13px;font-weight:600;color:var(--text-2);margin-right:6px; }
-  .cf-tab { border:1px solid var(--border);background:#fff;color:var(--text-2);font-size:12.5px;font-weight:600;padding:5px 16px;border-radius:999px;cursor:pointer;transition:.15s; }
+  .cf-tab { border:1px solid var(--border);background:#f5f6f8;color:var(--text-2);font-size:12.5px;font-weight:600;padding:5px 16px;border-radius:6px;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:6px; }
   .cf-tab:hover { border-color:var(--accent);color:var(--accent); }
   .cf-tab.active { background:rgba(0,113,227,.1);border-color:var(--accent);color:var(--accent); }
-  .cf-badge { display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;margin-left:5px;padding:0 4px;border-radius:99px;background:var(--accent);color:#fff;font-size:10px;font-weight:700; }
-  .cf-reset { margin-left:auto;font-size:12.5px; }
+  .cf-badge { display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:17px;padding:0 4px;border-radius:99px;background:#111;color:#fff;font-size:10.5px;font-weight:700; }
+  .cf-reset { margin-left:auto;font-size:12.5px;color:var(--accent);font-weight:600; }
   .cf-reset:disabled { color:#a8b0ba;cursor:not-allowed;text-decoration:none; }
   /* TikTok-style filter bar: one dropdown per field, horizontal layout */
-  .creator-filterbar { display:flex;flex-wrap:wrap;gap:6px;align-items:center;flex:1 1 auto;min-width:0; }
+  /* TikTok-backend style filter bar: 3 equal columns × 2 rows grid */
+  .creator-filterbar { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 10px;align-items:center;min-width:0; }
+  .creator-filterbar .fdrop { min-width:0; }
+  .creator-filterbar .fdrop-btn { width:100%;justify-content:space-between; }
   .fdrop { position:relative; }
   .fdrop-btn { display:flex;align-items:center;gap:5px;min-height:30px;padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text-2);font-size:12px;font-weight:500;cursor:pointer;transition:.12s; }
   .fdrop-btn:hover { border-color:var(--accent);color:var(--accent); }
-  .fdrop-btn.active { background:rgba(0,113,227,.08);border-color:var(--accent);color:var(--accent);font-weight:600; }
+  .fdrop-btn.active { background:rgba(0,113,227,.08);border-color:var(--accent);color:var(--accent);font-weight:600;box-shadow:0 0 0 3px rgba(0,113,227,.12); }
   .fdrop-btn .fcount { background:var(--accent);color:#fff;border-radius:9px;font-size:10px;padding:0 5px;line-height:14px; }
   .fdrop-menu { display:none;position:absolute;top:calc(100% + 5px);left:0;z-index:30;min-width:170px;max-height:280px;overflow:auto;padding:6px;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow-lg); }
   .fdrop-menu.open { display:block; }
@@ -309,7 +312,8 @@
   .fdrop-cascade-l1.active { background:rgba(0,113,227,.08);color:var(--accent);font-weight:600; }
   .fdrop-cascade-l1 input { width:14px;height:14px;flex:0 0 auto; }
   .fdrop-cascade-l1 span { flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
-  .fdrop-cascade-l1 em { font-style:normal;font-size:10.5px;color:var(--sub);background:#eef0f3;border-radius:99px;padding:1px 6px;flex:0 0 auto; }
+  .fdrop-cascade-l1 em { font-style:normal;font-size:11px;color:var(--sub);margin-left:2px;flex:0 0 auto; }
+  .fdrop-cascade-arrow { font-style:normal;color:var(--sub);font-size:13px;flex:0 0 auto;opacity:.7; }
   .fdrop-cascade-l2head { font-size:11px;font-weight:700;color:var(--sub);padding:8px 10px 4px;border-bottom:1px solid #eef0f3; }
   .fdrop-cascade-l2 { padding-left:12px; }
   /* selected-filter chips (TikTok-style removable tags) */
@@ -758,6 +762,13 @@ https://www.tiktok.com/@makeup.lover'></textarea>
 
   <div class="card" id="exports">
     <h2><span class="step-num">4</span> <span data-i18n="step4.title">导出设置</span></h2>
+    <!-- Filter-by style group row, consistent with the Creator Library filter card -->
+    <div class="creator-filter-tabs" style="margin-bottom:14px">
+      <span class="creator-filter-label" data-i18n="step4.title">导出设置</span>
+      <button type="button" class="cf-tab active" data-cf="format"><span data-i18n="step4.format">格式</span></button>
+      <button type="button" class="cf-tab" data-cf="fields"><span data-i18n="step4.fields">导出字段</span></button>
+      <button type="button" class="cf-tab" data-cf="history"><span data-i18n="step5.title">历史输出</span></button>
+    </div>
     <div class="inline">
       <div>
         <div class="hint" style="margin-bottom:8px" data-i18n="step4.format">格式</div>
@@ -1378,6 +1389,17 @@ renderFields();
 document.querySelectorAll('input[name=scrapeMode]').forEach(r => r.addEventListener('change', syncDetailFields));
 document.getElementById('fieldsAll').onclick = () => { document.querySelectorAll('.fld').forEach(c => c.checked = true); };
 document.getElementById('fieldsNone').onclick = () => { document.querySelectorAll('.fld').forEach(c => c.checked = false); };
+// Export Center group tabs: highlight + scroll to the matching section
+document.querySelectorAll('#exports .cf-tab').forEach(tab => {
+  tab.onclick = () => {
+    document.querySelectorAll('#exports .cf-tab').forEach(t => t.classList.toggle('active', t === tab));
+    const target = tab.dataset.cf;
+    const el = target === 'format' ? document.getElementById('exports').querySelector('.inline')
+      : target === 'fields' ? document.getElementById('fields')
+      : document.getElementById('history');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+});
 
 // ═══════════ Cookie 统一输入（拖拽 + 粘贴） ═══════════
 const cookieList = []; // array of { source: 'paste'|'file', data: string, name: string }
@@ -2238,8 +2260,10 @@ async function renderFilterBar() {
             renderFilterChips(); updateFilterBtn(btn, cnt, def, st); loadCreators(); renderCascade();
           };
           const span = document.createElement('span'); span.textContent = val;
-          const num = document.createElement('em'); num.textContent = childCount;
-          item.append(cb, span, num);
+          // bracketed child count, e.g. "Home Supplies (7)" — count of sub-categories
+          const num = document.createElement('em'); num.textContent = `(${childCount})`;
+          const arrow = document.createElement('i'); arrow.className = 'fdrop-cascade-arrow'; arrow.textContent = '›';
+          item.append(cb, span, num, arrow);
           item.onclick = (e) => { if (e.target === cb) return; activeL1 = val; renderCascade(); };
           l1Col.appendChild(item);
         });
