@@ -310,6 +310,7 @@
   .fdrop-cascade-l1 { display:flex;align-items:center;gap:6px;padding:6px 8px;font-size:12px;cursor:pointer;border-bottom:1px solid #f0f1f3; }
   .fdrop-cascade-l1:hover { background:#f6f8fa; }
   .fdrop-cascade-l1.active { background:rgba(0,113,227,.08);color:var(--accent);font-weight:600; }
+  .fdrop-cascade-l1.dim { opacity:.45; }
   .fdrop-cascade-l1 input { width:14px;height:14px;flex:0 0 auto; }
   .fdrop-cascade-l1 span { flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
   .fdrop-cascade-l1 em { font-style:normal;font-size:11px;color:var(--sub);margin-left:2px;flex:0 0 auto; }
@@ -2236,6 +2237,8 @@ async function renderFilterBar() {
       catSearch.type = 'search'; catSearch.className = 'fdrop-search';
       catSearch.placeholder = uiLang === 'zh' ? '搜索类目…' : 'Search categories…';
       menu.appendChild(catSearch);
+      // spec: focus the category search box when the panel opens
+      setTimeout(() => { if (menu.classList.contains('open')) catSearch.focus(); }, 0);
       const cascade = document.createElement('div'); cascade.className = 'fdrop-cascade';
       const l1Col = document.createElement('div'); l1Col.className = 'fdrop-cascade-col';
       const l2Col = document.createElement('div'); l2Col.className = 'fdrop-cascade-col fdrop-cascade-col2';
@@ -2246,11 +2249,17 @@ async function renderFilterBar() {
         const q = catSearch.value.trim().toLowerCase();
         // LEFT: top-level categories with child counts
         l1Col.innerHTML = '';
+        let l1Matched = 0;
         (level1Options || []).forEach(v => {
           const val = String(v);
-          if (q && !val.toLowerCase().includes(q)) return;
+          const hit = !q || val.toLowerCase().includes(q);
+          if (hit) l1Matched++;
+          // when searching and nothing matches level 1, still show the full list
+          // (dimmed) so the parent context of any matched level-2 stays visible
+          if (q && !hit) return;
           const item = document.createElement('div');
           item.className = 'fdrop-cascade-l1' + (activeL1 === val ? ' active' : '');
+          if (q && !hit) item.classList.add('dim');
           const cb = document.createElement('input'); cb.type = 'checkbox';
           const childCount = (level2Options || []).length;
           cb.checked = st.level1.has(val);
@@ -2284,7 +2293,13 @@ async function renderFilterBar() {
           const span = document.createElement('span'); span.textContent = val;
           item.append(cb, span); l2Col.appendChild(item);
         });
-        if (!(level2Options || []).length) {
+        const l2Shown = l2Col.querySelectorAll('.fdrop-cascade-l2').length;
+        if (q && l2Shown === 0) {
+          // spec: explicit "no results" empty state; keep the panel open
+          const empty = document.createElement('div'); empty.className = 'fdrop-empty';
+          empty.textContent = uiLang === 'zh' ? '未找到相关类目' : 'No matching categories';
+          l2Col.appendChild(empty);
+        } else if (!(level2Options || []).length) {
           const empty = document.createElement('div'); empty.className = 'fdrop-empty';
           empty.textContent = uiLang === 'zh' ? '（暂无垂直类目数据，更新达人数据后出现）' : '(no vertical data yet — refresh creators to populate)';
           l2Col.appendChild(empty);
@@ -2448,6 +2463,7 @@ function buildFieldFilters() {
 }
 function resetFieldFilters() {
   filterState.forEach(s => { s.enum.clear(); s.numeric.clear(); s.custom.clear(); s.level1.clear(); s.level2.clear(); });
+  closeFilterDrops(); // spec: Reset closes any open dropdown
   renderFilterBar();
   renderFilterChips();
   renderCreatorCatPanel();
@@ -2556,11 +2572,18 @@ document.getElementById('creatorCatPanelClear').onclick = () => {
   renderFilterBar(); renderFilterChips(); updateCatPanelCount(); loadCreators();
 };
 
+let creatorLoadSeq = 0; // race guard: only the latest request may render
 async function loadCreators() {
   const body = document.getElementById('creatorRows');
   renderCreatorHead();
   const columnCount = FIELDS.filter(f => !LIBRARY_SKIP.has(f.k)).length + 1;
-  body.innerHTML = `<tr><td colspan="${columnCount}" class="creator-empty">${uiLang === 'zh' ? '正在读取本地达人库…' : 'Loading creator library…'}</td></tr>`;
+  const seq = ++creatorLoadSeq;
+  const isLatest = () => seq === creatorLoadSeq;
+  // keep the previous rows visible until the new result arrives (no flicker);
+  // only show a loading row when there is nothing to keep
+  if (!body.querySelector('.creator-empty[data-has-rows]')) {
+    body.innerHTML = `<tr><td colspan="${columnCount}" class="creator-empty">${uiLang === 'zh' ? '正在读取本地达人库…' : 'Loading creator library…'}</td></tr>`;
+  }
   const filters = {
     search: document.getElementById('creatorSearch').value.trim(),
     hasEmail: document.getElementById('creatorHasEmail').checked,
@@ -2572,6 +2595,7 @@ async function loadCreators() {
     ...buildFieldFilters(),
   };
   const result = await window.api.listCreators(filters);
+  if (!isLatest()) return; // a newer filter request superseded this one
   body.innerHTML = '';
   if (!result.ok || !result.rows.length) {
     const row = document.createElement('tr');
@@ -2581,7 +2605,9 @@ async function loadCreators() {
     cell.textContent = result.error || I18N['creators.empty'][uiLang];
     row.appendChild(cell);
     body.appendChild(row);
+    delete body.dataset.hasRows;
   } else {
+    body.dataset.hasRows = '1';
     result.rows.forEach(creator => {
       const row = document.createElement('tr');
       FIELDS.filter(f => !LIBRARY_SKIP.has(f.k)).forEach(field => {
@@ -2690,7 +2716,11 @@ document.getElementById('creatorColumns').onclick = () => {
 };
 document.getElementById('creatorColumnsClose').onclick = () => setColumnDrawer(false);
 document.getElementById('creatorColumnOverlay').onclick = () => setColumnDrawer(false);
-document.addEventListener('keydown', e => { if (e.key === 'Escape') setColumnDrawer(false); });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  setColumnDrawer(false);       // close the field manager drawer
+  closeFilterDrops();           // close any open filter dropdown (spec §24)
+});
 document.getElementById('creatorColumnsAll').onclick = () => { hiddenCreatorColumns.clear(); renderCreatorColumns(); renderCreatorHead(); document.querySelectorAll('.creator-table [data-field]').forEach(cell => cell.hidden = false); };
 document.getElementById('creatorHasEmail').onchange = () => { creatorOffset = 0; loadCreators(); };
 document.getElementById('creatorActiveOnly').onchange = () => { creatorOffset = 0; loadCreators(); };
