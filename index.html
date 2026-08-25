@@ -271,6 +271,16 @@
   .ccp-child input { width:13px;height:13px;flex:0 0 auto; }
   .ccp-none { color:var(--sub);font-size:11.5px;padding:2px 0; }
   #creatorCatToggle.active { background:rgba(0,113,227,.1);border-color:var(--accent);color:var(--accent);font-weight:600; }
+  /* TikTok-backend style filter panel: Filter by + tabs + reset */
+  .creator-filter-panel { padding:10px 16px 4px;border-bottom:1px solid #eef0f3;background:#fff; }
+  .creator-filter-tabs { display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px; }
+  .creator-filter-label { font-size:13px;font-weight:600;color:var(--text-2);margin-right:6px; }
+  .cf-tab { border:1px solid var(--border);background:#fff;color:var(--text-2);font-size:12.5px;font-weight:600;padding:5px 16px;border-radius:999px;cursor:pointer;transition:.15s; }
+  .cf-tab:hover { border-color:var(--accent);color:var(--accent); }
+  .cf-tab.active { background:rgba(0,113,227,.1);border-color:var(--accent);color:var(--accent); }
+  .cf-badge { display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;margin-left:5px;padding:0 4px;border-radius:99px;background:var(--accent);color:#fff;font-size:10px;font-weight:700; }
+  .cf-reset { margin-left:auto;font-size:12.5px; }
+  .cf-reset:disabled { color:#a8b0ba;cursor:not-allowed;text-decoration:none; }
   /* TikTok-style filter bar: one dropdown per field, horizontal layout */
   .creator-filterbar { display:flex;flex-wrap:wrap;gap:6px;align-items:center;flex:1 1 auto;min-width:0; }
   .fdrop { position:relative; }
@@ -290,6 +300,18 @@
   .fdrop-hier-list { max-height:150px;overflow:auto;padding:0 2px; }
   .fdrop-hier-list2 .fdrop-option { padding-left:18px; }
   .fdrop-empty { color:var(--sub);font-size:11px;padding:6px; }
+  /* two-column category cascade (TikTok backend style) */
+  .fdrop-cascade { display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #eef0f3;border-radius:6px;overflow:hidden;min-height:180px;max-height:280px; }
+  .fdrop-cascade-col { overflow-y:auto;max-height:280px; }
+  .fdrop-cascade-col + .fdrop-cascade-col { border-left:1px solid #eef0f3;background:#fafbfc; }
+  .fdrop-cascade-l1 { display:flex;align-items:center;gap:6px;padding:6px 8px;font-size:12px;cursor:pointer;border-bottom:1px solid #f0f1f3; }
+  .fdrop-cascade-l1:hover { background:#f6f8fa; }
+  .fdrop-cascade-l1.active { background:rgba(0,113,227,.08);color:var(--accent);font-weight:600; }
+  .fdrop-cascade-l1 input { width:14px;height:14px;flex:0 0 auto; }
+  .fdrop-cascade-l1 span { flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+  .fdrop-cascade-l1 em { font-style:normal;font-size:10.5px;color:var(--sub);background:#eef0f3;border-radius:99px;padding:1px 6px;flex:0 0 auto; }
+  .fdrop-cascade-l2head { font-size:11px;font-weight:700;color:var(--sub);padding:8px 10px 4px;border-bottom:1px solid #eef0f3; }
+  .fdrop-cascade-l2 { padding-left:12px; }
   /* selected-filter chips (TikTok-style removable tags) */
   .creator-filter-chips { display:flex;flex-wrap:wrap;gap:6px;padding:8px 16px;background:#fafbfc;border-top:1px solid #eef0f3; }
   .fchip { display:inline-flex;align-items:center;gap:5px;padding:3px 8px 3px 10px;border-radius:14px;background:rgba(0,113,227,.1);border:1px solid rgba(0,113,227,.25);color:var(--accent);font-size:11.5px;font-weight:500; }
@@ -574,13 +596,23 @@
     <div class="card creator-workbench">
       <div class="creator-toolbar">
         <div class="creator-search-wrap"><input id="creatorSearch" type="search" data-i18n-placeholder="creators.search" placeholder="搜索昵称、账号、ID 或邮箱"></div>
-        <!-- TikTok-style filter bar: one dropdown per field, laid out horizontally -->
-        <div class="creator-filterbar" id="creatorFilterBar"></div>
         <button class="btn btn-secondary" id="creatorCatToggle" data-i18n="creators.catPanelBtn">🗂 类目筛选</button>
         <label class="check-label"><input id="creatorHasEmail" type="checkbox"> <span data-i18n="creators.hasEmail">仅有邮箱</span></label>
         <label class="check-label"><input id="creatorActiveOnly" type="checkbox"> <span data-i18n="creators.activeOnly">活跃达人</span></label>
         <button class="btn btn-secondary" id="creatorRefresh" data-i18n="creators.refresh">刷新</button>
+        <button class="btn btn-secondary" id="creatorImport" data-i18n="creators.import">📥 导入达人数据</button>
         <button class="btn btn-primary" id="creatorExport" data-i18n="creators.export">⬇ 导出当前筛选</button>
+      </div>
+      <!-- TikTok-backend style filter panel: Filter by + tabs + reset -->
+      <div class="creator-filter-panel" id="creatorFilterPanel">
+        <div class="creator-filter-tabs">
+          <span class="creator-filter-label" data-i18n="creators.filterBy">Filter by</span>
+          <button type="button" class="cf-tab" data-cf="creators" data-i18n="creators.tabCreators">Creators</button>
+          <button type="button" class="cf-tab" data-cf="followers" data-i18n="creators.tabFollowers">Followers</button>
+          <button type="button" class="cf-tab" data-cf="performance" data-i18n="creators.tabPerformance">Performance</button>
+          <button type="button" class="btn-link cf-reset" id="creatorFilterReset" data-i18n="creators.resetFilters" disabled>Reset</button>
+        </div>
+        <div class="creator-filterbar" id="creatorFilterBar"></div>
       </div>
       <!-- selected filter chips: removable tags like TikTok -->
       <div class="creator-filter-chips" id="creatorFilterChips" style="display:none"></div>
@@ -880,6 +912,7 @@ const I18N = {
   'creators.hasEmail': { zh: '仅有邮箱', en: 'Email only' },
   'creators.activeOnly': { zh: '活跃达人', en: 'Active only' },
   'creators.refresh': { zh: '刷新', en: 'Refresh' },
+  'creators.import': { zh: '📥 导入达人数据', en: '📥 Import creators' },
   'creators.dataTable': { zh: '达人数据', en: 'Creator data' },
   'creators.reset': { zh: '重置筛选', en: 'Reset filters' },
   'creators.compact': { zh: '紧凑显示', en: 'Compact view' },
@@ -888,6 +921,11 @@ const I18N = {
   'creators.columnsTitle': { zh: '显示字段', en: 'Visible columns' },
   'creators.allColumns': { zh: '全部显示', en: 'Show all' },
   'creators.catPanelBtn': { zh: '🗂 类目筛选', en: '🗂 Category' },
+  'creators.filterBy': { zh: 'Filter by', en: 'Filter by' },
+  'creators.tabCreators': { zh: 'Creators', en: 'Creators' },
+  'creators.tabFollowers': { zh: 'Followers', en: 'Followers' },
+  'creators.tabPerformance': { zh: 'Performance', en: 'Performance' },
+  'creators.resetFilters': { zh: 'Reset', en: 'Reset' },
   'creators.catPanelTitle': { zh: '类目筛选', en: 'Category filter' },
   'creators.catPanelSub': { zh: '勾选一级类目，可展开选择垂直类目（二级）', en: 'Check top-level categories; expand for vertical (2nd-level) categories' },
   'creators.catPanelClear': { zh: '清除', en: 'Clear' },
@@ -1941,20 +1979,21 @@ const LIBRARY_SKIP = new Set(['avatar']);
 // enum fields: values match raw_json text (LIKE). numeric fields: tuples
 // [min,max] (null = open) matched against the numeric value in raw_json.
 const FILTER_DEFS = [
-  { key: 'selection_region', n: '地区', e: 'Region', type: 'enum', fixed: ['US', 'UK', 'SG', 'MY', 'TH', 'VN', 'PH', 'ID', 'MX', 'BR'] },
-  // TikTok Shop style two-level category: top-level category + vertical (2nd-level)
-  // category, shown in ONE dropdown (hierarchy). level1 = 'category' (DB enum),
-  // level2 = '垂直类目' (DB enum). Selection maps to separate DB fields.
-  { key: 'category', n: '类目', e: 'Category', type: 'hierarchy', level1: 'category', level2: '垂直类目' },
-  { key: 'top_follower_ages', n: '粉丝年龄段', e: 'Ages', type: 'enum', fixed: ['18-24', '25-34', '35-44', '45-54', '55+'] },
-  { key: 'top_follower_gender', n: '粉丝性别', e: 'Gender', type: 'enum', fixed: ['Female', 'Male'] },
-  { key: 'pps_score', n: 'PPS评分', e: 'PPS Score', type: 'numeric', buckets: [[4.5, null, '4.5+'], [4, 4.5, '4 - 4.5'], [3.5, 4, '3.5 - 4'], [null, 3.5, '< 3.5']] },
-  { key: 'units_sold', n: '销量', e: 'Units Sold', type: 'numeric', buckets: [[1000, null, '1K+'], [100, 1000, '100 - 1K'], [10, 100, '10 - 100'], [null, 10, '< 10']] },
-  { key: 'video_avg_view_cnt', n: '平均观看', e: 'Avg Views', type: 'numeric', buckets: [[100000, null, '100K+'], [10000, 100000, '10K - 100K'], [1000, 10000, '1K - 10K'], [null, 1000, '< 1K']] },
-  { key: 'follower_cnt', n: '粉丝数', e: 'Followers', type: 'numeric', buckets: [[1000000, null, '1M+'], [100000, 1000000, '100K - 1M'], [10000, 100000, '10K - 100K'], [1000, 10000, '1K - 10K'], [null, 1000, '< 1K']] },
-  { key: 'med_gmv_revenue', n: '总GMV', e: 'Total GMV', type: 'numeric', buckets: [[100000, null, '$100K+'], [10000, 100000, '$10K - $100K'], [1000, 10000, '$1K - $10K'], [null, 1000, '< $1K']] },
-  { key: 'activity_status', n: '活跃状态', e: 'Activity', type: 'enum', fixed: ['active', 'inactive', 'unknown'] },
+  // tab: 'creators' | 'followers' | 'performance' — TikTok-backend style grouping
+  { key: 'category', n: '类目', e: 'Category', type: 'hierarchy', level1: 'category', level2: '垂直类目', tab: 'creators' },
+  { key: 'selection_region', n: '地区', e: 'Region', type: 'enum', fixed: ['US', 'UK', 'SG', 'MY', 'TH', 'VN', 'PH', 'ID', 'MX', 'BR'], tab: 'creators' },
+  { key: 'activity_status', n: '活跃状态', e: 'Activity', type: 'enum', fixed: ['active', 'inactive', 'unknown'], tab: 'creators' },
+  { key: 'MCN机构', n: 'MCN机构', e: 'MCN Agency', type: 'enum', tab: 'creators' },
+  { key: 'follower_cnt', n: '粉丝数', e: 'Followers', type: 'numeric', buckets: [[1000000, null, '1M+'], [100000, 1000000, '100K - 1M'], [10000, 100000, '10K - 100K'], [1000, 10000, '1K - 10K'], [null, 1000, '< 1K']], tab: 'followers' },
+  { key: 'top_follower_ages', n: '粉丝年龄段', e: 'Ages', type: 'enum', fixed: ['18-24', '25-34', '35-44', '45-54', '55+'], tab: 'followers' },
+  { key: 'top_follower_gender', n: '粉丝性别', e: 'Gender', type: 'enum', fixed: ['Female', 'Male'], tab: 'followers' },
+  { key: 'pps_score', n: 'PPS评分', e: 'PPS Score', type: 'numeric', buckets: [[4.5, null, '4.5+'], [4, 4.5, '4 - 4.5'], [3.5, 4, '3.5 - 4'], [null, 3.5, '< 3.5']], tab: 'performance' },
+  { key: 'units_sold', n: '销量', e: 'Units Sold', type: 'numeric', buckets: [[1000, null, '1K+'], [100, 1000, '100 - 1K'], [10, 100, '10 - 100'], [null, 10, '< 10']], tab: 'performance' },
+  { key: 'video_avg_view_cnt', n: '平均观看', e: 'Avg Views', type: 'numeric', buckets: [[100000, null, '100K+'], [10000, 100000, '10K - 100K'], [1000, 10000, '1K - 10K'], [null, 1000, '< 1K']], tab: 'performance' },
+  { key: 'med_gmv_revenue', n: '总GMV', e: 'Total GMV', type: 'numeric', buckets: [[100000, null, '$100K+'], [10000, 100000, '$10K - $100K'], [1000, 10000, '$1K - $10K'], [null, 1000, '< $1K']], tab: 'performance' },
 ];
+// active filter tab
+let creatorFilterTab = 'creators';
 // current selections: { key: { enum: Set, numeric: Set, custom: Set, level1: Set, level2: Set } }
 // hierarchy fields use level1 (top category) + level2 (vertical category)
 const filterState = new Map();
@@ -2103,8 +2142,10 @@ function updateColumnCount() {
 let openFilterDrop = null; // the currently open dropdown (its .fdrop element)
 async function renderFilterBar() {
   const bar = document.getElementById('creatorFilterBar');
+  if (!bar) return;
   bar.innerHTML = '';
-  for (const def of FILTER_DEFS) {
+  const visible = FILTER_DEFS.filter(d => (d.tab || 'creators') === creatorFilterTab);
+  for (const def of visible) {
     const st = filterState.get(def.key);
     const name = uiLang === 'zh' ? def.n : def.e;
     // enum options: fixed list, or dynamic values from the DB (category etc.)
@@ -2165,47 +2206,71 @@ async function renderFilterBar() {
     } else if (def.type === 'hierarchy') {
       // TikTok Shop style two-level category picker in one dropdown:
       //  ── 一级类目 ──   (top-level categories, multi-select)
-      //  Beauty & Personal Care ☑
-      //  ── 垂直类目（二级）──  (vertical categories, indented, multi-select)
+      //  Beauty & Personal Care ☑  (8)
+      //  ── 右栏：选中一级的二级类目 ──
       //    beauty_self_care ☐
-      const l1Label = document.createElement('div'); l1Label.className = 'fdrop-hier-label'; l1Label.textContent = uiLang === 'zh' ? '一级类目' : 'Top category';
-      menu.appendChild(l1Label);
-      const l1Box = document.createElement('div'); l1Box.className = 'fdrop-hier-list';
-      (level1Options || []).forEach(v => {
-        const label = document.createElement('label'); label.className = 'fdrop-option';
-        const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = st.level1.has(String(v));
-        cb.onchange = () => {
+      //  Search box filters both columns; left column shows sub-category counts.
+      const catSearch = document.createElement('input');
+      catSearch.type = 'search'; catSearch.className = 'fdrop-search';
+      catSearch.placeholder = uiLang === 'zh' ? '搜索类目…' : 'Search categories…';
+      menu.appendChild(catSearch);
+      const cascade = document.createElement('div'); cascade.className = 'fdrop-cascade';
+      const l1Col = document.createElement('div'); l1Col.className = 'fdrop-cascade-col';
+      const l2Col = document.createElement('div'); l2Col.className = 'fdrop-cascade-col fdrop-cascade-col2';
+      cascade.append(l1Col, l2Col); menu.appendChild(cascade);
+      // active top category whose children are shown on the right
+      let activeL1 = st.level1.size ? [...st.level1][0] : (level1Options[0] != null ? String(level1Options[0]) : '');
+      const renderCascade = () => {
+        const q = catSearch.value.trim().toLowerCase();
+        // LEFT: top-level categories with child counts
+        l1Col.innerHTML = '';
+        (level1Options || []).forEach(v => {
           const val = String(v);
-          cb.checked ? st.level1.add(val) : st.level1.delete(val);
-          renderFilterChips(); updateFilterBtn(btn, cnt, def, st); loadCreators();
-        };
-        const span = document.createElement('span'); span.textContent = v;
-        label.append(cb, span); l1Box.appendChild(label);
-      });
-      menu.appendChild(l1Box);
+          if (q && !val.toLowerCase().includes(q)) return;
+          const item = document.createElement('div');
+          item.className = 'fdrop-cascade-l1' + (activeL1 === val ? ' active' : '');
+          const cb = document.createElement('input'); cb.type = 'checkbox';
+          const childCount = (level2Options || []).length;
+          cb.checked = st.level1.has(val);
+          cb.indeterminate = !cb.checked && st.level2.size > 0; // partial when only children picked
+          cb.onchange = () => {
+            cb.checked ? st.level1.add(val) : st.level1.delete(val);
+            renderFilterChips(); updateFilterBtn(btn, cnt, def, st); loadCreators(); renderCascade();
+          };
+          const span = document.createElement('span'); span.textContent = val;
+          const num = document.createElement('em'); num.textContent = childCount;
+          item.append(cb, span, num);
+          item.onclick = (e) => { if (e.target === cb) return; activeL1 = val; renderCascade(); };
+          l1Col.appendChild(item);
+        });
+        // RIGHT: children of the active top category
+        l2Col.innerHTML = '';
+        const l2Head = document.createElement('div'); l2Head.className = 'fdrop-cascade-l2head';
+        l2Head.textContent = activeL1 || (uiLang === 'zh' ? '（选择一级类目）' : '(pick a top category)');
+        l2Col.appendChild(l2Head);
+        (level2Options || []).forEach(v => {
+          const val = String(v);
+          if (q && !val.toLowerCase().includes(q)) return;
+          const item = document.createElement('label'); item.className = 'fdrop-option fdrop-cascade-l2';
+          const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = st.level2.has(val);
+          cb.onchange = () => {
+            cb.checked ? st.level2.add(val) : st.level2.delete(val);
+            renderFilterChips(); updateFilterBtn(btn, cnt, def, st); loadCreators(); renderCascade();
+          };
+          const span = document.createElement('span'); span.textContent = val;
+          item.append(cb, span); l2Col.appendChild(item);
+        });
+        if (!(level2Options || []).length) {
+          const empty = document.createElement('div'); empty.className = 'fdrop-empty';
+          empty.textContent = uiLang === 'zh' ? '（暂无垂直类目数据，更新达人数据后出现）' : '(no vertical data yet — refresh creators to populate)';
+          l2Col.appendChild(empty);
+        }
+      };
+      catSearch.oninput = () => renderCascade();
+      renderCascade();
       if (!level1Options.length) {
         const empty = document.createElement('div'); empty.className = 'fdrop-empty';
-        empty.textContent = uiLang === 'zh' ? '（无匹配项）' : '(no matches)';
-        menu.appendChild(empty);
-      }
-      const l2Label = document.createElement('div'); l2Label.className = 'fdrop-hier-label'; l2Label.textContent = uiLang === 'zh' ? '垂直类目（二级）' : 'Vertical category';
-      menu.appendChild(l2Label);
-      const l2Box = document.createElement('div'); l2Box.className = 'fdrop-hier-list fdrop-hier-list2';
-      (level2Options || []).forEach(v => {
-        const label = document.createElement('label'); label.className = 'fdrop-option';
-        const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = st.level2.has(String(v));
-        cb.onchange = () => {
-          const val = String(v);
-          cb.checked ? st.level2.add(val) : st.level2.delete(val);
-          renderFilterChips(); updateFilterBtn(btn, cnt, def, st); loadCreators();
-        };
-        const span = document.createElement('span'); span.textContent = v;
-        label.append(cb, span); l2Box.appendChild(label);
-      });
-      menu.appendChild(l2Box);
-      if (!level2Options.length) {
-        const empty = document.createElement('div'); empty.className = 'fdrop-empty';
-        empty.textContent = uiLang === 'zh' ? '（暂无垂直类目数据，更新达人数据后出现）' : '(no vertical data yet — refresh creators to populate)';
+        empty.textContent = uiLang === 'zh' ? '（无类目数据）' : '(no categories yet)';
         menu.appendChild(empty);
       }
     }
@@ -2247,7 +2312,44 @@ async function renderFilterBar() {
     updateFilterBtn(btn, cnt, def, st);
   }
   renderFilterChips();
+  updateFilterTabs();
 }
+// Highlight the active filter tab + per-tab badge counts + Reset enabled state
+function updateFilterTabs() {
+  const counts = { creators: 0, followers: 0, performance: 0 };
+  for (const def of FILTER_DEFS) {
+    const st = filterState.get(def.key);
+    const n = def.type === 'hierarchy' ? st.level1.size + st.level2.size : (def.type === 'enum' ? st.enum.size : st.numeric.size + st.custom.size);
+    counts[def.tab || 'creators'] += n;
+  }
+  document.querySelectorAll('.cf-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.cf === creatorFilterTab);
+    let badge = t.querySelector('.cf-badge');
+    const c = counts[t.dataset.cf] || 0;
+    if (c > 0) {
+      if (!badge) { badge = document.createElement('span'); badge.className = 'cf-badge'; t.appendChild(badge); }
+      badge.textContent = c;
+    } else if (badge) { badge.remove(); }
+  });
+  const reset = document.getElementById('creatorFilterReset');
+  if (reset) {
+    const total = counts.creators + counts.followers + counts.performance;
+    reset.disabled = total === 0;
+  }
+}
+// Tab switch + Reset wiring (runs once at startup)
+document.querySelectorAll('.cf-tab').forEach(tab => {
+  tab.onclick = () => {
+    if (tab.dataset.cf === creatorFilterTab) return;
+    creatorFilterTab = tab.dataset.cf;
+    closeFilterDrops();
+    renderFilterBar();
+    loadCreators();
+  };
+});
+document.getElementById('creatorFilterReset').onclick = () => {
+  resetFieldFilters();
+};
 function updateFilterBtn(btn, cnt, def, st) {
   const n = def.type === 'hierarchy' ? st.level1.size + st.level2.size : (def.type === 'enum' ? st.enum.size : st.numeric.size + st.custom.size);
   cnt.style.display = n ? '' : 'none';
@@ -2481,6 +2583,12 @@ async function loadCreators() {
   document.getElementById('creatorPageInfo').textContent = `${current} / ${pages}`;
   document.getElementById('creatorPrev').disabled = creatorOffset === 0;
   document.getElementById('creatorNext').disabled = creatorOffset + creatorPageSize >= total;
+  // export button shows how many rows the current filter will export
+  const exportBtn = document.getElementById('creatorExport');
+  if (exportBtn) {
+    const base = uiLang === 'zh' ? '⬇ 导出当前筛选' : '⬇ Export filtered';
+    exportBtn.textContent = total > 0 ? `${base}（${total.toLocaleString()}）` : base;
+  }
 }
 
 document.querySelectorAll('.sidebar-nav [data-page]').forEach(link => link.addEventListener('click', event => {
@@ -2489,6 +2597,18 @@ document.querySelectorAll('.sidebar-nav [data-page]').forEach(link => link.addEv
 }));
 document.querySelectorAll('[data-go-page]').forEach(button => button.addEventListener('click', () => showPage(button.dataset.goPage)));
 document.getElementById('creatorRefresh').onclick = () => { creatorOffset = 0; loadCreators(); refreshDatabaseMetrics(); };
+document.getElementById('creatorImport').onclick = async () => {
+  const filePath = await window.api.chooseFile(['csv', 'xlsx', 'xls']).catch(() => '');
+  if (!filePath) return;
+  const region = (document.getElementById('shopRegionCustom').value.trim() || document.getElementById('shopRegion').value || 'US').toUpperCase();
+  const r = await window.api.importCreators({ filePath, region });
+  if (!r.ok) { alert(r.error || (uiLang === 'zh' ? '导入失败' : 'Import failed')); return; }
+  const msg = uiLang === 'zh'
+    ? `✅ 导入完成：新增 ${(r.inserted || 0).toLocaleString()} 位 · 更新 ${(r.updated || 0).toLocaleString()} 位（识别到 ${r.matched || 0} 个字段）`
+    : `✅ Imported: ${(r.inserted || 0).toLocaleString()} new · ${(r.updated || 0).toLocaleString()} updated (${r.matched || 0} fields matched)`;
+  alert(msg);
+  creatorOffset = 0; loadCreators(); refreshDatabaseMetrics();
+};
 document.getElementById('creatorExport').onclick = async () => {
   // reuse the Export Center settings (format / fields / output dir / header lang)
   const format = (document.querySelector('input[name=format]:checked') || {}).value || 'csv';
@@ -2520,7 +2640,11 @@ document.getElementById('creatorExport').onclick = async () => {
   const file = `${outDir.replace(/[\\/]+$/, '')}/达人筛选-${stamp}.${format}`;
   const r = await window.api.exportCreators({ filters, format, fields, headerLang, outPath: file });
   if (!r.ok) { alert(r.error || (uiLang === 'zh' ? '导出失败' : 'Export failed')); return; }
-  alert(uiLang === 'zh' ? `✅ 已导出 ${r.rows} 行 → ${r.outPath}` : `✅ Exported ${r.rows} rows → ${r.outPath}`);
+  // open the destination folder and highlight the exported file
+  window.api.openHistoryFolder(r.outPath || file).catch(() => { });
+  const fileCount = (r.files && r.files.length) || 1;
+  const multi = fileCount > 1 ? (uiLang === 'zh' ? `（自动分 ${fileCount} 个文件）` : ` (auto-split into ${fileCount} files)`) : '';
+  alert(uiLang === 'zh' ? `✅ 已导出 ${r.rows} 行${multi} → ${r.outPath}` : `✅ Exported ${r.rows} rows${multi} → ${r.outPath}`);
 };
 document.getElementById('creatorReset').onclick = () => { document.getElementById('creatorSearch').value = ''; document.getElementById('creatorHasEmail').checked = false; document.getElementById('creatorActiveOnly').checked = false; resetFieldFilters(); creatorOffset = 0; loadCreators(); };
 document.getElementById('creatorDensity').onclick = event => { const compact = document.querySelector('.creator-table').classList.toggle('compact'); event.currentTarget.textContent = I18N[compact ? 'creators.comfortable' : 'creators.compact'][uiLang]; };

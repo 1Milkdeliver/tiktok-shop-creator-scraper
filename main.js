@@ -228,7 +228,7 @@ ipcMain.handle('creator-db-export', async (event, payload) => {
     if (!creatorDb) return { ok: false, error: '本地达人库未初始化' };
     const { filters = {}, format = 'csv', fields = null, headerLang = 'zh', outPath } = payload || {};
     if (!outPath) return { ok: false, error: '缺少输出路径' };
-    const { exportCsv, exportXlsx, ensureDir } = require('./lib/exporter');
+    const { exportCsv, exportXlsx, createCsvStream, ensureDir } = require('./lib/exporter');
     const FIELD_LABELS = {
       handle: { zh: '达人主页', en: 'Creator Page' }, nickname: { zh: '昵称', en: 'Nickname' }, creator_oecuid: { zh: '达人ID', en: 'Creator ID' },
       avatar: { zh: '头像', en: 'Avatar' }, selection_region: { zh: '地区', en: 'Region' }, follower_cnt: { zh: '粉丝数', en: 'Followers' },
@@ -246,38 +246,73 @@ ipcMain.handle('creator-db-export', async (event, payload) => {
       last_refreshed_at: { zh: '最近更新', en: 'Last Updated' },
     };
     const label = k => (FIELD_LABELS[k] && FIELD_LABELS[k][headerLang]) || k;
-    // fetch up to 5000 rows (paged) matching the filters
-    const rows = [];
+    // export strategy:
+    //  - CSV  → streaming, memory-flat, no row cap
+    //  - XLSX → exceljs holds rows in memory (~55KB/row); export in batches of
+    //           XLSX_BATCH_ROWS, one file per batch, so memory stays bounded
+    //           even for very large result sets (auto multi-file export).
+    const isXlsx = String(format).toLowerCase() === 'xlsx';
+    const XLSX_BATCH_ROWS = 12000; // rows per xlsx file (~660MB peak per batch)
+    const known = Object.keys(FIELD_LABELS);
     let offset = 0;
     const pageSize = 500;
+    let writer = null; // CSV stream (created lazily after we know the fields)
+    let pick = null;
+    let headers = null;
+    let rowCount = 0;
+    let batchRows = []; // current xlsx batch
+    let batchIndex = 0; // file suffix: 1, 2, 3...
+    const writtenFiles = [];
+    ensureDir(outPath);
+    const flushXlsxBatch = async () => {
+      if (!batchRows.length) return;
+      batchIndex++;
+      const filePath = batchIndex === 1 ? outPath : outPath.replace(/(\.xlsx)$/i, `-${batchIndex}$1`);
+      await exportXlsx(filePath, batchRows, headers);
+      writtenFiles.push(filePath);
+      batchRows = [];
+    };
     for (;;) {
       const page = await creatorDb.listCreators({ ...filters, limit: pageSize, offset, sortBy: filters.sortBy || 'last_refreshed_at', sortDirection: filters.sortDirection || 'desc' });
-      rows.push(...(page.rows || []));
-      if (!page.rows || page.rows.length < pageSize) break;
-      if (offset > 20000) break; // hard safety cap
+      const rows = page.rows || [];
+      if (!rows.length && offset === 0) return { ok: false, error: '筛选条件下没有数据可导出', rows: 0 };
+      if (rows.length === 0) break;
+      // first page decides which columns exist (only fields with data)
+      if (!pick) {
+        pick = (Array.isArray(fields) && fields.length) ? fields : known.filter(k => rows.some(r => r[k] !== undefined && r[k] !== null && r[k] !== ''));
+        if (!pick.length) return { ok: false, error: '筛选条件下没有数据可导出', rows: 0 };
+        headers = pick.map(label);
+        if (!isXlsx) writer = createCsvStream(outPath, headers);
+      }
+      const out = rows.map(r => { const o = {}; for (const k of pick) o[label(k)] = r[k] ?? ''; return o; });
+      if (isXlsx) {
+        // fill batches; flush whenever the current batch would exceed the cap
+        for (const row of out) {
+          batchRows.push(row);
+          if (batchRows.length >= XLSX_BATCH_ROWS) await flushXlsxBatch();
+        }
+      } else {
+        writer.writeBatch(out);
+      }
+      rowCount += out.length;
+      if (rows.length < pageSize) break;
       offset += pageSize;
     }
-    // pick fields: default all known columns present in rows
-    const known = Object.keys(FIELD_LABELS);
-    const pick = (Array.isArray(fields) && fields.length) ? fields : known.filter(k => rows.some(r => r[k] !== undefined && r[k] !== null && r[k] !== ''));
-    const out = rows.map(r => { const o = {}; for (const k of pick) o[label(k)] = r[k] ?? ''; return o; });
-    if (!out.length) return { ok: false, error: '筛选条件下没有数据可导出', rows: 0 };
-    ensureDir(outPath);
-    if (String(format).toLowerCase() === 'xlsx') await exportXlsx(outPath, out, Object.keys(out[0] || {}));
-    else await exportCsv(outPath, out, Object.keys(out[0] || {}));
+    if (isXlsx) await flushXlsxBatch(); // write any remaining rows
+    else writer.end();
     // record manual filtered exports in history (type = 'export') so the user
     // can see/delete/update them separately from scrape-run exports. The
     // filters are stored so "update" can re-export with fresh library data.
     try {
       recordHistory({
-        outPath, rows: out.length, creators: out.length, details: 0, type: 'export',
+        outPath: writtenFiles[0] || outPath, rows: rowCount, creators: rowCount, details: 0, type: 'export',
         config: {
           exportFilters: filters || {}, exportFormat: String(format).toLowerCase(),
           exportFields: Array.isArray(fields) ? fields : null, exportHeaderLang: String(headerLang || 'zh'),
         },
       });
     } catch (e) { }
-    return { ok: true, outPath, rows: out.length };
+    return { ok: true, outPath: writtenFiles[0] || outPath, rows: rowCount, files: writtenFiles };
   } catch (e) { return { ok: false, error: e.message }; }
 });
 
@@ -293,7 +328,7 @@ ipcMain.handle('update-export-file', async (event, filePath) => {
     const fields = cfg.exportFields || null;
     const headerLang = cfg.exportHeaderLang || 'zh';
     // reuse the export handler logic against the same output path
-    const { exportCsv, exportXlsx, ensureDir } = require('./lib/exporter');
+    const { exportCsv, exportXlsx, createCsvStream, ensureDir } = require('./lib/exporter');
     const FIELD_LABELS = {
       handle: { zh: '达人主页', en: 'Creator Page' }, nickname: { zh: '昵称', en: 'Nickname' }, creator_oecuid: { zh: '达人ID', en: 'Creator ID' },
       avatar: { zh: '头像', en: 'Avatar' }, selection_region: { zh: '地区', en: 'Region' }, follower_cnt: { zh: '粉丝数', en: 'Followers' },
@@ -311,28 +346,73 @@ ipcMain.handle('update-export-file', async (event, filePath) => {
       last_refreshed_at: { zh: '最近更新', en: 'Last Updated' },
     };
     const label = k => (FIELD_LABELS[k] && FIELD_LABELS[k][headerLang]) || k;
-    const rows = [];
+    const isXlsx = String(format).toLowerCase() === 'xlsx';
+    const XLSX_BATCH_ROWS = 12000; // rows per xlsx file; matches the export handler
+    const known = Object.keys(FIELD_LABELS);
     let offset = 0;
     const pageSize = 500;
+    let writer = null; // CSV stream
+    let pick = null;
+    let headers = null;
+    let rowCount = 0;
+    let batchRows = [];
+    let batchIndex = 0;
+    const writtenFiles = [];
+    ensureDir(entry.outPath);
+    // clean stale sibling batches (-2, -3…) from a previous update
+    const base = entry.outPath.replace(/-\d+(\.xlsx)$/i, '$1');
+    if (isXlsx) {
+      try {
+        const dir = path.dirname(base);
+        const name = path.basename(base);
+        for (const f of fs.readdirSync(dir)) {
+          if (/^[\s\S]*-\d+\.xlsx$/i.test(f) && f.replace(/-\d+(\.xlsx)$/i, '.xlsx') === name) {
+            fs.unlinkSync(path.join(dir, f));
+          }
+        }
+      } catch (e) { }
+    }
+    const flushXlsxBatch = async () => {
+      if (!batchRows.length) return;
+      batchIndex++;
+      const filePath = batchIndex === 1 ? base : base.replace(/(\.xlsx)$/i, `-${batchIndex}$1`);
+      await exportXlsx(filePath, batchRows, headers);
+      writtenFiles.push(filePath);
+      batchRows = [];
+    };
     for (;;) {
       const page = await creatorDb.listCreators({ ...filters, limit: pageSize, offset, sortBy: filters.sortBy || 'last_refreshed_at', sortDirection: filters.sortDirection || 'desc' });
-      rows.push(...(page.rows || []));
-      if (!page.rows || page.rows.length < pageSize) break;
-      if (offset > 20000) break;
+      const rows = page.rows || [];
+      if (!rows.length && offset === 0) return { ok: false, error: '筛选条件下没有数据可更新', rows: 0 };
+      if (rows.length === 0) break;
+      if (!pick) {
+        pick = (Array.isArray(fields) && fields.length) ? fields : known.filter(k => rows.some(r => r[k] !== undefined && r[k] !== null && r[k] !== ''));
+        if (!pick.length) return { ok: false, error: '筛选条件下没有数据可更新', rows: 0 };
+        headers = pick.map(label);
+        if (!isXlsx) writer = createCsvStream(base, headers);
+      }
+      const out = rows.map(r => { const o = {}; for (const k of pick) o[label(k)] = r[k] ?? ''; return o; });
+      if (isXlsx) {
+        for (const row of out) {
+          batchRows.push(row);
+          if (batchRows.length >= XLSX_BATCH_ROWS) await flushXlsxBatch();
+        }
+      } else {
+        writer.writeBatch(out);
+      }
+      rowCount += out.length;
+      if (rows.length < pageSize) break;
       offset += pageSize;
     }
-    const known = Object.keys(FIELD_LABELS);
-    const pick = (Array.isArray(fields) && fields.length) ? fields : known.filter(k => rows.some(r => r[k] !== undefined && r[k] !== null && r[k] !== ''));
-    const out = rows.map(r => { const o = {}; for (const k of pick) o[label(k)] = r[k] ?? ''; return o; });
-    if (!out.length) return { ok: false, error: '筛选条件下没有数据可更新', rows: 0 };
-    ensureDir(entry.outPath);
-    if (format === 'xlsx') await exportXlsx(entry.outPath, out, Object.keys(out[0] || {}));
-    else await exportCsv(entry.outPath, out, Object.keys(out[0] || {}));
-    // refresh the history entry's row count + timestamp
-    entry.rows = out.length;
+    if (isXlsx) await flushXlsxBatch();
+    else writer.end();
+    // refresh the history entry's row count + timestamp (point at first file)
+    const primary = writtenFiles[0] || base;
+    entry.outPath = primary;
+    entry.rows = rowCount;
     entry.time = new Date().toLocaleString();
     saveAppData();
-    return { ok: true, outPath: entry.outPath, rows: out.length, history: appData.history || [] };
+    return { ok: true, outPath: primary, rows: rowCount, history: appData.history || [] };
   } catch (e) { return { ok: false, error: e.message }; }
 });
 
@@ -376,6 +456,189 @@ function parseCsvLine(line) {
   out.push(cur);
   return out;
 }
+
+// ── import creators from a shared CSV/XLSX file ──
+// Recognizes column headers by their Chinese/English/internal label and maps
+// them into DB fields, then upserts every row that has a creator ID.
+const IMPORT_FIELD_ALIASES = {
+  creator_oecuid: ['达人ID', 'creator_id', 'creator_oecuid', 'creator id', 'id', 'oecuid'],
+  handle: ['达人主页', 'handle', 'username', '昵称链接', '主页'],
+  nickname: ['昵称', 'nickname', '达人名称', 'name', '达人名字'],
+  selection_region: ['地区', 'region', 'selection_region', '站点'],
+  follower_cnt: ['粉丝数', 'followers', 'follower_cnt', '粉丝数量', '粉丝'],
+  category: ['类目', 'category', '一级类目', '擅长类目'],
+  med_gmv_revenue: ['总GMV', 'total gmv', 'med_gmv_revenue', 'gmv'],
+  units_sold: ['销量', 'units sold', 'units_sold', '成交件数'],
+  video_avg_view_cnt: ['平均观看', 'avg views', 'video_avg_view_cnt', '平均视频观看', '平均播放量'],
+  pps_score: ['PPS评分', 'pps score', 'pps_score', 'pps'],
+  top_follower_ages: ['粉丝年龄段', 'ages', 'top_follower_ages', '年龄段'],
+  top_follower_gender: ['粉丝性别', 'gender', 'top_follower_gender', '粉丝性别分布'],
+  '简介': ['简介', 'bio', 'description'],
+  '合作邮箱': ['合作邮箱', 'contact email', 'email', '邮箱', '合作邮箱email'],
+  'MCN机构': ['MCN机构', 'mcn', 'mcn agency', 'mcn机构', '达人机构'],
+  '垂直类目': ['垂直类目', 'vertical category', 'vertical', '二级类目'],
+  last_publish_time: ['最后发布时间', 'last published', 'last_publish_time', '最近发布'],
+  activity_status: ['活跃状态', 'activity status', 'activity', '活跃度'],
+};
+// build a lookup: normalized label -> internal field
+const IMPORT_LABEL_MAP = (() => {
+  const m = new Map();
+  for (const [field, aliases] of Object.entries(IMPORT_FIELD_ALIASES)) {
+    for (const a of aliases) m.set(a.toLowerCase().trim(), field);
+  }
+  return m;
+})();
+// ── streaming import: reads rows one batch at a time, so files of any size
+// can be imported without loading everything into memory ──
+// Returns { getHeaders(), mapColumns(), forEachBatch(async (batch) => ...) }
+async function openImportSource(filePath) {
+  const ext = path.extname(filePath || '').toLowerCase();
+  if (ext === '.csv') {
+    const readline = require('readline');
+    const stream = fs.createReadStream(filePath, { encoding: 'utf8' });
+    const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
+    // NOTE: readline's async iterator drops lines when the consumer awaits a
+    // slow operation between events. Use an event-driven queue with explicit
+    // pause/resume so large files never lose rows.
+    let headers = [];
+    let resolveReady = null;
+    const ready = new Promise(r => { resolveReady = r; });
+    let queue = [];
+    let waiters = [];
+    let done = false;
+    const QUEUE_LIMIT = 2000; // rows buffered ahead; beyond this we pause the stream
+    rl.on('line', (line) => {
+      if (line.trim() === '') return;
+      if (!headers.length) { headers = parseCsvLine(line.replace(/^\uFEFF/, '')).map(h => String(h || '').trim()); resolveReady(); return; }
+      queue.push(line);
+      if (queue.length > QUEUE_LIMIT) rl.pause(); // backpressure: stop reading
+      // hand a line to the first waiting consumer
+      if (waiters.length) { const w = waiters.shift(); w(queue.shift()); }
+    });
+    rl.on('close', () => { done = true; resolveReady(); waiters.forEach(w => w(null)); waiters = []; });
+    const nextLine = () => {
+      if (queue.length) return Promise.resolve(queue.shift());
+      if (done) return Promise.resolve(null);
+      return new Promise(r => waiters.push(r));
+    };
+    const forEachBatch = async (onBatch) => {
+      await ready;
+      let batch = [];
+      let count = 0;
+      for (;;) {
+        const line = await nextLine();
+        if (line === null) break;
+        // consumer drained below the limit → resume the stream
+        if (queue.length <= QUEUE_LIMIT / 2 && !done) rl.resume();
+        const cells = parseCsvLine(line);
+        const row = {};
+        for (let c = 0; c < headers.length; c++) row[headers[c]] = cells[c] === undefined ? '' : cells[c];
+        batch.push(row);
+        if (batch.length >= 500) {
+          await onBatch(batch);
+          count += batch.length;
+          batch = [];
+        }
+      }
+      if (batch.length) { await onBatch(batch); count += batch.length; }
+      return count;
+    };
+    const getHeaders = async () => { await ready; return headers; };
+    return { getHeaders, forEachBatch };
+  }
+  if (ext === '.xlsx' || ext === '.xls') {
+    const ExcelJS = require('exceljs');
+    const wb = new ExcelJS.stream.xlsx.WorkbookReader(filePath, { entries: 'emit' });
+    await wb.read(); // opens the zip, emits worksheets
+    let ws = null;
+    for await (const sheet of wb) { ws = sheet; break; }
+    if (!ws) return { getHeaders: async () => [], forEachBatch: async () => 0 };
+    const rowToValues = (row) => {
+      const values = [];
+      row.eachCell({ includeEmpty: true }, (cell) => { values[cell.col - 1] = cell.value; });
+      return values;
+    };
+    // Single-pass reader: the first worksheet row is the header; it is cached so
+    // getHeaders() can inspect it for column mapping, and forEachBatch skips it.
+    let headers = null;
+    const iterator = ws[Symbol.asyncIterator] ? ws[Symbol.asyncIterator]() : null;
+    const nextRow = async () => {
+      if (!iterator) return null;
+      const r = await iterator.next();
+      return r.done ? null : r.value;
+    };
+    const getHeaders = async () => {
+      if (headers) return headers;
+      const first = await nextRow();
+      if (first) {
+        headers = rowToValues(first).map(v => String(v === null || v === undefined ? '' : (typeof v === 'object' && v.text !== undefined ? v.text : v)).trim());
+      } else {
+        headers = [];
+      }
+      return headers;
+    };
+    const forEachBatch = async (onBatch) => {
+      await getHeaders(); // ensures the header row is consumed exactly once
+      let batch = [];
+      let count = 0;
+      for (;;) {
+        const row = await nextRow();
+        if (!row) break;
+        const values = rowToValues(row);
+        const obj = {};
+        for (let c = 0; c < headers.length; c++) {
+          const v = values[c];
+          obj[headers[c]] = v === null || v === undefined ? '' : (typeof v === 'object' && v.text !== undefined ? v.text : String(v));
+        }
+        batch.push(obj);
+        if (batch.length >= 500) { await onBatch(batch); count += batch.length; batch = []; }
+      }
+      if (batch.length) { await onBatch(batch); count += batch.length; }
+      return count;
+    };
+    return { getHeaders, forEachBatch };
+  }
+  throw new Error('仅支持 CSV 或 Excel 文件');
+}
+ipcMain.handle('creator-db-import', async (event, payload) => {
+  try {
+    if (!creatorDb) return { ok: false, error: '本地达人库未初始化' };
+    const filePath = payload && payload.filePath;
+    if (!filePath) return { ok: false, error: '缺少文件路径' };
+    const region = String((payload && payload.region) || 'US').toUpperCase();
+    const source = await openImportSource(filePath);
+    const headers = await source.getHeaders();
+    if (!headers || !headers.length) return { ok: false, error: '文件没有表头行' };
+    // map columns by recognized labels → internal fields
+    const colMap = {};
+    for (const h of headers) {
+      const f = IMPORT_LABEL_MAP.get(String(h).toLowerCase().trim());
+      if (f) colMap[h] = f;
+    }
+    if (!Object.values(colMap).includes('creator_oecuid')) {
+      return { ok: false, error: '未识别到「达人ID」列（支持列名：达人ID / Creator ID / creator_oecuid / id）' };
+    }
+    // stream rows through upsert in batches (memory stays flat)
+    let totalRows = 0;
+    let inserted = 0;
+    let updated = 0;
+    await source.forEachBatch(async (batch) => {
+      const mapped = batch.map(r => {
+        const o = {};
+        for (const [label, field] of Object.entries(colMap)) {
+          const v = r[label];
+          if (v !== undefined && v !== null && String(v).trim() !== '') o[field] = String(v).trim();
+        }
+        return o;
+      });
+      const dbRes = await creatorDb.upsertCreators(mapped, { region });
+      inserted += dbRes.inserted || 0;
+      updated += dbRes.updated || 0;
+      totalRows += mapped.length;
+    });
+    return { ok: true, inserted, updated, saved: inserted + updated, matched: Object.keys(colMap).length, rows: totalRows, skipped: totalRows - (inserted + updated) };
+  } catch (e) { return { ok: false, error: e.message }; }
+});
 
 // IPC: continue scraping based on a history entry (incremental, skips saved IDs)
 ipcMain.handle('continue-history', async (event, filePath) => {
@@ -805,6 +1068,20 @@ ipcMain.handle('choose-dir', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
     title: '选择输出目录',
     properties: ['openDirectory', 'createDirectory'],
+  });
+  if (result.canceled || !result.filePaths.length) return '';
+  return result.filePaths[0];
+});
+
+// IPC: pick an import file (CSV/XLSX)
+ipcMain.handle('choose-file', async (event, exts) => {
+  const filters = Array.isArray(exts) && exts.length
+    ? exts.map(e => ({ name: e.toUpperCase(), extensions: [e.replace(/^\./, '')] }))
+    : [{ name: 'CSV / Excel', extensions: ['csv', 'xlsx', 'xls'] }];
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: '选择要导入的达人数据文件',
+    properties: ['openFile'],
+    filters,
   });
   if (result.canceled || !result.filePaths.length) return '';
   return result.filePaths[0];

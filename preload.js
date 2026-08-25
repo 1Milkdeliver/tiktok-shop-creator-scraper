@@ -18,6 +18,8 @@ contextBridge.exposeInMainWorld('api', {
   listCreators: (filters) => ipcRenderer.invoke('creator-db-list', filters),
   listCreatorIds: (filters) => ipcRenderer.invoke('creator-db-ids', filters),
   creatorFilterOptions: (key) => ipcRenderer.invoke('creator-db-options', key),
+  importCreators: (payload) => ipcRenderer.invoke('creator-db-import', payload),
+  chooseFile: (exts) => ipcRenderer.invoke('choose-file', exts),
   listScrapeJobs: (filters) => ipcRenderer.invoke('creator-db-jobs', filters),
   exportCreators: (payload) => ipcRenderer.invoke('creator-db-export', payload),
   updateExportFile: (filePath) => ipcRenderer.invoke('update-export-file', filePath),
