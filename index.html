@@ -2503,6 +2503,10 @@ async function renderFilterBar(targetId = '') {
     const chevron = document.createElement('span'); chevron.className = 'fdrop-chevron'; chevron.textContent = '⌄'; chevron.setAttribute('aria-hidden', 'true'); btn.appendChild(chevron);
     const menu = document.createElement('div'); menu.className = 'fdrop-menu';
     menu.id = menuId; menu.setAttribute('role', 'dialog'); menu.setAttribute('aria-label', name);
+    // Category selections can synchronously re-render and detach the clicked
+    // option. Stop the event at the stable menu boundary so the page-level
+    // outside-click handler never mistakes an internal click for an external one.
+    menu.addEventListener('click', event => event.stopPropagation());
     if (def.type === 'hierarchy') menu.classList.add('fdrop-menu-category');
     const head = document.createElement('div'); head.className = 'fdrop-menu-head';
     head.innerHTML = `<span>${name}</span>`;
@@ -2810,7 +2814,11 @@ function renderFilterChips() {
     box.appendChild(reset);
   });
 }
-document.addEventListener('click', (e) => { if (!e.target.closest('.fdrop')) closeFilterDrops(); });
+document.addEventListener('click', (event) => {
+  const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
+  const insideFilter = path.some(node => node?.classList?.contains('fdrop'));
+  if (!insideFilter) closeFilterDrops();
+});
 // Build the filters object passed to the DB query (fieldFilters + numericFieldFilters)
 function buildFieldFilters(source = appliedFilterState) {
   const fieldFilters = {};
