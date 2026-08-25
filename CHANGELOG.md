@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.3.1] - 2026-08-25
+
+### Changed
+
+- Arranged the six Creator Library summary cards into a clearer two-row, three-column desktop layout, with responsive fallbacks for narrower windows.
+
+### Fixed
+
+- Kept the product-category dropdown open while selecting parent or child categories, so multiple categories can be chosen without reopening the menu.
+
+### 更新内容
+
+- 达人库六张统计卡调整为更清晰的桌面端两行三列布局，并为较窄窗口提供响应式排列。
+- 修复勾选一级或二级商品类目后下拉框立即关闭的问题，支持连续选择多个类目。
+
 ## [1.3.0] - 2026-08-25
 
 ### Added

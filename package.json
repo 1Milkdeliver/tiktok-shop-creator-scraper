@@ -1,6 +1,6 @@
 {
   "name": "tiktok-shop-creator-scraper",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "TikTok Shop 达人抓取工具 - 专为 TikTok Shop 卖家打造的联盟达人数据采集桌面应用，一键抓取达人广场数据，支持多账号并发、CSV/Excel 导出、达人筛选、选品分析。TikTok Shop affiliate creator scraper desktop app for sellers.",
   "main": "main.js",
   "author": "1Milkdeliver <https://github.com/1Milkdeliver>",
