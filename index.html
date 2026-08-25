@@ -511,6 +511,172 @@
   .metric small { font-size:11.5px;line-height:18px; }
   .creator-page [data-go-page="tasks"] { min-width:156px; }
   #creatorRefresh { min-width:84px; }
+  #creatorContinueOpen { display:inline-flex;align-items:center;gap:8px; }
+  .creator-continue-icon { flex:0 0 18px;width:18px;height:18px;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;fill:none; }
+
+  /* Creator-library filters — proportions and states match TikTok Shop's
+     desktop creator filter card while retaining this app's data model. */
+  .creator-workbench { background:transparent;border:0;box-shadow:none; }
+  .creator-workbench:hover { box-shadow:none; }
+  .creator-toolbar { margin-bottom:16px;border:1px solid var(--border);border-radius:10px;background:#fff; }
+  #creatorCatToggle,#creatorCatPanel { display:none !important; }
+  .creator-filter-panel {
+    --filter-accent:#008f89;
+    --filter-accent-soft:#dff5f3;
+    position:relative;
+    z-index:6;
+    margin-bottom:18px;
+    padding:22px 24px 24px;
+    border:1px solid #e2e5e9;
+    border-radius:14px;
+    background:#fff;
+    box-shadow:0 1px 2px rgba(31,35,40,.04);
+  }
+  .creator-filter-panel :where(button,input):focus-visible { outline:2px solid #008f89;outline-offset:2px;box-shadow:0 0 0 4px rgba(0,143,137,.18); }
+  .creator-filter-tabs { flex-wrap:nowrap;gap:6px;margin-bottom:22px;padding:6px;border:1px solid #e2e5e9;border-radius:11px;background:#f6f7f8; }
+  .creator-filter-label { display:flex;align-items:center;flex:0 0 auto;margin-right:8px;padding:0 10px;color:#5d6570;font-size:14px;font-weight:600; }
+  .cf-tab {
+    position:relative;
+    min-width:144px;
+    min-height:44px;
+    justify-content:center;
+    gap:9px;
+    padding:0 20px;
+    border:1px solid transparent;
+    border-radius:8px;
+    background:transparent;
+    color:#4d5560;
+    font-size:14px;
+    font-weight:600;
+    box-shadow:none;
+  }
+  .cf-tab::before { width:7px;height:7px;border-radius:50%;background:#aab1b9;content:"";transition:.16s; }
+  .cf-tab:hover { border-color:#d5e8e6;color:#087d78;background:#edf8f7; }
+  .cf-tab:hover::before { background:#43a9a3; }
+  .cf-tab.active { border-color:#c7e5e2;background:#fff;color:#087d78;box-shadow:0 2px 8px rgba(35,53,61,.08); }
+  .cf-tab.active::before { width:8px;height:8px;background:var(--filter-accent);box-shadow:0 0 0 4px rgba(0,143,137,.12); }
+  .cf-badge { min-width:22px;height:22px;padding:0 6px;background:#111418;font-size:12px;line-height:22px; }
+  .cf-reset { margin-left:auto;min-height:40px;padding:0 12px;color:var(--filter-accent);font-size:13px;font-weight:650; }
+  .cf-reset:hover:not(:disabled) { background:transparent;text-decoration:underline;text-underline-offset:3px; }
+  .cf-reset:disabled { color:#a7adb5; }
+  .creator-filterbar { grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 16px; }
+  .creator-filterbar .fdrop { min-width:0; }
+  .creator-filterbar .fdrop-btn {
+    width:100%;
+    min-height:52px;
+    justify-content:flex-start;
+    gap:8px;
+    padding:0 18px;
+    border:1px solid #cfd4da;
+    border-radius:7px;
+    background:#fff;
+    color:#181b20;
+    font-size:14px;
+    font-weight:500;
+    text-align:left;
+  }
+  .creator-filterbar .fdrop-btn:hover { border-color:#8dc9c4;color:#181b20; }
+  .creator-filterbar .fdrop-btn.active {
+    border-color:var(--filter-accent);
+    background:#fff;
+    color:#181b20;
+    box-shadow:0 0 0 4px rgba(0,143,137,.2);
+  }
+  .creator-filterbar .fdrop-btn.has-value:not(.active) { border-color:#8dc9c4; }
+  .fdrop-label { min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+  .fdrop-help {
+    display:inline-grid;
+    flex:0 0 18px;
+    width:18px;
+    height:18px;
+    place-items:center;
+    border:1.5px solid #7e858d;
+    border-radius:50%;
+    color:#6d747c;
+    font-size:11px;
+    font-weight:750;
+  }
+  .fdrop-spacer { flex:1 1 auto; }
+  .fdrop-chevron { flex:0 0 auto;color:#121519;font-size:20px;line-height:1;transform:translateY(-1px); }
+  .fdrop-btn.active .fdrop-chevron { transform:rotate(180deg) translateY(1px); }
+  .fdrop-btn .fcount { min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#111418;color:#fff;font-size:12px;line-height:22px;text-align:center; }
+  .fdrop-menu {
+    top:calc(100% + 8px);
+    left:0;
+    min-width:100%;
+    max-height:360px;
+    padding:8px;
+    border:1px solid #d9dde2;
+    border-radius:9px;
+    box-shadow:0 14px 34px rgba(31,35,40,.16),0 2px 8px rgba(31,35,40,.08);
+  }
+  .fdrop:nth-child(3n) .fdrop-menu:not(.fdrop-menu-category) { right:0;left:auto; }
+  .fdrop-menu-head { min-height:34px;padding:2px 6px 8px;font-size:12px; }
+  .fdrop-option { min-height:38px;padding:8px 10px;border-radius:6px;font-size:13px; }
+  .fdrop-option input,.fdrop-cascade-l1 input { width:17px;height:17px;accent-color:var(--filter-accent); }
+  .fdrop-menu-category {
+    width:min(760px,calc(100vw - 330px));
+    max-height:none;
+    padding:0;
+    overflow:hidden;
+  }
+  .fdrop-menu-category .fdrop-menu-head { display:none; }
+  .fdrop-menu-category .fdrop-search {
+    min-height:50px;
+    margin:0;
+    padding:0 18px;
+    border:0 !important;
+    border-bottom:1px solid #dfe3e7 !important;
+    border-radius:0 !important;
+    box-shadow:none !important;
+    font-size:14px !important;
+  }
+  .fdrop-cascade { min-height:300px;max-height:360px;border:0;border-radius:0; }
+  .fdrop-cascade-col { max-height:360px;background:#fff; }
+  .fdrop-cascade-col + .fdrop-cascade-col { border-left:1px solid #dfe3e7;background:#fff; }
+  .fdrop-cascade-l1 { min-height:52px;gap:10px;padding:10px 14px;border-bottom:0;font-size:14px; }
+  .fdrop-cascade-l1:hover { background:#f2f3f4; }
+  .fdrop-cascade-l1.active { background:#eceeef;color:#171a1f;font-weight:500; }
+  .fdrop-cascade-l1 em { font-size:13px;color:#343a41; }
+  .fdrop-cascade-arrow { font-size:22px;color:#555d66; }
+  .fdrop-cascade-l2head { display:none; }
+  .fdrop-cascade-l2 { min-height:52px;padding:10px 18px;font-size:14px; }
+  .fdrop-empty { padding:18px;color:#7b838c;font-size:13px; }
+  .fdrop-range { min-width:290px;gap:8px;padding:6px 6px 10px; }
+  .fdrop-range input { width:86px;min-height:34px;padding:5px 8px; }
+  .fdrop-apply { min-height:34px;padding:5px 12px;background:var(--filter-accent);font-size:12px; }
+  .creator-filter-actions { display:flex;align-items:center;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid #eceef0; }
+  .creator-filter-status { display:flex;align-items:center;gap:8px;min-width:0;margin-right:auto;color:#6a727c;font-size:13px; }
+  .creator-filter-status::before { flex:0 0 7px;width:7px;height:7px;border-radius:50%;background:#98a0aa;content:""; }
+  .creator-filter-status.pending { color:#986500;font-weight:600; }
+  .creator-filter-status.pending::before { background:#e0a100;box-shadow:0 0 0 4px rgba(224,161,0,.12); }
+  .creator-filter-discard,.creator-filter-apply { min-height:40px;padding:0 18px;border-radius:7px;font-size:13px;font-weight:650; }
+  .creator-filter-apply { min-width:112px;background:var(--filter-accent);border-color:var(--filter-accent); }
+  .creator-filter-apply:hover:not(:disabled) { background:#087d78;border-color:#087d78; }
+  .creator-filter-apply:disabled,.creator-filter-discard:disabled { opacity:.45;cursor:not-allowed; }
+  .export-filter-panel { z-index:8;margin:0 0 16px;padding-top:18px; }
+  .export-filter-heading { display:flex;align-items:center;justify-content:space-between;margin-bottom:14px; }
+  .export-filter-heading strong { display:block;color:#20242a;font-size:15px; }
+  .export-filter-heading span { display:block;margin-top:4px;color:#747c86;font-size:12px; }
+  .export-filter-chips { margin:0 0 16px; }
+  .export-filter-submit { display:flex;align-items:center;gap:16px;margin-top:18px;padding:16px;border:1px solid #dbe5e4;border-radius:10px;background:#f7fbfa; }
+  .export-filter-submit > div { min-width:0;margin-right:auto; }
+  .export-filter-submit strong { display:block;color:#20242a;font-size:14px; }
+  .export-filter-submit span { display:block;margin-top:4px;color:#69727c;font-size:12px; }
+  #exportFilteredCreators { min-width:152px;background:var(--filter-accent,#008f89);border-color:var(--filter-accent,#008f89); }
+  @media (max-width:900px) {
+    .export-filter-submit { align-items:stretch;flex-direction:column; }
+    #exportFilteredCreators { width:100%; }
+  }
+  .creator-filter-chips { margin:-8px 0 18px;padding:10px 14px;border:1px solid #e2e5e9;border-radius:10px;background:#fff; }
+  .fchip { min-height:28px;border-color:#9dd6d1;background:#e8f8f6;color:#087d78; }
+  .creator-table-tools { border:1px solid var(--border);border-radius:10px 10px 0 0;background:#fff; }
+  .creator-table-wrap { border-right:1px solid var(--border);border-left:1px solid var(--border);background:#fff; }
+  .creator-pagination { border:1px solid var(--border);border-radius:0 0 10px 10px;background:#fff; }
+  @media (max-width:1250px) {
+    .cf-tab { min-width:128px; }
+    .fdrop-menu-category { width:min(680px,calc(100vw - 300px)); }
+  }
   @media (max-width:1050px) {
     .creator-dashboard { grid-template-columns:repeat(3,minmax(0,1fr)); }
     .creator-toolbar { flex-wrap:wrap; }
@@ -582,7 +748,7 @@
   </section>
 
   <section class="creator-page" id="creatorPage">
-    <div class="page-heading"><div><h2 data-i18n="creators.title">达人库</h2><p data-i18n="creators.subtitle">查询已抓取的数据，需要时再筛选导出。</p></div><div style="display:flex;gap:8px;align-items:center"><button class="btn btn-primary" id="creatorContinueOpen" data-i18n="creators.continueScrape">➕ 继续抓取</button><button class="btn btn-secondary" id="creatorUpdateOpen" data-i18n="creators.updateData">更新达人数据</button></div></div>
+    <div class="page-heading"><div><h2 data-i18n="creators.title">达人库</h2><p data-i18n="creators.subtitle">查询已抓取的数据，需要时再筛选导出。</p></div><div style="display:flex;gap:8px;align-items:center"><button class="btn btn-primary" id="creatorContinueOpen"><svg class="creator-continue-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.8-4.2L4 9"></path><path d="M4 4v5h5"></path><path d="M4 13a8 8 0 0 0 14.8 4.2L20 15"></path><path d="M20 20v-5h-5"></path></svg><span data-i18n="creators.continueScrape">继续抓取</span></button><button class="btn btn-secondary" id="creatorUpdateOpen" data-i18n="creators.updateData">更新达人数据</button></div></div>
     <div class="creator-dashboard" aria-label="Creator library dashboard">
       <div class="creator-dashboard-card"><span data-i18n="creators.dashboardTotal">达人总数</span><strong id="creatorDashTotal">—</strong><small data-i18n="creators.dashboardTotalHint">已自动去重</small></div>
       <div class="creator-dashboard-card"><span data-i18n="creators.dashboardEmail">含合作邮箱</span><strong id="creatorDashEmail">—</strong><small id="creatorDashEmailHint">—</small></div>
@@ -610,14 +776,19 @@
       </div>
       <!-- TikTok-backend style filter panel: Filter by + tabs + reset -->
       <div class="creator-filter-panel" id="creatorFilterPanel">
-        <div class="creator-filter-tabs">
-          <span class="creator-filter-label" data-i18n="creators.filterBy">Filter by</span>
-          <button type="button" class="cf-tab" data-cf="creators" data-i18n="creators.tabCreators">Creators</button>
-          <button type="button" class="cf-tab" data-cf="followers" data-i18n="creators.tabFollowers">Followers</button>
-          <button type="button" class="cf-tab" data-cf="performance" data-i18n="creators.tabPerformance">Performance</button>
-          <button type="button" class="btn-link cf-reset" id="creatorFilterReset" data-i18n="creators.resetFilters" disabled>Reset</button>
+        <div class="creator-filter-tabs" role="tablist" aria-label="Creator filters">
+          <span class="creator-filter-label" data-i18n="creators.filterBy">筛选维度</span>
+          <button type="button" class="cf-tab filter-group-tab" id="creatorTabCreators" role="tab" aria-controls="creatorFilterBar" aria-selected="true" data-cf="creators" data-i18n="creators.tabCreators">达人属性</button>
+          <button type="button" class="cf-tab filter-group-tab" id="creatorTabFollowers" role="tab" aria-controls="creatorFilterBar" aria-selected="false" data-cf="followers" data-i18n="creators.tabFollowers">粉丝画像</button>
+          <button type="button" class="cf-tab filter-group-tab" id="creatorTabPerformance" role="tab" aria-controls="creatorFilterBar" aria-selected="false" data-cf="performance" data-i18n="creators.tabPerformance">带货表现</button>
+          <button type="button" class="btn-link cf-reset creator-filter-reset" id="creatorFilterReset" data-i18n="creators.resetFilters" disabled>重置</button>
         </div>
-        <div class="creator-filterbar" id="creatorFilterBar"></div>
+        <div class="creator-filterbar" id="creatorFilterBar" role="tabpanel" aria-labelledby="creatorTabCreators"></div>
+        <div class="creator-filter-actions">
+          <span class="creator-filter-status" id="creatorFilterStatus" role="status" aria-live="polite">筛选条件已应用</span>
+          <button type="button" class="btn btn-secondary creator-filter-discard" id="creatorFilterDiscard" disabled>撤销修改</button>
+          <button type="button" class="btn btn-primary creator-filter-apply" id="creatorFilterApply" disabled>应用筛选</button>
+        </div>
       </div>
       <!-- selected filter chips: removable tags like TikTok -->
       <div class="creator-filter-chips" id="creatorFilterChips" style="display:none"></div>
@@ -764,12 +935,32 @@ https://www.tiktok.com/@makeup.lover'></textarea>
   <div class="card" id="exports">
     <h2><span class="step-num">4</span> <span data-i18n="step4.title">导出设置</span></h2>
     <!-- Filter-by style group row, consistent with the Creator Library filter card -->
-    <div class="creator-filter-tabs" style="margin-bottom:14px">
+    <div class="creator-filter-tabs export-settings-tabs" style="margin-bottom:14px">
       <span class="creator-filter-label" data-i18n="step4.title">导出设置</span>
-      <button type="button" class="cf-tab active" data-cf="format"><span data-i18n="step4.format">格式</span></button>
-      <button type="button" class="cf-tab" data-cf="fields"><span data-i18n="step4.fields">导出字段</span></button>
-      <button type="button" class="cf-tab" data-cf="history"><span data-i18n="step5.title">历史输出</span></button>
+      <button type="button" class="cf-tab export-nav-tab active" data-cf="filters" data-i18n="export.filters">筛选条件</button>
+      <button type="button" class="cf-tab export-nav-tab" data-cf="format"><span data-i18n="step4.format">格式</span></button>
+      <button type="button" class="cf-tab export-nav-tab" data-cf="fields"><span data-i18n="step4.fields">导出字段</span></button>
+      <button type="button" class="cf-tab export-nav-tab" data-cf="history"><span data-i18n="step5.title">历史输出</span></button>
     </div>
+    <section class="creator-filter-panel export-filter-panel" id="exportFilterPanel" aria-label="导出达人筛选条件">
+      <div class="export-filter-heading">
+        <div><strong data-i18n="export.filterScopeTitle">达人筛选范围</strong><span data-i18n="export.filterScopeHint">与达人库共用筛选条件；只有应用后才影响导出结果</span></div>
+      </div>
+      <div class="creator-filter-tabs" role="tablist" aria-label="Export creator filters">
+        <span class="creator-filter-label" data-i18n="creators.filterBy">筛选维度</span>
+        <button type="button" class="cf-tab filter-group-tab" id="exportTabCreators" role="tab" aria-controls="exportCreatorFilterBar" aria-selected="true" data-cf="creators" data-i18n="creators.tabCreators">达人属性</button>
+        <button type="button" class="cf-tab filter-group-tab" id="exportTabFollowers" role="tab" aria-controls="exportCreatorFilterBar" aria-selected="false" data-cf="followers" data-i18n="creators.tabFollowers">粉丝画像</button>
+        <button type="button" class="cf-tab filter-group-tab" id="exportTabPerformance" role="tab" aria-controls="exportCreatorFilterBar" aria-selected="false" data-cf="performance" data-i18n="creators.tabPerformance">带货表现</button>
+        <button type="button" class="btn-link cf-reset creator-filter-reset" data-i18n="creators.resetFilters" disabled>重置</button>
+      </div>
+      <div class="creator-filterbar" id="exportCreatorFilterBar" role="tabpanel" aria-labelledby="exportTabCreators"></div>
+      <div class="creator-filter-actions">
+        <span class="creator-filter-status" role="status" aria-live="polite">筛选条件已应用</span>
+        <button type="button" class="btn btn-secondary creator-filter-discard" disabled>撤销修改</button>
+        <button type="button" class="btn btn-primary creator-filter-apply" disabled>应用筛选</button>
+      </div>
+    </section>
+    <div class="creator-filter-chips export-filter-chips" id="exportFilterChips" style="display:none"></div>
     <div class="inline">
       <div>
         <div class="hint" style="margin-bottom:8px" data-i18n="step4.format">格式</div>
@@ -797,6 +988,10 @@ https://www.tiktok.com/@makeup.lover'></textarea>
       <span style="font-size:13px;color:var(--sub)" data-i18n="step4.fields">导出字段</span>
       <span class="sel-all" id="fieldsAll" data-i18n="step4.fieldsAll">全选</span> <span class="sel-all" id="fieldsNone" data-i18n="step4.fieldsNone">清空</span>
       <div class="field-grid" id="fields" style="margin-top:8px"></div>
+    </div>
+    <div class="export-filter-submit">
+      <div><strong data-i18n="export.localLibrary">导出本地达人库</strong><span id="exportFilterScope">将按当前已应用的筛选条件导出</span></div>
+      <button type="button" class="btn btn-primary" id="exportFilteredCreators" data-i18n="export.filteredButton">⬇ 导出筛选结果</button>
     </div>
 
     <!-- 历史输出（从抓取页移入导出中心） -->
@@ -933,11 +1128,11 @@ const I18N = {
   'creators.columnsTitle': { zh: '显示字段', en: 'Visible columns' },
   'creators.allColumns': { zh: '全部显示', en: 'Show all' },
   'creators.catPanelBtn': { zh: '🗂 类目筛选', en: '🗂 Category' },
-  'creators.filterBy': { zh: 'Filter by', en: 'Filter by' },
-  'creators.tabCreators': { zh: 'Creators', en: 'Creators' },
-  'creators.tabFollowers': { zh: 'Followers', en: 'Followers' },
-  'creators.tabPerformance': { zh: 'Performance', en: 'Performance' },
-  'creators.resetFilters': { zh: 'Reset', en: 'Reset' },
+  'creators.filterBy': { zh: '筛选维度', en: 'Filter by' },
+  'creators.tabCreators': { zh: '达人属性', en: 'Creators' },
+  'creators.tabFollowers': { zh: '粉丝画像', en: 'Followers' },
+  'creators.tabPerformance': { zh: '带货表现', en: 'Performance' },
+  'creators.resetFilters': { zh: '重置', en: 'Reset' },
   'creators.catPanelTitle': { zh: '类目筛选', en: 'Category filter' },
   'creators.catPanelSub': { zh: '勾选一级类目，可展开选择垂直类目（二级）', en: 'Check top-level categories; expand for vertical (2nd-level) categories' },
   'creators.catPanelClear': { zh: '清除', en: 'Clear' },
@@ -963,7 +1158,7 @@ const I18N = {
   'creators.dashboardStorage': { zh: '数据库占用', en: 'Database size' },
   'creators.dashboardStorageHint': { zh: '仅本地结构化数据', en: 'Local structured data only' },
   'creators.updateData': { zh: '更新达人数据', en: 'Update creator data' },
-  'creators.continueScrape': { zh: '➕ 继续抓取', en: '➕ Continue scraping' },
+  'creators.continueScrape': { zh: '继续抓取', en: 'Continue scraping' },
   'creators.updateTitle': { zh: '更新达人数据', en: 'Update creator data' },
   'creators.updateHint': { zh: '复用达人库名单，更新当前地区和筛选范围，不重复搜索达人。', en: 'Reuse saved creator IDs and update the current region and filters without rediscovery.' },
   'creators.updateScope': { zh: '更新范围', en: 'Update scope' },
@@ -1042,6 +1237,11 @@ const I18N = {
   'step3.none': { zh: '清空', en: 'Clear' },
   'step4.title': { zh: '导出设置', en: 'Export Settings' },
   'step4.format': { zh: '格式', en: 'Format' },
+  'export.filters': { zh: '筛选条件', en: 'Filters' },
+  'export.filterScopeTitle': { zh: '达人筛选范围', en: 'Creator filter scope' },
+  'export.filterScopeHint': { zh: '与达人库共用筛选条件；只有应用后才影响导出结果', en: 'Shares filters with the Creator Library; only applied filters affect exports' },
+  'export.localLibrary': { zh: '导出本地达人库', en: 'Export local creator library' },
+  'export.filteredButton': { zh: '⬇ 导出筛选结果', en: '⬇ Export filtered results' },
   'step4.headerLang': { zh: '表头语言', en: 'Header Language' },
   'step4.out': { zh: '输出位置', en: 'Output Location' },
   'step4.choose': { zh: '选择', en: 'Choose' },
@@ -1121,6 +1321,11 @@ function applyI18n() {
     const label = link.querySelector('span');
     if (label) link.dataset.tooltip = label.textContent.trim();
   });
+  document.querySelectorAll('.creator-filter-tabs[role="tablist"]').forEach(tablist => {
+    tablist.setAttribute('aria-label', uiLang === 'zh' ? '达人筛选分组' : 'Creator filter groups');
+  });
+  const exportFilterPanel = document.getElementById('exportFilterPanel');
+  if (exportFilterPanel) exportFilterPanel.setAttribute('aria-label', uiLang === 'zh' ? '导出达人筛选条件' : 'Creator export filters');
   catLang = uiLang;
   renderCats();
   if (typeof renderFields === 'function') renderFields();
@@ -1391,11 +1596,12 @@ document.querySelectorAll('input[name=scrapeMode]').forEach(r => r.addEventListe
 document.getElementById('fieldsAll').onclick = () => { document.querySelectorAll('.fld').forEach(c => c.checked = true); };
 document.getElementById('fieldsNone').onclick = () => { document.querySelectorAll('.fld').forEach(c => c.checked = false); };
 // Export Center group tabs: highlight + scroll to the matching section
-document.querySelectorAll('#exports .cf-tab').forEach(tab => {
+document.querySelectorAll('#exports .export-settings-tabs .export-nav-tab').forEach(tab => {
   tab.onclick = () => {
-    document.querySelectorAll('#exports .cf-tab').forEach(t => t.classList.toggle('active', t === tab));
+    document.querySelectorAll('#exports .export-settings-tabs .export-nav-tab').forEach(t => t.classList.toggle('active', t === tab));
     const target = tab.dataset.cf;
-    const el = target === 'format' ? document.getElementById('exports').querySelector('.inline')
+    const el = target === 'filters' ? document.getElementById('exportFilterPanel')
+      : target === 'format' ? document.getElementById('exports').querySelector('.inline')
       : target === 'fields' ? document.getElementById('fields')
       : document.getElementById('history');
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -2003,25 +2209,106 @@ const LIBRARY_SKIP = new Set(['avatar']);
 // [min,max] (null = open) matched against the numeric value in raw_json.
 const FILTER_DEFS = [
   // tab: 'creators' | 'followers' | 'performance' — TikTok-backend style grouping
-  { key: 'category', n: '类目', e: 'Category', type: 'hierarchy', level1: 'category', level2: '垂直类目', tab: 'creators' },
-  { key: 'selection_region', n: '地区', e: 'Region', type: 'enum', fixed: ['US', 'UK', 'SG', 'MY', 'TH', 'VN', 'PH', 'ID', 'MX', 'BR'], tab: 'creators' },
-  { key: 'activity_status', n: '活跃状态', e: 'Activity', type: 'enum', fixed: ['active', 'inactive', 'unknown'], tab: 'creators' },
-  { key: 'MCN机构', n: 'MCN机构', e: 'MCN Agency', type: 'enum', tab: 'creators' },
+  { key: 'category', n: '商品类目', e: 'Product Category', type: 'hierarchy', level1: 'category', level2: '垂直类目', tab: 'creators', helpZh: '按达人主要带货类目和垂直类目筛选', helpEn: 'Filter by top-level and vertical product categories' },
+  { key: 'selection_region', n: '达人地区', e: 'Creator Region', type: 'enum', fixed: ['US', 'UK', 'SG', 'MY', 'TH', 'VN', 'PH', 'ID', 'MX', 'BR'], tab: 'creators' },
+  { key: 'activity_status', n: '活跃状态', e: 'Activity Status', type: 'enum', fixed: ['active', 'inactive', 'unknown'], tab: 'creators', helpZh: '根据最近发布、增长和GMV趋势判断', helpEn: 'Based on recent posts, growth and GMV trend' },
+  { key: 'MCN机构', n: '达人机构', e: 'Creator Agency', type: 'enum', tab: 'creators' },
+  { key: 'creator_permission_tag', n: '类目权限', e: 'Category Access', type: 'enum', tab: 'creators', helpZh: '达人可参与合作的商品类目权限', helpEn: 'Product-category collaboration permissions' },
+  { key: 'is_live_auction', n: '直播拍卖', e: 'Live Auction', type: 'enum', tab: 'creators' },
   { key: 'follower_cnt', n: '粉丝数', e: 'Followers', type: 'numeric', buckets: [[1000000, null, '1M+'], [100000, 1000000, '100K - 1M'], [10000, 100000, '10K - 100K'], [1000, 10000, '1K - 10K'], [null, 1000, '< 1K']], tab: 'followers' },
   { key: 'top_follower_ages', n: '粉丝年龄段', e: 'Ages', type: 'enum', fixed: ['18-24', '25-34', '35-44', '45-54', '55+'], tab: 'followers' },
   { key: 'top_follower_gender', n: '粉丝性别', e: 'Gender', type: 'enum', fixed: ['Female', 'Male'], tab: 'followers' },
+  { key: 'med_gmv_revenue', n: 'GMV', e: 'GMV', type: 'numeric', buckets: [[100000, null, '$100K+'], [10000, 100000, '$10K - $100K'], [1000, 10000, '$1K - $10K'], [null, 1000, '< $1K']], tab: 'performance' },
+  { key: 'units_sold', n: '成交件数', e: 'Units Sold', type: 'numeric', buckets: [[1000, null, '1K+'], [100, 1000, '100 - 1K'], [10, 100, '10 - 100'], [null, 10, '< 10']], tab: 'performance' },
+  { key: 'video_avg_view_cnt', n: '平均视频播放量', e: 'Avg. Video Views', type: 'numeric', buckets: [[100000, null, '100K+'], [10000, 100000, '10K - 100K'], [1000, 10000, '1K - 10K'], [null, 1000, '< 1K']], tab: 'performance' },
+  { key: 'ec_live_avg_uv', n: '平均直播观看人数', e: 'Avg. LIVE Viewers', type: 'numeric', buckets: [[10000, null, '10K+'], [1000, 10000, '1K - 10K'], [100, 1000, '100 - 1K'], [null, 100, '< 100']], tab: 'performance' },
+  { key: 'video_engagement', n: '互动率', e: 'Engagement Rate', type: 'numeric', buckets: [[10, null, '10%+'], [5, 10, '5% - 10%'], [2, 5, '2% - 5%'], [null, 2, '< 2%']], tab: 'performance', helpZh: '视频互动量占播放量的比例', helpEn: 'Video interactions as a share of views' },
   { key: 'pps_score', n: 'PPS评分', e: 'PPS Score', type: 'numeric', buckets: [[4.5, null, '4.5+'], [4, 4.5, '4 - 4.5'], [3.5, 4, '3.5 - 4'], [null, 3.5, '< 3.5']], tab: 'performance' },
-  { key: 'units_sold', n: '销量', e: 'Units Sold', type: 'numeric', buckets: [[1000, null, '1K+'], [100, 1000, '100 - 1K'], [10, 100, '10 - 100'], [null, 10, '< 10']], tab: 'performance' },
-  { key: 'video_avg_view_cnt', n: '平均观看', e: 'Avg Views', type: 'numeric', buckets: [[100000, null, '100K+'], [10000, 100000, '10K - 100K'], [1000, 10000, '1K - 10K'], [null, 1000, '< 1K']], tab: 'performance' },
-  { key: 'med_gmv_revenue', n: '总GMV', e: 'Total GMV', type: 'numeric', buckets: [[100000, null, '$100K+'], [10000, 100000, '$10K - $100K'], [1000, 10000, '$1K - $10K'], [null, 1000, '< $1K']], tab: 'performance' },
+  { key: 'has_collaborated', n: '品牌合作', e: 'Brand Collaboration', type: 'enum', tab: 'performance' },
 ];
 // active filter tab
 let creatorFilterTab = 'creators';
 // current selections: { key: { enum: Set, numeric: Set, custom: Set, level1: Set, level2: Set } }
 // hierarchy fields use level1 (top category) + level2 (vertical category)
-const filterState = new Map();
-FILTER_DEFS.forEach(f => filterState.set(f.key, { enum: new Set(), numeric: new Set(), custom: new Set(), level1: new Set(), level2: new Set() }));
+function createFilterStateEntry() {
+  return { enum: new Set(), numeric: new Set(), custom: new Set(), level1: new Set(), level2: new Set() };
+}
+const filterState = new Map(); // draft selections currently being edited
+const appliedFilterState = new Map(); // immutable query snapshot until Apply
+FILTER_DEFS.forEach(f => {
+  filterState.set(f.key, createFilterStateEntry());
+  appliedFilterState.set(f.key, createFilterStateEntry());
+});
 let filterOptionsCache = {}; // key -> array of dynamic enum options (for category etc.)
+let filterCategoryTreeCache = null;
+
+function copyFilterState(source, target) {
+  FILTER_DEFS.forEach(def => {
+    const from = source.get(def.key) || createFilterStateEntry();
+    const to = target.get(def.key) || createFilterStateEntry();
+    to.enum = new Set(from.enum);
+    to.numeric = new Set(from.numeric);
+    to.custom = new Set([...from.custom].map(item => ({ ...item })));
+    to.level1 = new Set(from.level1);
+    to.level2 = new Set(from.level2);
+    target.set(def.key, to);
+  });
+}
+
+function filterStateSignature(source) {
+  return FILTER_DEFS.map(def => {
+    const st = source.get(def.key) || createFilterStateEntry();
+    const sorted = set => [...set].map(String).sort();
+    const custom = [...st.custom].map(item => [item.lo, item.hi, item.tag]).sort((a, b) => String(a[2]).localeCompare(String(b[2])));
+    return [def.key, sorted(st.enum), sorted(st.numeric), custom, sorted(st.level1), sorted(st.level2)];
+  });
+}
+
+function updateFilterDraftStatus() {
+  const pending = JSON.stringify(filterStateSignature(filterState)) !== JSON.stringify(filterStateSignature(appliedFilterState));
+  document.querySelectorAll('.creator-filter-status').forEach(status => {
+    status.classList.toggle('pending', pending);
+    status.textContent = pending
+      ? (uiLang === 'zh' ? '筛选条件有修改，达人库尚未刷新' : 'Filters changed — results not refreshed yet')
+      : (uiLang === 'zh' ? '筛选条件已应用' : 'Filters are applied');
+  });
+  document.querySelectorAll('.creator-filter-apply').forEach(button => {
+    button.disabled = !pending;
+    button.textContent = uiLang === 'zh' ? '应用筛选' : 'Apply filters';
+  });
+  document.querySelectorAll('.creator-filter-discard').forEach(button => {
+    button.disabled = !pending;
+    button.textContent = uiLang === 'zh' ? '撤销修改' : 'Discard changes';
+  });
+  const exportButton = document.getElementById('exportFilteredCreators');
+  if (exportButton) {
+    exportButton.disabled = pending;
+    exportButton.title = pending
+      ? (uiLang === 'zh' ? '请先应用筛选条件' : 'Apply filter changes first')
+      : '';
+  }
+}
+
+function markFilterDraftChanged() {
+  updateFilterTabs();
+  updateFilterDraftStatus();
+}
+
+function filterSelectionCount(def, st) {
+  if (def.type === 'hierarchy') return st.level1.size + st.level2.size;
+  if (def.type === 'enum') return st.enum.size;
+  return st.numeric.size + st.custom.size;
+}
+
+function applyCreatorFilters() {
+  copyFilterState(filterState, appliedFilterState);
+  creatorOffset = 0;
+  closeFilterDrops();
+  renderFilterChips();
+  updateFilterTabs();
+  updateFilterDraftStatus();
+  if (activePage === 'creators') loadCreators();
+}
 
 function showPage(page) {
   const allowed = ['overview', 'tasks', 'creators', 'exports'];
@@ -2049,6 +2336,7 @@ function showPage(page) {
   document.getElementById('accountMetricCard').setAttribute('aria-expanded', String(activePage === 'overview' && accountPanelOpen));
   if (location.hash !== `#${activePage}`) history.replaceState(null, '', `#${activePage}`);
   if (activePage === 'creators') loadCreators();
+  if (activePage === 'exports') { renderFilterBar(); renderFilterChips(); }
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -2163,10 +2451,18 @@ function updateColumnCount() {
 
 // ── TikTok-style filter bar: one dropdown per field ──
 let openFilterDrop = null; // the currently open dropdown (its .fdrop element)
-async function renderFilterBar() {
-  const bar = document.getElementById('creatorFilterBar');
+let openFilterDropTrigger = null;
+const filterRenderGenerations = new Map();
+async function renderFilterBar(targetId = '') {
+  if (!targetId) {
+    await Promise.all(['creatorFilterBar', 'exportCreatorFilterBar'].map(id => renderFilterBar(id)));
+    return;
+  }
+  const bar = document.getElementById(targetId);
   if (!bar) return;
-  bar.innerHTML = '';
+  const generation = (filterRenderGenerations.get(targetId) || 0) + 1;
+  filterRenderGenerations.set(targetId, generation);
+  const fragment = document.createDocumentFragment();
   const visible = FILTER_DEFS.filter(d => (d.tab || 'creators') === creatorFilterTab);
   for (const def of visible) {
     const st = filterState.get(def.key);
@@ -2179,22 +2475,35 @@ async function renderFilterBar() {
       }
       options = filterOptionsCache[def.key];
     }
-    // hierarchy (two-level category): load level-1 (category) and level-2 (vertical)
-    let level1Options = [], level2Options = [];
+    // Hierarchy options are returned as observed parent/child pairs. This keeps
+    // vertical categories under the correct top-level category.
+    let categoryTree = [];
     if (def.type === 'hierarchy') {
-      if (!filterOptionsCache[def.level1]) {
-        try { const r = await window.api.creatorFilterOptions(def.level1); filterOptionsCache[def.level1] = r.ok ? r.options : []; } catch (e) { filterOptionsCache[def.level1] = []; }
+      if (!filterCategoryTreeCache) {
+        try {
+          const r = await window.api.creatorCategoryTree();
+          filterCategoryTreeCache = r.ok && Array.isArray(r.tree) ? r.tree : [];
+        } catch (e) { filterCategoryTreeCache = []; }
       }
-      if (!filterOptionsCache[def.level2]) {
-        try { const r = await window.api.creatorFilterOptions(def.level2); filterOptionsCache[def.level2] = r.ok ? r.options : []; } catch (e) { filterOptionsCache[def.level2] = []; }
-      }
-      level1Options = filterOptionsCache[def.level1];
-      level2Options = filterOptionsCache[def.level2];
+      categoryTree = filterCategoryTreeCache;
     }
     const wrap = document.createElement('div'); wrap.className = 'fdrop';
-    const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'fdrop-btn'; btn.textContent = name;
+    const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'fdrop-btn';
+    const menuId = `${targetId}-filter-${def.key.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+    btn.setAttribute('aria-expanded', 'false'); btn.setAttribute('aria-controls', menuId); btn.setAttribute('aria-haspopup', 'dialog');
+    const labelText = document.createElement('span'); labelText.className = 'fdrop-label'; labelText.textContent = name;
+    btn.appendChild(labelText);
+    const helpText = uiLang === 'zh' ? def.helpZh : def.helpEn;
+    if (helpText) {
+      const help = document.createElement('span'); help.className = 'fdrop-help'; help.textContent = '?'; help.title = helpText; help.setAttribute('aria-label', helpText);
+      btn.appendChild(help);
+    }
+    const spacer = document.createElement('span'); spacer.className = 'fdrop-spacer'; btn.appendChild(spacer);
     const cnt = document.createElement('span'); cnt.className = 'fcount'; cnt.style.display = 'none'; btn.appendChild(cnt);
+    const chevron = document.createElement('span'); chevron.className = 'fdrop-chevron'; chevron.textContent = '⌄'; chevron.setAttribute('aria-hidden', 'true'); btn.appendChild(chevron);
     const menu = document.createElement('div'); menu.className = 'fdrop-menu';
+    menu.id = menuId; menu.setAttribute('role', 'dialog'); menu.setAttribute('aria-label', name);
+    if (def.type === 'hierarchy') menu.classList.add('fdrop-menu-category');
     const head = document.createElement('div'); head.className = 'fdrop-menu-head';
     head.innerHTML = `<span>${name}</span>`;
     const clearBtn = document.createElement('button'); clearBtn.type = 'button'; clearBtn.textContent = uiLang === 'zh' ? '清除' : 'Clear';
@@ -2207,7 +2516,7 @@ async function renderFilterBar() {
       const minIn = document.createElement('input'); minIn.type = 'number'; minIn.placeholder = uiLang === 'zh' ? '最小值' : 'Min';
       const dash = document.createElement('span'); dash.textContent = '—';
       const maxIn = document.createElement('input'); maxIn.type = 'number'; maxIn.placeholder = uiLang === 'zh' ? '最大值' : 'Max';
-      const apply = document.createElement('button'); apply.type = 'button'; apply.className = 'fdrop-apply'; apply.textContent = uiLang === 'zh' ? '应用' : 'Apply';
+      const apply = document.createElement('button'); apply.type = 'button'; apply.className = 'fdrop-apply'; apply.textContent = uiLang === 'zh' ? '添加' : 'Add';
       apply.onclick = () => {
         const lo = minIn.value !== '' ? Number(minIn.value) : null;
         const hi = maxIn.value !== '' ? Number(maxIn.value) : null;
@@ -2217,7 +2526,7 @@ async function renderFilterBar() {
           st.custom.add({ lo, hi, tag });
         }
         minIn.value = ''; maxIn.value = '';
-        renderOptions(); renderFilterChips(); updateFilterBtn(btn, cnt, def, st); loadCreators();
+        renderOptions(); updateFilterBtn(btn, cnt, def, st); markFilterDraftChanged();
       };
       row.append(minIn, dash, maxIn, apply); menu.appendChild(row);
     } else if (def.type === 'enum' && !def.fixed && options.length > 8) {
@@ -2243,34 +2552,41 @@ async function renderFilterBar() {
       const l1Col = document.createElement('div'); l1Col.className = 'fdrop-cascade-col';
       const l2Col = document.createElement('div'); l2Col.className = 'fdrop-cascade-col fdrop-cascade-col2';
       cascade.append(l1Col, l2Col); menu.appendChild(cascade);
-      // active top category whose children are shown on the right
-      let activeL1 = st.level1.size ? [...st.level1][0] : (level1Options[0] != null ? String(level1Options[0]) : '');
+      // active top category controls the right column only; it is not itself a
+      // selection unless that category has no observed children.
+      let activeL1 = categoryTree[0] ? String(categoryTree[0].value) : '';
       const renderCascade = () => {
         const q = catSearch.value.trim().toLowerCase();
-        // LEFT: top-level categories with child counts
+        const visibleTree = categoryTree.filter(node => {
+          const parentHit = String(node.value).toLowerCase().includes(q);
+          const childHit = (node.children || []).some(child => String(child).toLowerCase().includes(q));
+          return !q || parentHit || childHit;
+        });
+        if (visibleTree.length && !visibleTree.some(node => String(node.value) === activeL1)) activeL1 = String(visibleTree[0].value);
+
+        // LEFT: top-level categories with their own child counts.
         l1Col.innerHTML = '';
-        let l1Matched = 0;
-        (level1Options || []).forEach(v => {
-          const val = String(v);
-          const hit = !q || val.toLowerCase().includes(q);
-          if (hit) l1Matched++;
-          // when searching and nothing matches level 1, still show the full list
-          // (dimmed) so the parent context of any matched level-2 stays visible
-          if (q && !hit) return;
+        visibleTree.forEach(node => {
+          const val = String(node.value);
+          const children = (node.children || []).map(String);
+          const selectedChildren = children.filter(child => st.level2.has(child));
           const item = document.createElement('div');
           item.className = 'fdrop-cascade-l1' + (activeL1 === val ? ' active' : '');
-          if (q && !hit) item.classList.add('dim');
           const cb = document.createElement('input'); cb.type = 'checkbox';
-          const childCount = (level2Options || []).length;
-          cb.checked = st.level1.has(val);
-          cb.indeterminate = !cb.checked && st.level2.size > 0; // partial when only children picked
+          cb.setAttribute('aria-label', val);
+          cb.checked = children.length ? selectedChildren.length === children.length : st.level1.has(val);
+          cb.indeterminate = children.length > 0 && selectedChildren.length > 0 && selectedChildren.length < children.length;
           cb.onchange = () => {
-            cb.checked ? st.level1.add(val) : st.level1.delete(val);
-            renderFilterChips(); updateFilterBtn(btn, cnt, def, st); loadCreators(); renderCascade();
+            if (children.length) {
+              children.forEach(child => cb.checked ? st.level2.add(child) : st.level2.delete(child));
+              st.level1.delete(val);
+            } else {
+              cb.checked ? st.level1.add(val) : st.level1.delete(val);
+            }
+            updateFilterBtn(btn, cnt, def, st); markFilterDraftChanged(); renderCascade();
           };
           const span = document.createElement('span'); span.textContent = val;
-          // bracketed child count, e.g. "Home Supplies (7)" — count of sub-categories
-          const num = document.createElement('em'); num.textContent = `(${childCount})`;
+          const num = document.createElement('em'); num.textContent = `(${children.length})`;
           const arrow = document.createElement('i'); arrow.className = 'fdrop-cascade-arrow'; arrow.textContent = '›';
           item.append(cb, span, num, arrow);
           item.onclick = (e) => { if (e.target === cb) return; activeL1 = val; renderCascade(); };
@@ -2281,14 +2597,16 @@ async function renderFilterBar() {
         const l2Head = document.createElement('div'); l2Head.className = 'fdrop-cascade-l2head';
         l2Head.textContent = activeL1 || (uiLang === 'zh' ? '（选择一级类目）' : '(pick a top category)');
         l2Col.appendChild(l2Head);
-        (level2Options || []).forEach(v => {
-          const val = String(v);
-          if (q && !val.toLowerCase().includes(q)) return;
+        const activeNode = categoryTree.find(node => String(node.value) === activeL1);
+        const parentMatches = activeNode && String(activeNode.value).toLowerCase().includes(q);
+        const activeChildren = activeNode ? (activeNode.children || []).map(String) : [];
+        activeChildren.forEach(val => {
+          if (q && !parentMatches && !val.toLowerCase().includes(q)) return;
           const item = document.createElement('label'); item.className = 'fdrop-option fdrop-cascade-l2';
           const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = st.level2.has(val);
           cb.onchange = () => {
             cb.checked ? st.level2.add(val) : st.level2.delete(val);
-            renderFilterChips(); updateFilterBtn(btn, cnt, def, st); loadCreators(); renderCascade();
+            updateFilterBtn(btn, cnt, def, st); markFilterDraftChanged(); renderCascade();
           };
           const span = document.createElement('span'); span.textContent = val;
           item.append(cb, span); l2Col.appendChild(item);
@@ -2299,7 +2617,7 @@ async function renderFilterBar() {
           const empty = document.createElement('div'); empty.className = 'fdrop-empty';
           empty.textContent = uiLang === 'zh' ? '未找到相关类目' : 'No matching categories';
           l2Col.appendChild(empty);
-        } else if (!(level2Options || []).length) {
+        } else if (!activeChildren.length) {
           const empty = document.createElement('div'); empty.className = 'fdrop-empty';
           empty.textContent = uiLang === 'zh' ? '（暂无垂直类目数据，更新达人数据后出现）' : '(no vertical data yet — refresh creators to populate)';
           l2Col.appendChild(empty);
@@ -2307,7 +2625,7 @@ async function renderFilterBar() {
       };
       catSearch.oninput = () => renderCascade();
       renderCascade();
-      if (!level1Options.length) {
+      if (!categoryTree.length) {
         const empty = document.createElement('div'); empty.className = 'fdrop-empty';
         empty.textContent = uiLang === 'zh' ? '（无类目数据）' : '(no categories yet)';
         menu.appendChild(empty);
@@ -2327,7 +2645,7 @@ async function renderFilterBar() {
         const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = selected.has(val);
         cb.onchange = () => {
           cb.checked ? selected.add(val) : selected.delete(val);
-          renderFilterChips(); updateFilterBtn(btn, cnt, def, st); loadCreators();
+          updateFilterBtn(btn, cnt, def, st); markFilterDraftChanged();
         };
         const span = document.createElement('span'); span.textContent = val;
         label.append(cb, span); menu.appendChild(label);
@@ -2339,30 +2657,51 @@ async function renderFilterBar() {
         menu.appendChild(empty);
       }
     };
-    renderOptions();
+    if (def.type !== 'hierarchy') renderOptions();
     clearBtn.onclick = () => {
       if (def.type === 'hierarchy') { st.level1.clear(); st.level2.clear(); }
       else if (def.type === 'enum') st.enum.clear();
       else { st.numeric.clear(); st.custom.clear(); }
-      renderOptions(); renderFilterChips(); updateFilterBtn(btn, cnt, def, st); loadCreators();
+      if (def.type !== 'hierarchy') renderOptions();
+      else { const categorySearch = menu.querySelector('.fdrop-search'); if (categorySearch) categorySearch.value = ''; }
+      updateFilterBtn(btn, cnt, def, st); markFilterDraftChanged();
     };
-    btn.onclick = (e) => { e.stopPropagation(); closeFilterDrops(); menu.classList.toggle('open'); btn.classList.toggle('active', menu.classList.contains('open')); openFilterDrop = menu.classList.contains('open') ? wrap : null; };
-    wrap.append(btn, menu); bar.appendChild(wrap);
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const willOpen = !menu.classList.contains('open');
+      closeFilterDrops(false);
+      menu.classList.toggle('open', willOpen);
+      btn.classList.toggle('active', willOpen);
+      btn.setAttribute('aria-expanded', String(willOpen));
+      openFilterDrop = willOpen ? wrap : null;
+      openFilterDropTrigger = willOpen ? btn : null;
+      if (willOpen && def.type === 'hierarchy') {
+        const categorySearch = menu.querySelector('.fdrop-search');
+        if (categorySearch) setTimeout(() => categorySearch.focus(), 0);
+      }
+    };
+    wrap.append(btn, menu); fragment.appendChild(wrap);
     updateFilterBtn(btn, cnt, def, st);
   }
+  if (generation !== filterRenderGenerations.get(targetId)) return;
+  bar.replaceChildren(fragment);
   renderFilterChips();
   updateFilterTabs();
+  updateFilterDraftStatus();
 }
 // Highlight the active filter tab + per-tab badge counts + Reset enabled state
 function updateFilterTabs() {
   const counts = { creators: 0, followers: 0, performance: 0 };
   for (const def of FILTER_DEFS) {
     const st = filterState.get(def.key);
-    const n = def.type === 'hierarchy' ? st.level1.size + st.level2.size : (def.type === 'enum' ? st.enum.size : st.numeric.size + st.custom.size);
+    const n = filterSelectionCount(def, st);
     counts[def.tab || 'creators'] += n;
   }
-  document.querySelectorAll('.cf-tab').forEach(t => {
-    t.classList.toggle('active', t.dataset.cf === creatorFilterTab);
+  document.querySelectorAll('.filter-group-tab').forEach(t => {
+    const active = t.dataset.cf === creatorFilterTab;
+    t.classList.toggle('active', active);
+    t.setAttribute('aria-selected', String(active));
+    t.tabIndex = active ? 0 : -1;
     let badge = t.querySelector('.cf-badge');
     const c = counts[t.dataset.cf] || 0;
     if (c > 0) {
@@ -2370,43 +2709,64 @@ function updateFilterTabs() {
       badge.textContent = c;
     } else if (badge) { badge.remove(); }
   });
-  const reset = document.getElementById('creatorFilterReset');
-  if (reset) {
-    const total = counts.creators + counts.followers + counts.performance;
-    reset.disabled = total === 0;
-  }
+  document.querySelectorAll('.creator-filterbar[role="tabpanel"]').forEach(panel => {
+    const owner = panel.closest('.creator-filter-panel');
+    const activeTab = owner && owner.querySelector(`.filter-group-tab[data-cf="${creatorFilterTab}"]`);
+    if (activeTab) panel.setAttribute('aria-labelledby', activeTab.id);
+  });
+  const draftTotal = counts.creators + counts.followers + counts.performance;
+  const appliedTotal = FILTER_DEFS.reduce((total, def) => total + filterSelectionCount(def, appliedFilterState.get(def.key)), 0);
+  document.querySelectorAll('.creator-filter-reset').forEach(reset => { reset.disabled = draftTotal === 0 && appliedTotal === 0; });
 }
 // Tab switch + Reset wiring (runs once at startup)
-document.querySelectorAll('.cf-tab').forEach(tab => {
+document.querySelectorAll('.filter-group-tab').forEach(tab => {
   tab.onclick = () => {
     if (tab.dataset.cf === creatorFilterTab) return;
     creatorFilterTab = tab.dataset.cf;
     closeFilterDrops();
     renderFilterBar();
-    loadCreators();
+  };
+  tab.onkeydown = event => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const tabs = [...tab.closest('.creator-filter-tabs').querySelectorAll('.filter-group-tab')];
+    const current = tabs.indexOf(tab);
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (current + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+    tabs[next].focus();
+    tabs[next].click();
   };
 });
-document.getElementById('creatorFilterReset').onclick = () => {
-  resetFieldFilters();
-};
+document.querySelectorAll('.creator-filter-reset').forEach(button => { button.onclick = () => resetFieldFilters(); });
+document.querySelectorAll('.creator-filter-apply').forEach(button => { button.onclick = () => applyCreatorFilters(); });
+document.querySelectorAll('.creator-filter-discard').forEach(button => {
+  button.onclick = () => {
+    copyFilterState(appliedFilterState, filterState);
+    closeFilterDrops();
+    renderFilterBar();
+    updateFilterDraftStatus();
+  };
+});
 function updateFilterBtn(btn, cnt, def, st) {
-  const n = def.type === 'hierarchy' ? st.level1.size + st.level2.size : (def.type === 'enum' ? st.enum.size : st.numeric.size + st.custom.size);
+  const n = filterSelectionCount(def, st);
   cnt.style.display = n ? '' : 'none';
   cnt.textContent = n;
-  btn.classList.toggle('active', n > 0);
+  btn.classList.toggle('has-value', n > 0);
 }
-function closeFilterDrops() {
+function closeFilterDrops(restoreFocus = false) {
   document.querySelectorAll('.fdrop-menu.open').forEach(m => m.classList.remove('open'));
-  document.querySelectorAll('.fdrop-btn.active').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.fdrop-btn.active').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-expanded', 'false'); });
+  const trigger = openFilterDropTrigger;
   openFilterDrop = null;
+  openFilterDropTrigger = null;
+  if (restoreFocus && trigger) trigger.focus();
 }
 // TikTok-style removable chips for every active filter condition
 function renderFilterChips() {
-  const box = document.getElementById('creatorFilterChips');
-  if (!box) return;
+  const boxes = [document.getElementById('creatorFilterChips'), document.getElementById('exportFilterChips')].filter(Boolean);
+  if (!boxes.length) return;
   const chips = [];
   for (const def of FILTER_DEFS) {
-    const st = filterState.get(def.key);
+    const st = appliedFilterState.get(def.key);
     const name = uiLang === 'zh' ? def.n : def.e;
     if (def.type === 'hierarchy') {
       const l1Name = uiLang === 'zh' ? '类目' : 'Category';
@@ -2422,28 +2782,41 @@ function renderFilterChips() {
       chips.push({ def, label: `${name}: ${rangeLabel}`, remove: () => st.custom.delete([...st.custom].find(c => c.tag === tag)) });
     }
   }
-  if (!chips.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
-  box.style.display = 'flex';
-  box.innerHTML = '';
-  chips.forEach(chip => {
-    const el = document.createElement('span'); el.className = 'fchip';
-    const txt = document.createElement('span'); txt.textContent = chip.label;
-    const x = document.createElement('button'); x.type = 'button'; x.textContent = '✕'; x.title = uiLang === 'zh' ? '移除' : 'Remove';
-    x.onclick = () => { chip.remove(); renderFilterChips(); renderFilterBar(); loadCreators(); };
-    el.append(txt, x); box.appendChild(el);
+  const scope = document.getElementById('exportFilterScope');
+  if (scope) scope.textContent = chips.length
+    ? (uiLang === 'zh' ? `将按 ${chips.length} 个已应用条件导出` : `Export using ${chips.length} applied conditions`)
+    : (uiLang === 'zh' ? '未应用字段筛选，将导出全部达人' : 'No field filters applied — all creators will be exported');
+  boxes.forEach(box => {
+    if (!chips.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+    box.style.display = 'flex';
+    box.innerHTML = '';
+    chips.forEach(chip => {
+      const el = document.createElement('span'); el.className = 'fchip';
+      const txt = document.createElement('span'); txt.textContent = chip.label;
+      const x = document.createElement('button'); x.type = 'button'; x.textContent = '✕'; x.title = uiLang === 'zh' ? '移除' : 'Remove';
+      x.onclick = () => {
+        chip.remove();
+        copyFilterState(appliedFilterState, filterState);
+        renderFilterChips();
+        renderFilterBar();
+        creatorOffset = 0;
+        if (activePage === 'creators') loadCreators();
+      };
+      el.append(txt, x); box.appendChild(el);
+    });
+    const reset = document.createElement('button'); reset.type = 'button'; reset.className = 'fchip-reset';
+    reset.textContent = uiLang === 'zh' ? '重置全部' : 'Reset all';
+    reset.onclick = () => resetFieldFilters();
+    box.appendChild(reset);
   });
-  const reset = document.createElement('button'); reset.type = 'button'; reset.className = 'fchip-reset';
-  reset.textContent = uiLang === 'zh' ? '重置全部' : 'Reset all';
-  reset.onclick = () => resetFieldFilters();
-  box.appendChild(reset);
 }
 document.addEventListener('click', (e) => { if (!e.target.closest('.fdrop')) closeFilterDrops(); });
 // Build the filters object passed to the DB query (fieldFilters + numericFieldFilters)
-function buildFieldFilters() {
+function buildFieldFilters(source = appliedFilterState) {
   const fieldFilters = {};
   const numericFieldFilters = {};
   for (const def of FILTER_DEFS) {
-    const st = filterState.get(def.key);
+    const st = source.get(def.key);
     if (def.type === 'hierarchy') {
       // level-1 selections filter the 'category' DB field; level-2 filter '垂直类目'
       if (st.level1.size) fieldFilters[def.level1] = [...st.level1];
@@ -2462,12 +2835,14 @@ function buildFieldFilters() {
   return { fieldFilters, numericFieldFilters };
 }
 function resetFieldFilters() {
-  filterState.forEach(s => { s.enum.clear(); s.numeric.clear(); s.custom.clear(); s.level1.clear(); s.level2.clear(); });
+  [filterState, appliedFilterState].forEach(state => state.forEach(s => { s.enum.clear(); s.numeric.clear(); s.custom.clear(); s.level1.clear(); s.level2.clear(); }));
   closeFilterDrops(); // spec: Reset closes any open dropdown
   renderFilterBar();
   renderFilterChips();
   renderCreatorCatPanel();
-  loadCreators();
+  updateFilterDraftStatus();
+  creatorOffset = 0;
+  if (activePage === 'creators') loadCreators();
 }
 
 // ── dedicated two-level category picker panel ──
@@ -2505,7 +2880,7 @@ async function renderCreatorCatPanel() {
     cb.checked = st.level1.has(val);
     cb.onchange = () => {
       cb.checked ? st.level1.add(val) : st.level1.delete(val);
-      renderFilterChips(); renderFilterBar(); updateCatPanelCount(); loadCreators();
+      renderFilterBar(); updateCatPanelCount(); markFilterDraftChanged();
     };
     const text = document.createElement('span'); text.textContent = val;
     const expand = document.createElement('button'); expand.type = 'button'; expand.className = 'ccp-expand';
@@ -2527,7 +2902,7 @@ async function renderCreatorCatPanel() {
         ccb.checked = st.level2.has(vv);
         ccb.onchange = () => {
           ccb.checked ? st.level2.add(vv) : st.level2.delete(vv);
-          renderFilterChips(); renderFilterBar(); updateCatPanelCount(); loadCreators();
+          renderFilterBar(); updateCatPanelCount(); markFilterDraftChanged();
         };
         const span = document.createElement('span'); span.textContent = vv;
         label.append(ccb, span); childBox.appendChild(label);
@@ -2569,7 +2944,7 @@ document.getElementById('creatorCatPanelClose').onclick = () => toggleCreatorCat
 document.getElementById('creatorCatPanelClear').onclick = () => {
   const hier = FILTER_DEFS.find(d => d.type === 'hierarchy');
   if (hier) { const st = filterState.get(hier.key); st.level1.clear(); st.level2.clear(); }
-  renderFilterBar(); renderFilterChips(); updateCatPanelCount(); loadCreators();
+  renderFilterBar(); updateCatPanelCount(); markFilterDraftChanged();
 };
 
 let creatorLoadSeq = 0; // race guard: only the latest request may render
@@ -2659,7 +3034,7 @@ document.getElementById('creatorImport').onclick = async () => {
   alert(msg);
   creatorOffset = 0; loadCreators(); refreshDatabaseMetrics();
 };
-document.getElementById('creatorExport').onclick = async () => {
+async function exportCreatorLibraryFromCurrentFilters() {
   // reuse the Export Center settings (format / fields / output dir / header lang)
   const format = (document.querySelector('input[name=format]:checked') || {}).value || 'csv';
   const headerLang = (document.querySelector('input[name=headerLang]:checked') || {}).value || 'zh';
@@ -2676,9 +3051,9 @@ document.getElementById('creatorExport').onclick = async () => {
     ...buildFieldFilters(),
   };
   // confirm before exporting (let the user see the scope they are about to save)
-  const activeFilters = FILTER_DEFS.filter(d => { const st = filterState.get(d.key); return st && (st.enum.size || st.numeric.size); });
+  const activeFilters = FILTER_DEFS.filter(d => filterSelectionCount(d, appliedFilterState.get(d.key)) > 0);
   const scopeDesc = activeFilters.length
-    ? activeFilters.map(d => { const st = filterState.get(d.key); const n = d.type === 'enum' ? st.enum.size : st.numeric.size; return `${uiLang === 'zh' ? d.n : d.e}: ${n} 项`; }).join('、')
+    ? activeFilters.map(d => `${uiLang === 'zh' ? d.n : d.e}: ${filterSelectionCount(d, appliedFilterState.get(d.key))} 项`).join('、')
     : (uiLang === 'zh' ? '无字段筛选（全部达人）' : 'no field filters (all creators)');
   const formatLabel = format === 'xlsx' ? 'Excel' : 'CSV';
   if (!confirm(uiLang === 'zh'
@@ -2695,8 +3070,10 @@ document.getElementById('creatorExport').onclick = async () => {
   const fileCount = (r.files && r.files.length) || 1;
   const multi = fileCount > 1 ? (uiLang === 'zh' ? `（自动分 ${fileCount} 个文件）` : ` (auto-split into ${fileCount} files)`) : '';
   alert(uiLang === 'zh' ? `✅ 已导出 ${r.rows} 行${multi} → ${r.outPath}` : `✅ Exported ${r.rows} rows${multi} → ${r.outPath}`);
-};
-document.getElementById('creatorReset').onclick = () => { document.getElementById('creatorSearch').value = ''; document.getElementById('creatorHasEmail').checked = false; document.getElementById('creatorActiveOnly').checked = false; resetFieldFilters(); creatorOffset = 0; loadCreators(); };
+}
+document.getElementById('creatorExport').onclick = exportCreatorLibraryFromCurrentFilters;
+document.getElementById('exportFilteredCreators').onclick = exportCreatorLibraryFromCurrentFilters;
+document.getElementById('creatorReset').onclick = () => { document.getElementById('creatorSearch').value = ''; document.getElementById('creatorHasEmail').checked = false; document.getElementById('creatorActiveOnly').checked = false; resetFieldFilters(); };
 document.getElementById('creatorDensity').onclick = event => { const compact = document.querySelector('.creator-table').classList.toggle('compact'); event.currentTarget.textContent = I18N[compact ? 'creators.comfortable' : 'creators.compact'][uiLang]; };
 // ── field manager drawer (open/close) ──
 function setColumnDrawer(open) {
@@ -2719,7 +3096,7 @@ document.getElementById('creatorColumnOverlay').onclick = () => setColumnDrawer(
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   setColumnDrawer(false);       // close the field manager drawer
-  closeFilterDrops();           // close any open filter dropdown (spec §24)
+  closeFilterDrops(true);       // close any open filter dropdown and restore focus
 });
 document.getElementById('creatorColumnsAll').onclick = () => { hiddenCreatorColumns.clear(); renderCreatorColumns(); renderCreatorHead(); document.querySelectorAll('.creator-table [data-field]').forEach(cell => cell.hidden = false); };
 document.getElementById('creatorHasEmail').onchange = () => { creatorOffset = 0; loadCreators(); };
