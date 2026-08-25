@@ -69,3 +69,31 @@ test('creator database migrates, deduplicates and filters creators', async (t) =
   assert.equal(stats.jobs.completed, 1);
   assert.ok(stats.bytes > 0);
 });
+
+test('creator database groups vertical categories under their observed top-level categories', async (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'creator-category-tree-test-'));
+  const file = path.join(dir, 'creators.db');
+  const db = new CreatorDatabase(file);
+  t.after(async () => {
+    await db.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  await db.open();
+  await db.upsertCreators([
+    { creator_oecuid: 'home-1', category: 'Home Supplies', '垂直类目': 'Bathroom Supplies | Home Decor' },
+    { creator_oecuid: 'home-2', category: 'Home Supplies', '垂直类目': 'Home Decor | Laundry Tools' },
+    { creator_oecuid: 'beauty-1', category: 'Beauty & Personal Care', '垂直类目': 'Skin Care' },
+  ], { region: 'US' });
+
+  assert.deepEqual(await db.getCategoryTree(), [
+    { value: 'Beauty & Personal Care', children: ['Skin Care'] },
+    { value: 'Home Supplies', children: ['Bathroom Supplies', 'Home Decor', 'Laundry Tools'] },
+  ]);
+
+  const verticalMatch = await db.listCreators({
+    fieldFilters: { '垂直类目': ['Home Decor'] },
+  });
+  assert.equal(verticalMatch.total, 2);
+  assert.deepEqual(verticalMatch.rows.map(row => row.creator_id).sort(), ['home-1', 'home-2']);
+});

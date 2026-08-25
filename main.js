@@ -216,6 +216,12 @@ ipcMain.handle('creator-db-options', async (event, key) => {
   try { return { ok: true, options: await creatorDb.getFilterOptions(String(key || '')) }; }
   catch (e) { return { error: e.message, options: [] }; }
 });
+
+ipcMain.handle('creator-db-category-tree', async () => {
+  if (!creatorDb) return { error: '本地达人库未初始化', tree: [] };
+  try { return { ok: true, tree: await creatorDb.getCategoryTree() }; }
+  catch (e) { return { error: e.message, tree: [] }; }
+});
 ipcMain.handle('creator-db-jobs', async (event, filters) => {
   if (!creatorDb) return { error: '本地达人库未初始化', rows: [], total: 0 };
   try { return { ok: true, ...(await creatorDb.listScrapeJobs(filters || {})) }; }
