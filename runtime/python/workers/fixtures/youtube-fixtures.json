@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "scenarios": {
+    "pagination": {
+      "pages": [
+        {
+          "items": [
+            {
+              "channelId": 101,
+              "snippet": {
+                "title": "Trail Kitchen",
+                "customUrl": "@trailkitchen",
+                "description": "Outdoor cooking videos"
+              },
+              "statistics": { "subscriberCount": 1200, "videoCount": 18 }
+            },
+            {
+              "channelId": "UC-garden-202",
+              "snippet": {
+                "title": "Garden Notes",
+                "customUrl": "@gardennotes"
+              },
+              "statistics": { "subscriberCount": "2400" }
+            }
+          ]
+        },
+        {
+          "items": [
+            {
+              "channelId": "UC-studio-303",
+              "snippet": { "title": "Studio Finds" },
+              "statistics": { "subscriberCount": 3800 }
+            }
+          ]
+        }
+      ]
+    },
+    "empty": {
+      "pages": [
+        { "items": [] }
+      ]
+    },
+    "missing_fields": {
+      "pages": [
+        {
+          "items": [
+            {
+              "channelId": 90210,
+              "snippet": {},
+              "statistics": {}
+            },
+            {
+              "snippet": {}
+            }
+          ]
+        }
+      ]
+    },
+    "throttled": {
+      "error": {
+        "code": "THROTTLED",
+        "classification": "transient",
+        "message": "Fixture provider asked the local collector to retry later"
+      }
+    },
+    "changed_payload_shape": {
+      "pages": [
+        {
+          "results": [
+            {
+              "channel": {
+                "id": "UC-shape-404",
+                "name": "Payload Shape Lab",
+                "handle": "@payloadshapelab"
+              },
+              "metrics": { "subscribers": 5100 }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

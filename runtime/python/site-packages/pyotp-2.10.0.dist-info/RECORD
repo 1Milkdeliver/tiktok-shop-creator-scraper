@@ -1,0 +1,15 @@
+pyotp-2.10.0.dist-info/INSTALLER,sha256=5hhM4Q4mYTT9z6QB6PGpUAW81PGNFrYrdXMj4oM_6ak,2
+pyotp-2.10.0.dist-info/METADATA,sha256=khIilotcerpIDbHpKIVEz2NAcDL63i4ZUxCxnIBlkmE,10149
+pyotp-2.10.0.dist-info/RECORD,,
+pyotp-2.10.0.dist-info/REQUESTED,sha256=47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU,0
+pyotp-2.10.0.dist-info/WHEEL,sha256=mffPy8wBnZQn2VnJUU5jE99KsxaSfiyMHV9Yt0aLVxs,87
+pyotp-2.10.0.dist-info/licenses/LICENSE,sha256=eViFEjNBRYFyqtbr-rMbBxzHtAUkkp5pAWYtXbv1fqM,1174
+pyotp/__init__.py,sha256=KvbyPLPtAllp_9LfRzvsFAZJRxJGk3MvWIKwsteSJ2M,4254
+pyotp/compat.py,sha256=AB2ImrQE5tA9pUVGWKlKZDU1h5qpZHKGBUCpaRiJ3rY,217
+pyotp/contrib/__init__.py,sha256=2hKOYyF4NnZ09Rw3FmeoYmk1l7l631cgIpj2kjzbKfw,38
+pyotp/contrib/steam.py,sha256=neSbrAjTdX4qb4iqOmmV00g8545GlIkQxIFesJn699M,1292
+pyotp/hotp.py,sha256=krBp412C3pkF2caANi8MLJfnzynVn5CJltFDLTF6pwc,2825
+pyotp/otp.py,sha256=rdvDUU7atlf80eOowvZEoIipTrQKyLWrCyx48o6Nwb4,2542
+pyotp/py.typed,sha256=47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU,0
+pyotp/totp.py,sha256=eYHhCrWzBLsEjHblnFj2LFi8lyerZgMiy0ND4UhVx6A,4234
+pyotp/utils.py,sha256=I9b_Ys5DLel6NgXiHGq_TE_0SZ01id8j-CTAxniU1Qs,3281

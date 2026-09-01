@@ -1,0 +1,695 @@
+import hashlib
+import json
+import random
+import time
+from enum import Enum
+from typing import Dict
+
+import requests
+
+from instagrapi.exceptions import (
+    ChallengeError,
+    ChallengeRedirection,
+    ChallengeRequired,
+    ChallengeSelfieCaptcha,
+    ChallengeUnknownStep,
+    LegacyForceSetNewPasswordForm,
+    RecaptchaChallengeForm,
+    SelectContactPointRecoveryForm,
+    SubmitPhoneNumberForm,
+)
+
+WAIT_SECONDS = 5
+BLOKS_REDIRECT_ACTION = "com.bloks.www.ig.challenge.redirect.async"
+
+
+class ChallengeChoice(Enum):
+    SMS = 0
+    EMAIL = 1
+
+
+def extract_messages(challenge):
+    messages = []
+    for item in challenge["extraData"].get("content"):
+        message = item.get("title", item.get("text"))
+        if message:
+            dot = "" if message.endswith(".") else "."
+            messages.append(f"{message}{dot}")
+    return messages
+
+
+class ChallengeResolveMixin:
+    """
+    Helpers for resolving login challenge
+    """
+
+    @staticmethod
+    def _normalize_challenge_api_path(api_path: str) -> str:
+        if api_path.startswith("/api/v1/"):
+            return api_path[len("/api/v1") :]
+        if api_path.startswith("/api/"):
+            return api_path[len("/api") :]
+        return api_path
+
+    def challenge_code_or_raised(self, choice: ChallengeChoice, wait_seconds: int = 5, attempts: int = 24) -> str:
+        error_context = dict(self.last_json)
+        error_context.pop("message", None)
+        for attempt in range(attempts):
+            code = self.challenge_code_handler(self.username, choice)
+            if code:
+                print(f'Code entered "{code}" for {self.username} ({attempt} attempts by {wait_seconds} seconds)')
+                return code
+            if attempt == 0:
+                raise ChallengeRequired(
+                    "Challenge code required. Provide it via challenge_code_handler "
+                    "or retry login after saving client settings.",
+                    **error_context,
+                )
+            time.sleep(wait_seconds)
+        raise ChallengeRequired(
+            "Challenge code was not provided before the retry window expired.",
+            **error_context,
+        )
+
+    def _challenge_error_context(self) -> Dict:
+        return {key: value for key, value in self.last_json.items() if key != "message"}
+
+    def _raise_bloks_redirect_required(self) -> None:
+        raise ChallengeRequired(
+            "Manual verification required via Instagram Bloks redirect checkpoint. "
+            "Please confirm the login in the official Instagram app or web flow on a trusted device, "
+            "then retry with the same saved client settings, device identifiers, and proxy/IP.",
+            **self._challenge_error_context(),
+        )
+
+    def _challenge_resolve_change_password(self) -> bool:
+        challenge_context = self.last_json.get("challenge_context")
+        if not challenge_context:
+            raise ChallengeRequired(
+                "Password change required, but Instagram did not return a challenge context. "
+                "Complete the flow manually.",
+                **self._challenge_error_context(),
+            )
+        wait_seconds = 5
+        pwd = None
+        for attempt in range(24):
+            pwd = self.change_password_handler(self.username)
+            if pwd:
+                break
+            time.sleep(wait_seconds)
+        if not pwd:
+            raise ChallengeRequired(
+                "Password change required. Provide a new password via "
+                "change_password_handler or complete the flow manually.",
+                **self._challenge_error_context(),
+            )
+        self.logger.info(
+            "New password (%d chars) entered for %s (%d attempts by %d seconds)",
+            len(pwd),
+            self.username,
+            attempt,
+            wait_seconds,
+        )
+        return self.bloks_change_password(pwd, challenge_context)
+
+    def challenge_bloks_redirect_dismiss(self) -> bool:
+        """
+        Acknowledge a pending Bloks redirect checkpoint after manual approval.
+
+        Call this after approving the login in the official Instagram app while
+        keeping the same client instance/settings alive.
+        """
+        if self.last_json.get("bloks_action") != BLOKS_REDIRECT_ACTION or not self.last_json.get("challenge_context"):
+            raise ChallengeRequired(
+                "No pending Bloks redirect challenge context found. "
+                "Retry the original login/request first, then approve it in the official app.",
+                **self._challenge_error_context(),
+            )
+        result = self.bloks_challenge_take_challenge(
+            challenge_context=self.last_json["challenge_context"],
+        )
+        if isinstance(result, dict):
+            self.last_json = result
+        if self.last_json.get("status") != "ok":
+            self._raise_bloks_redirect_required()
+        if self.last_json.get("action") == "close" or self.last_json.get("type") == "CHALLENGE_REDIRECTION":
+            return True
+        if self.last_json.get("bloks_action") == BLOKS_REDIRECT_ACTION:
+            self._raise_bloks_redirect_required()
+        return True
+
+    def challenge_resolve(self, last_json: Dict) -> bool:
+        """
+        Start challenge resolve
+
+        Returns
+        -------
+        bool
+            A boolean value
+        """
+        # START GET REQUEST to challenge_url
+        challenge_url = self._normalize_challenge_api_path(last_json["challenge"]["api_path"])
+        if challenge_url.startswith("/auth_platform/"):
+            last_json["message"] = (
+                "Manual verification required via Instagram auth platform flow. "
+                "This challenge is not yet supported automatically."
+            )
+            raise ChallengeRequired(**last_json)
+        if last_json.get("challenge", {}).get("native_flow") and challenge_url.startswith("/challenge/"):
+            error_context = dict(last_json)
+            error_context["message"] = "challenge_required"
+            raise ChallengeRequired(
+                "Manual verification required via Instagram native challenge flow. "
+                "This checkpoint is not handled by challenge_code_handler or change_password_handler; "
+                "complete it in the official Instagram app or web flow on a trusted device. "
+                "Retry with the same saved client settings, device identifiers, and proxy/IP.",
+                **error_context,
+            )
+        try:
+            user_id, nonce_code = challenge_url.split("/")[2:4]
+            challenge_context = last_json.get("challenge", {}).get("challenge_context")
+            if not challenge_context:
+                challenge_context = json.dumps(
+                    {
+                        "step_name": "",
+                        "nonce_code": nonce_code,
+                        "user_id": int(user_id),
+                        "is_stateless": False,
+                    }
+                )
+            params = {
+                "guid": self.uuid,
+                "device_id": self.android_device_id,
+                "challenge_context": challenge_context,
+            }
+        except ValueError:
+            # not enough values to unpack (expected 2, got 1)
+            params = {}
+        try:
+            self._send_private_request(challenge_url.lstrip("/"), params=params)
+        except ChallengeRequired:
+            assert self.last_json["message"] == "challenge_required", self.last_json
+            return self.challenge_resolve_contact_form(challenge_url)
+        return self.challenge_resolve_simple(challenge_url)
+
+    def challenge_resolve_contact_form(self, challenge_url: str) -> bool:
+        """
+        Start challenge resolve
+
+        Помогите нам удостовериться, что вы владеете этим аккаунтом
+        > CODE
+        Верна ли информация вашего профиля?
+        Мы заметили подозрительные действия в вашем аккаунте.
+        В целях безопасности сообщите, верна ли информация вашего профиля.
+        > I AGREE
+
+        Help us make sure you own this account
+        > CODE
+        Is your profile information correct?
+        We have noticed suspicious activity on your account.
+        For security reasons, please let us know if your profile information is correct.
+        > I AGREE
+
+        Parameters
+        ----------
+        challenge_url: str
+            Challenge URL
+
+        Returns
+        -------
+        bool
+            A boolean value
+        """
+        result = self.last_json
+        challenge_url = "https://i.instagram.com%s" % challenge_url
+        # IG's web flow tags requests with an "instagram_ajax" fingerprint
+        # derived from a timestamp seed. Despite the leading "#PWD_..." marker,
+        # this string contains no password — only the current epoch.
+        ajax_seed = "#PWD_INSTAGRAM_BROWSER:0:%s:" % str(int(time.time()))
+        instagram_ajax = hashlib.sha256(ajax_seed.encode()).hexdigest()[:12]
+        session = requests.Session()
+        session.verify = self.tls_verify
+        session.proxies = self.private.proxies
+        session.headers.update(
+            {
+                "User-Agent": "Mozilla/5.0 (Linux; Android 8.0.0; MI 5s Build/OPR1.170623.032; wv) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/80.0.3987.149 "
+                "Mobile Safari/537.36 %s" % self.user_agent,
+                "upgrade-insecure-requests": "1",
+                "sec-fetch-dest": "document",
+                "accept": (
+                    "text/html,application/xhtml+xml,application/xml;q=0.9,"
+                    "image/webp,image/apng,*/*;q=0.8,"
+                    "application/signed-exchange;v=b3;q=0.9"
+                ),
+                "x-requested-with": "com.instagram.android",
+                "sec-fetch-site": "none",
+                "sec-fetch-mode": "navigate",
+                "sec-fetch-user": "?1",
+                "accept-encoding": "gzip, deflate",
+                "accept-language": "en-US,en;q=0.9,en-US;q=0.8,en;q=0.7",
+                "pragma": "no-cache",
+                "cache-control": "no-cache",
+            }
+        )
+        for key, value in self.private.cookies.items():
+            if key in ["mid", "csrftoken"]:
+                session.cookies.set(key, value)
+        time.sleep(WAIT_SECONDS)
+        result = session.get(challenge_url)  # render html form
+        session.headers.update(
+            {
+                "x-ig-www-claim": "0",
+                "x-instagram-ajax": instagram_ajax,
+                "content-type": "application/x-www-form-urlencoded",
+                "accept": "*/*",
+                "sec-fetch-dest": "empty",
+                "x-requested-with": "XMLHttpRequest",
+                "x-csrftoken": session.cookies.get_dict().get("csrftoken"),
+                "x-ig-app-id": self.private.headers.get("X-IG-App-ID"),
+                "sec-fetch-site": "same-origin",
+                "sec-fetch-mode": "cors",
+                "referer": challenge_url,
+            }
+        )
+        time.sleep(WAIT_SECONDS)
+        choice = ChallengeChoice.EMAIL
+        result = session.post(challenge_url, {"choice": choice.value})
+        result = result.json()
+        for retry in range(8):
+            time.sleep(WAIT_SECONDS)
+            try:
+                # FORM TO ENTER CODE
+                result = self.handle_challenge_result(result)
+                break
+            except SelectContactPointRecoveryForm as e:
+                if choice == ChallengeChoice.SMS:  # last iteration
+                    raise e
+                choice = ChallengeChoice.SMS
+                result = session.post(challenge_url, {"choice": choice.value})
+                result = result.json()
+                continue  # next choice attempt
+            except SubmitPhoneNumberForm as e:
+                result = session.post(
+                    challenge_url,
+                    {
+                        "phone_number": e.challenge["fields"]["phone_number"],
+                        "challenge_context": e.challenge["challenge_context"],
+                    },
+                )
+                result = result.json()
+                break
+            except ChallengeRedirection:
+                return True  # instagram redirect
+        if result.get("challengeType") not in (
+            "VerifyEmailCodeForm",
+            "VerifySMSCodeForm",
+            "VerifySMSCodeFormForSMSCaptcha",
+        ):
+            raise ChallengeError(f"Unexpected contact-form challenge step after verification selection: {result}")
+        for retry_code in range(5):
+            code = None
+            for attempt in range(1, 11):
+                code = self.challenge_code_handler(self.username, choice)
+                if code:
+                    break
+                time.sleep(WAIT_SECONDS * attempt)
+            if not code:
+                raise ChallengeRequired(
+                    "Challenge code required to continue contact-form verification. "
+                    "Provide it via challenge_code_handler or retry after manual verification.",
+                    **{key: value for key, value in self.last_json.items() if key != "message"},
+                )
+            # SEND CODE
+            time.sleep(WAIT_SECONDS)
+            result = session.post(challenge_url, {"security_code": code}).json()
+            result = result.get("challenge", result)
+            if "Please check the code we sent you and try again" not in (result.get("errors") or [""])[0]:
+                break
+        # FORM TO APPROVE CONTACT DATA
+        challenge_type = result.get("challengeType")
+        if challenge_type == "LegacyForceSetNewPasswordForm":
+            self.challenge_resolve_new_password_form(result)
+        if result.get("challengeType") != "ReviewContactPointChangeForm":
+            raise ChallengeError(f"Unexpected contact-form challenge step after security code submission: {result}")
+        details = []
+        extra_data = result.get("extraData") or {}
+        content = extra_data.get("content") or []
+        for data in content:
+            for entry in data.get("labeled_list_entries", []):
+                val = entry.get("list_item_text")
+                if not val:
+                    continue
+                if "@" not in val:
+                    val = val.replace(" ", "").replace("-", "")
+                details.append(val)
+        # CHECK ACCOUNT DATA
+        for detail in [self.username, self.email, self.phone_number]:
+            if detail and detail not in details:
+                raise ChallengeError(f'ChallengeResolve: Data invalid: "{detail}" not in {details}')
+        navigation = result.get("navigation") or {}
+        forward = navigation.get("forward")
+        if not forward:
+            raise ChallengeError("Contact-form challenge response did not provide a forward navigation target.")
+        time.sleep(WAIT_SECONDS)
+        result = session.post(
+            "https://i.instagram.com%s" % forward,
+            {
+                "choice": 0,  # I AGREE
+                "enc_new_password1": ajax_seed,
+                "new_password1": "",
+                "enc_new_password2": ajax_seed,
+                "new_password2": "",
+            },
+        ).json()
+        if result.get("type") != "CHALLENGE_REDIRECTION" or result.get("status") != "ok":
+            raise ChallengeError(f"Unexpected final response after contact-form approval: {result}")
+        return True
+
+    def challenge_resolve_new_password_form(self, result):
+        msg = " ".join(
+            [
+                "Log into your Instagram account from smartphone and change password!",
+                *extract_messages(result),
+            ]
+        )
+        raise LegacyForceSetNewPasswordForm(msg)
+
+    def handle_challenge_result(self, challenge: Dict):
+        """
+        Handle challenge result
+
+        Parameters
+        ----------
+        challenge: Dict
+            Dict
+
+        Returns
+        -------
+        bool
+            A boolean value
+        """
+        messages = []
+        if "challenge" in challenge:
+            """
+            Иногда в JSON есть вложенность,
+            вместо {challege_object}
+            приходит {"challenge": {challenge_object}}
+            Sometimes there is nesting in JSON,
+            instead of {challege_object}
+            comes {"challenge": {challenge_object}}
+            """
+            challenge = challenge["challenge"]
+            if not isinstance(challenge, dict):
+                raise ChallengeError("Malformed nested challenge payload received from Instagram.")
+        challenge_type = challenge.get("challengeType")
+        if challenge_type == "SelectContactPointRecoveryForm":
+            """
+            Помогите нам удостовериться, что вы владеете этим аккаунтом
+            Чтобы защитить свой аккаунт, запросите помощь со входом.
+            {'message': '',
+            'challenge': {'challengeType': 'SelectContactPointRecoveryForm',
+            'errors': ['Select a valid choice. 1 is not one of the available choices.'],
+            'experiments': {},
+            'extraData': {'__typename': 'GraphChallengePage',
+            'content': [{'__typename': 'GraphChallengePageHeader',
+            'description': None,
+            'title': 'Help Us Confirm You Own This Account'},
+            {'__typename': 'GraphChallengePageText',
+            'alignment': 'center',
+            'html': None,
+            'text': 'To secure your account, you need to request help logging in.'},
+            {'__typename': 'GraphChallengePageForm',
+            'call_to_action': 'Get Help Logging In',
+            'display': 'inline',
+            'fields': None,
+            'href': 'https://help.instagram.com/358911864194456'}]},
+            'fields': {'choice': 'None'},
+            'navigation': {'forward': '/challenge/8530598273/PlWAX2OMVk/',
+            'replay': '/challenge/replay/8530598273/PlWAX2OMVk/',
+            'dismiss': 'instagram://checkpoint/dismiss'},
+            'privacyPolicyUrl': '/about/legal/privacy/',
+            'type': 'CHALLENGE'},
+            'status': 'fail'}
+            """
+            if "extraData" in challenge:
+                messages += extract_messages(challenge)
+            if "errors" in challenge:
+                for error in challenge["errors"]:
+                    messages.append(error)
+            raise SelectContactPointRecoveryForm(" ".join(messages), challenge=challenge)
+        elif challenge_type == "RecaptchaChallengeForm":
+            """
+            Example:
+            {'message': '',
+            'challenge': {
+            'challengeType': 'RecaptchaChallengeForm',
+            'errors': ['Неправильная Captcha. Попробуйте еще раз.'],
+            'experiments': {},
+            'extraData': None,
+            'fields': {'g-recaptcha-response': 'None',
+            'disable_num_days_remaining': -60,
+            'sitekey': '6LebnxwUAAAAAGm3yH06pfqQtcMH0AYDwlsXnh-u'},
+            'navigation': {'forward': '/challenge/32708972491/CE6QdsYZyB/',
+            'replay': '/challenge/replay/32708972491/CE6QdsYZyB/',
+            'dismiss': 'instagram://checkpoint/dismiss'},
+            'privacyPolicyUrl': '/about/legal/privacy/',
+            'type': 'CHALLENGE'},
+            'status': 'fail'}
+            """
+            raise RecaptchaChallengeForm(". ".join(challenge.get("errors", [])))
+        elif challenge_type in (
+            "VerifyEmailCodeForm",
+            "VerifySMSCodeForm",
+            "VerifySMSCodeFormForSMSCaptcha",
+        ):
+            # Success. Next step
+            return challenge
+        elif challenge_type == "SubmitPhoneNumberForm":
+            raise SubmitPhoneNumberForm(challenge=challenge)
+        elif challenge_type:
+            # Unknown challenge_type
+            messages.append(f"Unsupported challenge type: {challenge_type}.")
+            if challenge.get("extraData"):
+                messages += extract_messages(challenge)
+            if "errors" in challenge:
+                messages.append("\n".join(challenge["errors"]))
+            messages.append("(Please manual login)")
+            raise ChallengeError(" ".join(messages))
+        elif challenge.get("type") == "CHALLENGE_REDIRECTION":
+            """
+            Example:
+            {'location': 'instagram://checkpoint/dismiss',
+            'status': 'ok',
+            'type': 'CHALLENGE_REDIRECTION'}
+            """
+            raise ChallengeRedirection()
+        return challenge
+
+    def challenge_resolve_simple(self, challenge_url: str) -> bool:
+        """
+        Old type (through private api) challenge resolver
+        Помогите нам удостовериться, что вы владеете этим аккаунтом
+
+        Parameters
+        ----------
+        challenge_url : str
+            Challenge URL
+
+        Returns
+        -------
+        bool
+            A boolean value
+        """
+        step_name = self.last_json.get("step_name", "")
+        if step_name in ("delta_login_review", "delta_acknowledge_approved", "scraping_warning"):
+            # IT WAS ME (by GEO)
+            self._send_private_request(challenge_url, {"choice": "0"})
+            return True
+        elif step_name == "add_birthday":
+            random_year = random.randint(1970, 2004)
+            random_month = random.randint(1, 12)
+            random_day = random.randint(1, 28)
+            self._send_private_request(
+                challenge_url,
+                {
+                    "birthday_year": str(random_year),
+                    "birthday_month": str(random_month),
+                    "birthday_day": str(random_day),
+                },
+            )
+            return True
+        elif step_name in (
+            "verify_email",
+            "verify_email_code",
+            "verify_phone",
+            "verify_phone_code",
+            "verify_sms",
+            "verify_sms_code",
+            "select_verify_method",
+        ):
+            choice = ChallengeChoice.SMS if "phone" in step_name or "sms" in step_name else ChallengeChoice.EMAIL
+            if step_name == "select_verify_method":
+                """
+                {'step_name': 'select_verify_method',
+                'step_data': {'choice': '0',
+                'fb_access_token': 'None',
+                'big_blue_token': 'None',
+                'google_oauth_token': 'true',
+                'vetted_device': 'None',
+                'phone_number': '+7 *** ***-**-09',
+                'email': 'x****g@y*****.com'},     <------------- choice
+                'nonce_code': 'DrW8V4m5Ec',
+                'user_id': 12060121299,
+                'status': 'ok'}
+                """
+                steps = self.last_json["step_data"].keys()
+                challenge_url = challenge_url[1:]
+                if "email" in steps:
+                    choice = ChallengeChoice.EMAIL
+                    self._send_private_request(challenge_url, {"choice": str(choice.value)})
+                elif "phone_number" in steps:
+                    choice = ChallengeChoice.SMS
+                    self._send_private_request(challenge_url, {"choice": str(choice.value)})
+                else:
+                    raise ChallengeError(
+                        f'ChallengeResolve: Choice "email" or "phone_number" '
+                        f"(sms) not available to this account {self.last_json}"
+                    )
+            code = self.challenge_code_or_raised(choice, wait_seconds=5, attempts=24)
+            self._send_private_request(challenge_url, {"security_code": code})
+            # assert 'logged_in_user' in client.last_json
+            assert self.last_json.get("action", "") == "close"
+            assert self.last_json.get("status", "") == "ok"
+            return True
+        elif step_name == "submit_phone":
+            phone_number = getattr(self, "phone_number", None)
+            if not phone_number:
+                raise ChallengeRequired(
+                    "Phone number required to continue submit_phone challenge. "
+                    "Set client.phone_number or complete the flow manually.",
+                    **{key: value for key, value in self.last_json.items() if key != "message"},
+                )
+            self._send_private_request(challenge_url, {"phone_number": phone_number})
+            if self.last_json.get("step_name") == step_name:
+                raise ChallengeError(f"submit_phone challenge did not advance after phone submission: {self.last_json}")
+            return self.challenge_resolve_simple(challenge_url)
+        elif self.last_json.get("bloks_action") == BLOKS_REDIRECT_ACTION:
+            if self.last_json.get("challenge_type_enum_str") == "PASSWORD_RESET":
+                return self._challenge_resolve_change_password()
+            challenge_context = self.last_json.get("challenge_context")
+            if not challenge_context:
+                self._raise_bloks_redirect_required()
+            result = self.bloks_challenge_take_challenge(
+                challenge_context=challenge_context,
+                choice=0,
+            )
+            if isinstance(result, dict):
+                self.last_json = result
+            if self.last_json.get("status") != "ok":
+                self._raise_bloks_redirect_required()
+            if self.last_json.get("action") == "close" or self.last_json.get("type") == "CHALLENGE_REDIRECTION":
+                return True
+            if self.last_json.get("bloks_action") == BLOKS_REDIRECT_ACTION:
+                self._raise_bloks_redirect_required()
+            if self.last_json.get("step_name"):
+                return self.challenge_resolve_simple(challenge_url)
+            return True
+        elif step_name == "":
+            assert self.last_json.get("action", "") == "close"
+            assert self.last_json.get("status", "") == "ok"
+            return True
+        elif step_name == "change_password":
+            # Example: {'step_name': 'change_password',
+            #  'step_data': {'new_password1': 'None', 'new_password2': 'None'},
+            #  'flow_render_type': 3,
+            #  'bloks_action': 'com.instagram.challenge.navigation.take_challenge',
+            #  'cni': 18226879502000588,
+            #  'challenge_context': '{"step_name": "change_password",
+            #      "cni": 18226879502000588, "is_stateless": false,
+            #      "challenge_type_enum": "PASSWORD_RESET"}',
+            #  'challenge_type_enum_str': 'PASSWORD_RESET',
+            #  'status': 'ok'}
+            return self._challenge_resolve_change_password()
+        elif step_name == "ufac_www_bloks":
+            raise ChallengeRequired(
+                "Manual verification required via Instagram UFAC web bloks checkpoint. "
+                "Please resolve it in the Instagram app or web flow and then retry.",
+                **{key: value for key, value in self.last_json.items() if key != "message"},
+            )
+        elif step_name == "selfie_captcha":
+            raise ChallengeSelfieCaptcha(self.last_json)
+        elif step_name == "select_contact_point_recovery":
+            """
+            {
+                'step_name': 'select_contact_point_recovery',
+                'step_data': {'choice': '0',
+                    'phone_number': '+62 ***-****-**11',
+                    'email': 'g*******b@w**.de',
+                    'hl_co_enabled': False,
+                    'sigp_to_hl': False
+                },
+                'flow_render_type': 3,
+                'bloks_action': 'com.instagram.challenge.navigation.take_challenge',
+                'cni': 178623487724,
+                'challenge_context': '{"step_name": "select_contact_point_recovery",
+                "cni": 178623487724,
+                "is_stateless": false,
+                "challenge_type_enum": "HACKED_LOCK",
+                "present_as_modal": false}',
+                'challenge_type_enum_str': 'HACKED_LOCK',
+                'status': 'ok'
+            }
+            """
+            steps = self.last_json["step_data"].keys()
+            challenge_url = challenge_url[1:]
+            choice = ChallengeChoice.EMAIL
+            if "email" in steps:
+                choice = ChallengeChoice.EMAIL
+                self._send_private_request(challenge_url, {"choice": str(choice.value)})
+            elif "phone_number" in steps:
+                choice = ChallengeChoice.SMS
+                self._send_private_request(challenge_url, {"choice": str(choice.value)})
+            else:
+                raise ChallengeError(
+                    f'ChallengeResolve: Choice "email" or "phone_number" (sms) '
+                    f"not available to this account {self.last_json}"
+                )
+            wait_seconds = 5
+            code = self.challenge_code_or_raised(choice, wait_seconds=wait_seconds, attempts=24)
+            self._send_private_request(challenge_url, {"security_code": code})
+
+            if self.last_json.get("action", "") == "close":
+                assert self.last_json.get("status", "") == "ok"
+                return True
+
+            # last form to verify account details
+            if self.last_json.get("step_name") != "review_contact_point_change":
+                raise ChallengeError(
+                    f"Unexpected final challenge step after contact point recovery: {self.last_json.get('step_name')}"
+                )
+
+            # details = self.last_json["step_data"]
+
+            # TODO: add validation of account details
+            # assert self.username == details['username'], \
+            #     f"Data invalid: {self.username} does not match {details['username']}"
+            # assert self.email == details['email'], \
+            #     f"Data invalid: {self.email} does not match {details['email']}"
+            # assert self.phone_number == details['phone_number'], \
+            #     f"Data invalid: {self.phone_number} does not match {details['phone_number']}"
+
+            # "choice": 0 ==> details look good
+            self._send_private_request(challenge_url, {"choice": 0})
+
+            # TODO: assert that the user is now logged in.
+            # # assert 'logged_in_user' in client.last_json
+            # assert self.last_json.get("action", "") == "close"
+            # assert self.last_json.get("status", "") == "ok"
+            return True
+        else:
+            raise ChallengeUnknownStep(
+                f'ChallengeResolve: Unknown step_name "{step_name}" for '
+                f'"{self.username}" in challenge resolver: {self.last_json}'
+            )
+        return True

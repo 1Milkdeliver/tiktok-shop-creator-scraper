@@ -1,0 +1,424 @@
+import base64
+import json
+import os
+from collections import defaultdict
+from datetime import datetime, timezone
+from typing import Any, AsyncGenerator, Callable, TypeVar, overload
+
+T = TypeVar("T")
+
+
+class utc:
+    @staticmethod
+    def now() -> datetime:
+        return datetime.now(timezone.utc)
+
+    @staticmethod
+    def from_iso(iso: str) -> datetime:
+        return datetime.fromisoformat(iso).replace(tzinfo=timezone.utc)
+
+    @staticmethod
+    def ts() -> int:
+        return int(utc.now().timestamp())
+
+
+async def gather(gen: AsyncGenerator[T, None]) -> list[T]:
+    items = []
+    async for x in gen:
+        items.append(x)
+    return items
+
+
+def encode_params(obj: dict):
+    res = {}
+    for k, v in obj.items():
+        if isinstance(v, dict):
+            v = {a: b for a, b in v.items() if b is not None}
+            v = json.dumps(v, separators=(",", ":"))
+
+        res[k] = str(v)
+
+    return res
+
+
+@overload
+def get_or(obj: dict, key: str) -> Any | None: ...
+
+
+@overload
+def get_or(obj: dict, key: str, default_value: T) -> Any | T: ...
+
+
+def get_or(obj: dict, key: str, default_value: Any = None) -> Any:
+    for part in key.split("."):
+        if part not in obj:
+            return default_value
+        obj = obj[part]
+    return obj
+
+
+def int_or(obj: dict, key: str, default_value: int | None = None):
+    try:
+        val = get_or(obj, key)
+        return int(val) if val is not None else default_value
+    except Exception:
+        return default_value
+
+
+# https://stackoverflow.com/a/43184871
+def get_by_path(obj: dict, key: str, default=None):
+    stack = [iter(obj.items())]
+    while stack:
+        for k, v in stack[-1]:
+            if k == key:
+                return v
+            elif isinstance(v, dict):
+                stack.append(iter(v.items()))
+                break
+            elif isinstance(v, list):
+                stack.append(iter(enumerate(v)))
+                break
+        else:
+            stack.pop()
+    return default
+
+
+def find_item(lst: list[T], fn: Callable[[T], bool]) -> T | None:
+    for item in lst:
+        if fn(item):
+            return item
+    return None
+
+
+def find_or_fail(lst: list[T], fn: Callable[[T], bool]) -> T:
+    item = find_item(lst, fn)
+    if item is None:
+        raise ValueError()
+    return item
+
+
+def find_obj(obj: dict, fn: Callable[[dict], bool]) -> Any | None:
+    if not isinstance(obj, dict):
+        return None
+
+    if fn(obj):
+        return obj
+
+    for _, v in obj.items():
+        if isinstance(v, dict):
+            if res := find_obj(v, fn):
+                return res
+        elif isinstance(v, list):
+            for x in v:
+                if res := find_obj(x, fn):
+                    return res
+
+    return None
+
+
+def get_typed_object(obj: dict, res: defaultdict[str, list]):
+    obj_type = obj.get("__typename")
+    if obj_type is not None:
+        res[obj_type].append(obj)
+
+    for _, v in obj.items():
+        if isinstance(v, dict):
+            get_typed_object(v, res)
+        elif isinstance(v, list):
+            for x in v:
+                if isinstance(x, dict):
+                    get_typed_object(x, res)
+
+    return res
+
+
+def _merge_legacy(base: dict, legacy) -> dict:
+    # top-level wins, missing keys filled from legacy if it is a dict
+    out = dict(base)
+    if isinstance(legacy, dict):
+        for k, v in legacy.items():
+            out.setdefault(k, v)
+    return out
+
+
+def _flatten_user_v2(obj: dict) -> dict:
+    flat = _merge_legacy(obj, obj.get("legacy"))
+    rest_id = obj.get("rest_id") or flat.get("rest_id") or flat.get("id_str")
+    flat["rest_id"] = rest_id
+    flat["id_str"] = str(rest_id) if rest_id is not None else flat.get("id_str", "")
+    flat["id"] = int(rest_id) if rest_id is not None and str(rest_id).isdigit() else 0
+    flat["legacy"] = None
+
+    core = obj.get("core") or {}
+    if isinstance(core, dict):
+        for k in ("screen_name", "name", "created_at"):
+            if k not in flat and k in core:
+                flat[k] = core[k]
+
+    # See https://github.com/vladkens/twscrape/issues/309: treat empty legacy values as missing.
+    if not flat.get("profile_image_url_https"):
+        avatar_url = (obj.get("avatar") or {}).get("image_url")
+        if avatar_url:
+            flat["profile_image_url_https"] = avatar_url
+
+    banner = obj.get("banner")
+    if isinstance(banner, dict) and banner.get("image_url") is not None:
+        flat["profile_banner_url"] = banner["image_url"]
+
+    location = obj.get("location")
+    if isinstance(location, dict):
+        loc = location.get("location")
+        if loc is not None:
+            flat["location"] = loc
+    elif not flat.get("location") and location is not None:
+        flat["location"] = location
+
+    if "protected" not in flat:
+        prot = (obj.get("privacy") or {}).get("protected")
+        if prot is not None:
+            flat["protected"] = prot
+
+    if "verified" not in flat:
+        ver = (obj.get("verification") or {}).get("verified")
+        if ver is not None:
+            flat["verified"] = ver
+
+    if "verified_type" not in flat:
+        ver_type = (obj.get("verification") or {}).get("verified_type")
+        if ver_type is not None:
+            flat["verified_type"] = ver_type
+
+    if "is_blue_verified" not in flat and "is_blue_verified" in obj:
+        flat["is_blue_verified"] = obj["is_blue_verified"]
+
+    profile_bio = obj.get("profile_bio")
+    if isinstance(profile_bio, dict):
+        if not flat.get("description") and profile_bio.get("description") is not None:
+            flat["description"] = profile_bio["description"]
+        if isinstance(profile_bio.get("entities"), dict):
+            flat["entities"] = profile_bio["entities"]
+
+    action_counts = obj.get("action_counts")
+    if isinstance(action_counts, dict) and action_counts.get("favorites_count") is not None:
+        flat["favourites_count"] = action_counts["favorites_count"]
+
+    relationship_counts = obj.get("relationship_counts")
+    if isinstance(relationship_counts, dict):
+        if relationship_counts.get("followers") is not None:
+            flat["followers_count"] = relationship_counts["followers"]
+        if relationship_counts.get("following") is not None:
+            flat["friends_count"] = relationship_counts["following"]
+
+    tweet_counts = obj.get("tweet_counts")
+    if isinstance(tweet_counts, dict):
+        if tweet_counts.get("tweets") is not None:
+            flat["statuses_count"] = tweet_counts["tweets"]
+        if tweet_counts.get("media_tweets") is not None:
+            flat["media_count"] = tweet_counts["media_tweets"]
+
+    pinned_items = obj.get("pinned_items")
+    if isinstance(pinned_items, dict) and isinstance(pinned_items.get("tweet_ids_str"), list):
+        flat["pinned_tweet_ids_str"] = pinned_items["tweet_ids_str"]
+
+    flat.setdefault("description", "")
+    flat.setdefault("location", "")
+    flat.setdefault("followers_count", 0)
+    flat.setdefault("friends_count", 0)
+    flat.setdefault("statuses_count", 0)
+    flat.setdefault("favourites_count", 0)
+    flat.setdefault("listed_count", 0)
+    flat.setdefault("media_count", 0)
+    flat.setdefault("profile_image_url_https", "")
+    flat.setdefault("entities", {})
+    flat.setdefault("pinned_tweet_ids_str", [])
+    return flat
+
+
+def _flatten_tweet_v2(obj: dict) -> dict:
+    flat = _merge_legacy(obj, obj.get("legacy"))
+    rest_id = obj.get("rest_id") or flat.get("rest_id") or flat.get("id_str")
+    flat["rest_id"] = rest_id
+    flat["id_str"] = str(rest_id) if rest_id is not None else flat.get("id_str", "")
+    flat["id"] = int(rest_id) if rest_id is not None and str(rest_id).isdigit() else 0
+    flat["legacy"] = None
+    if "source" not in flat and "source" in obj:
+        flat["source"] = obj["source"]
+    flat.setdefault("full_text", "")
+    flat.setdefault("lang", "")
+    flat.setdefault("reply_count", 0)
+    flat.setdefault("retweet_count", 0)
+    flat.setdefault("favorite_count", 0)
+    flat.setdefault("quote_count", 0)
+    flat.setdefault("bookmark_count", 0)
+    flat.setdefault("entities", {})
+    flat.setdefault("conversation_id_str", flat["id_str"])
+    return flat
+
+
+def to_old_obj(obj: dict):
+    # Since 2026-05 X serves Tweet/User with legacy=null. Tweet fields moved
+    # to the top level; User fields are split between top-level and the
+    # sub-objects core/avatar/location/privacy/verification/profile_bio.
+    # Always rebuild a flat dict; works on the old schema too.
+    if not isinstance(obj, dict):
+        return obj
+    if obj.get("__typename") == "User":
+        return _flatten_user_v2(obj)
+    return _flatten_tweet_v2(obj)
+
+
+def to_old_rep(obj: dict) -> dict[str, Any]:
+    tmp = get_typed_object(obj, defaultdict(list))
+
+    # "legacy" in x still matches under the new schema: the key is present
+    # with value None, so membership tests keep working.
+    tw1 = [x for x in tmp.get("Tweet", []) if "legacy" in x]
+    tw1 = {str(x["rest_id"]): to_old_obj(x) for x in tw1}
+
+    # https://github.com/vladkens/twscrape/issues/53
+    tw2 = [x["tweet"] for x in tmp.get("TweetWithVisibilityResults", []) if "legacy" in x["tweet"]]
+    tw2 = {str(x["rest_id"]): to_old_obj(x) for x in tw2}
+
+    def _to_old_user(obj: dict) -> dict | None:
+        legacy = obj.get("legacy") or {}
+        core = obj.get("core") or {}
+
+        # fill required fields for legacy-based parser
+        for k in ("screen_name", "name", "created_at"):
+            if k not in legacy and k in core:
+                legacy[k] = core[k]
+
+        if not legacy.get("screen_name"):
+            return None
+
+        defaults = {
+            "description": "",
+            "followers_count": 0,
+            "friends_count": 0,
+            "statuses_count": 0,
+            "favourites_count": 0,
+            "listed_count": 0,
+            "media_count": 0,
+            "location": "",
+            "profile_image_url_https": "",
+        }
+        for k, v in defaults.items():
+            legacy.setdefault(k, v)
+
+        obj = {**obj, "legacy": legacy, "rest_id": obj.get("rest_id") or obj.get("id_str")}
+        try:
+            return to_old_obj(obj)
+        except Exception:
+            return None
+
+    users = {}
+    for x in tmp.get("User", []):
+        if res := _to_old_user(x):
+            users[str(res["id_str"])] = res
+
+    trends = list(tmp.get("TimelineTrend", []))
+    trends = {x["name"]: x for x in trends}
+
+    tweets = {**tw1, **tw2}
+    retweeted_ids = {
+        str(retweeted_id)
+        for tweet in tweets.values()
+        for path in (
+            "retweeted_status_id_str",
+            "retweeted_status_result.result.rest_id",
+            "retweeted_status_result.result.tweet.rest_id",
+        )
+        if (retweeted_id := get_or(tweet, path)) is not None
+    }
+
+    return {"tweets": tweets, "retweeted_ids": retweeted_ids, "users": users, "trends": trends}
+
+
+def print_table(rows: list[dict], hr_after=False):
+    if not rows:
+        return
+
+    def prt(x):
+        if isinstance(x, str):
+            return x
+
+        if isinstance(x, int):
+            return f"{x:,}"
+
+        if isinstance(x, datetime):
+            return x.isoformat().split("+")[0].replace("T", " ")
+
+        return str(x)
+
+    keys = list(rows[0].keys())
+    rows = [{k: k for k in keys}, *[{k: prt(x.get(k, "")) for k in keys} for x in rows]]
+    colw = [max(len(x[k]) for x in rows) + 1 for k in keys]
+
+    lines = []
+    for row in rows:
+        line = [f"{row[k]:<{colw[i]}}" for i, k in enumerate(keys)]
+        lines.append(" ".join(line))
+
+    max_len = max(len(x) for x in lines)
+    # lines.insert(1, "─" * max_len)
+    # lines.insert(0, "─" * max_len)
+    print("\n".join(lines))
+    if hr_after:
+        print("-" * max_len)
+
+
+def parse_cookies(val: str) -> dict[str, str]:
+    # Decode base64 exports when possible.
+    try:
+        val = base64.b64decode(val).decode()
+    except Exception:
+        pass
+
+    # Parse JSON or fall back to a Cookie header.
+    try:
+        res = json.loads(val)
+    except json.JSONDecodeError:
+        res = dict(x.strip().split("=", 1) for x in val.split(";") if "=" in x)
+
+    # Unwrap browser extension exports.
+    if isinstance(res, dict) and "cookies" in res:
+        res = res["cookies"]
+
+    # Convert browser cookie lists to a mapping.
+    if isinstance(res, list):
+        try:
+            res = {x["name"]: x["value"] for x in res}
+        except (KeyError, TypeError):
+            raise ValueError("Invalid cookie value") from None
+
+    if not isinstance(res, dict) or not res:
+        raise ValueError("Invalid cookie value")
+
+    # Normalize values for HTTP clients.
+    return {str(name): str(value) for name, value in res.items()}
+
+
+def parse_proxy(proxy: str | None) -> str | None:
+    if not proxy:
+        return None
+    if "://" in proxy:
+        return proxy
+    if "@" in proxy:
+        # user:pass@host:port — missing scheme
+        return f"http://{proxy}"
+    parts = proxy.split(":")
+    if len(parts) == 2:
+        # host:port
+        return f"http://{parts[0]}:{parts[1]}"
+    if len(parts) == 4:
+        # host:port:user:pass
+        host, port, user, password = parts
+        return f"http://{user}:{password}@{host}:{port}"
+    return proxy
+
+
+def get_env_bool(key: str, default_val: bool = False) -> bool:
+    val = os.getenv(key)
+    if val is None:
+        return default_val
+    return val.lower() in ("1", "true", "yes")

@@ -1,0 +1,103 @@
+{
+  "name": "tiktok-shop-creator-scraper-desktop",
+  "version": "1.4.0",
+  "description": "TikTok Shop 达人抓取工具 - 专为 TikTok Shop 卖家打造的联盟达人数据采集桌面应用，一键抓取达人广场数据，支持多账号并发、CSV/Excel 导出、达人筛选、选品分析。TikTok Shop affiliate creator scraper desktop app for sellers.",
+  "main": "main.js",
+  "author": "1Milkdeliver <https://github.com/1Milkdeliver>",
+  "homepage": "https://github.com/1Milkdeliver/tiktok-shop-creator-scraper",
+  "license": "GPL-3.0",
+  "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource-variable/noto-sans-sc": "^5.3.0",
+    "@primer/octicons": "^19.33.0",
+    "electron-updater": "^6.8.9",
+    "exceljs": "^4.4.0",
+    "png2icons": "^2.0.1",
+    "pngjs": "^7.0.0",
+    "puppeteer-core": "^24.0.0",
+    "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.creator.scraper.tiktokshop",
+    "productName": "TikTok Shop 达人采集",
+    "asarUnpack": [
+      "node_modules/sqlite3/build/Release/*.node"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "product.config.js",
+      "logo.png",
+      "icon-256.png",
+      "build/icon.ico",
+      "lib/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "LICENSE",
+        "to": "LICENSE"
+      },
+      {
+        "from": "docs/THIRD_PARTY_NOTICES.md",
+        "to": "THIRD_PARTY_NOTICES.md"
+      },
+      {
+        "from": "third-party-inventory.json",
+        "to": "third-party-inventory.json"
+      },
+      {
+        "from": "runtime/python",
+        "to": "python-runtime"
+      },
+      {
+        "from": "build/app-icon.png",
+        "to": "app-icon.png"
+      },
+      {
+        "from": "README.md",
+        "to": "README.md"
+      },
+      {
+        "from": "README.en.md",
+        "to": "README-en.md"
+      }
+    ],
+    "afterPack": "./afterPack.js",
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "TikTok Shop 达人采集",
+      "license": "build/license.html",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "runAfterFinish": true,
+      "include": "build/nsis-auto-close.nsh",
+      "artifactName": "TikTok-Shop-达人采集-${version}.exe"
+    }
+  },
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win nsis",
+    "verify-release": "node verify-release-metadata.js",
+    "verify-third-party-release": "node verify-third-party-release.js",
+    "test": "node scripts/run-product-tests.js"
+  }
+}

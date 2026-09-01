@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "resourceDirectory": "python-runtime",
+  "developmentDirectory": "runtime/python",
+  "windowsEmbeddedRuntime": {
+    "version": "3.11.9",
+    "architecture": "amd64",
+    "source": "https://www.python.org/ftp/python/3.11.9/python-3.11.9-embed-amd64.zip",
+    "pythonExeSha256": "5f7b89a612c9b8af1d6456cdfcd1dbe5ca630849e79aebced9bee9a6694952ec",
+    "license": "PSF-2.0"
+  },
+  "executables": {
+    "win32": "python/python.exe",
+    "darwin": "python/bin/python3",
+    "linux": "python/bin/python3"
+  },
+  "requiredFiles": [
+    "requirements.lock",
+    "python/python311._pth",
+    "site-packages/ytscrape/__init__.py",
+    "workers/worker_common.py",
+    "workers/instagram_worker.py",
+    "workers/youtube_worker.py",
+    "workers/x_worker.py"
+  ],
+  "workerEntrypoints": {
+    "instagram": "workers/instagram_worker.py",
+    "youtube": "workers/youtube_worker.py",
+    "x": "workers/x_worker.py"
+  }
+}

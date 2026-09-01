@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "scenarios": {
+    "profile": {
+      "results": [{
+        "id": 10001,
+        "name": "Fixture Profile",
+        "username": "fixtureprofile",
+        "description": "Profile fixture",
+        "followers_count": 1200,
+        "statuses_count": 44,
+        "inferred_category": "Home & Living",
+        "category_provenance": "fixture:description-keyword",
+        "public_email": "fixture.creator@example.test",
+        "email_provenance": "fixture:public-profile"
+      }]
+    },
+    "search": {
+      "results": [
+        {"rest_id": "search-200", "display_name": "Search One", "screen_name": "search_one", "followers": "88"},
+        {"rest_id": "search-201", "display_name": "Search Two", "screen_name": "search_two", "posts": 3}
+      ]
+    },
+    "content": {
+      "results": [{"userId": "content-300", "name": "Content Author", "username": "content_author", "bio": "Content match"}]
+    },
+    "no_account": {
+      "error": {"code": "NO_ACCOUNT_AVAILABLE", "classification": "action_required", "message": "No local X account is available for this task"}
+    },
+    "rate_limit": {
+      "error": {"code": "THROTTLED", "classification": "transient", "message": "Fixture rate limit; retry later"}
+    },
+    "cancel": {"awaitCancel": true, "waitMs": 50}
+  }
+}

@@ -1,0 +1,769 @@
+import datetime
+import html
+import json
+import re
+from copy import deepcopy
+
+from .types import (
+    About,
+    Account,
+    Broadcast,
+    Collection,
+    Comment,
+    DirectMedia,
+    DirectMessage,
+    DirectResponse,
+    DirectShortThread,
+    DirectThread,
+    Guide,
+    Hashtag,
+    Highlight,
+    Location,
+    Media,
+    MediaOembed,
+    MediaXma,
+    ReplyMessage,
+    Resource,
+    Story,
+    StoryArchiveDay,
+    StoryHashtag,
+    StoryLink,
+    StoryLocation,
+    StoryMedia,
+    StoryMention,
+    StoryPoll,
+    Track,
+    User,
+    UserShort,
+    Usertag,
+    Viewer,
+)
+from .utils import InstagramIdCodec, json_value
+
+MEDIA_TYPES_GQL = {"GraphImage": 1, "GraphVideo": 2, "GraphSidecar": 8, "StoryVideo": 2}
+XDT_MEDIA_TYPES_GQL = {
+    "XDTGraphImage": "GraphImage",
+    "XDTGraphVideo": "GraphVideo",
+    "XDTGraphSidecar": "GraphSidecar",
+}
+
+
+def _normalize_media_gql_typename(data):
+    data["__typename"] = XDT_MEDIA_TYPES_GQL.get(data.get("__typename"), data.get("__typename"))
+
+
+def extract_media_v1(data):
+    """Extract media from Private API"""
+    media = deepcopy(data)
+    if media.get("video_versions"):
+        # Select Best Quality by Resolutiuon
+        media["video_url"] = sorted(media["video_versions"], key=lambda o: o["height"] * o["width"])[-1]["url"]
+    if media["media_type"] == 2 and not media.get("product_type"):
+        media["product_type"] = "feed"
+    if "image_versions2" in media:
+        media["thumbnail_url"] = sorted(
+            media["image_versions2"]["candidates"],
+            key=lambda o: o["height"] * o["width"],
+        )[-1]["url"]
+        scrubber = media["image_versions2"].get("scrubber_spritesheet_info_candidates") or {}
+        if scrubber.get("default") and not scrubber["default"].get("sprite_urls"):
+            media["image_versions2"].pop("scrubber_spritesheet_info_candidates", None)
+    if media["media_type"] == 8:
+        # remove thumbnail_url and video_url for albums
+        # see resources
+        media.pop("thumbnail_url", "")
+        media.pop("video_url", "")
+    location = media.get("location")
+    media["location"] = location and extract_location(location)
+    media["user"] = extract_user_short(media.get("user"))
+    usertags = media.get("usertags") or {}
+    media["usertags"] = sorted(
+        [extract_usertag(usertag) for usertag in usertags.get("in", [])],
+        key=lambda tag: tag.user.pk,
+    )
+    media["like_count"] = media.get("like_count", 0)
+    media["has_liked"] = media.get("has_liked", False)
+    media["sponsor_tags"] = [extract_user_short(tag["sponsor"]) for tag in media.get("sponsor_tags") or []]
+    media["view_count"] = media.get("view_count", media.get("video_view_count", 0))
+    media["play_count"] = media.get("play_count", media.get("video_play_count", 0))
+    media["coauthor_producers"] = [extract_user_short(user) for user in media.get("coauthor_producers", [])]
+    return Media(
+        caption_text=(media.get("caption") or {}).get("text", ""),
+        resources=[extract_resource_v1(edge) for edge in media.get("carousel_media") or []],
+        **media,
+    )
+
+
+def extract_media_v1_xma(data):
+    """Extract media from Private API"""
+    media = deepcopy(data)
+    if not media.get("target_url"):
+        return None
+
+    # media["media_type"] = 10
+    media["video_url"] = media.get("target_url")
+    media["title"] = media.get("title_text", "")
+    media["preview_url"] = media.get("preview_url", "")
+    media["preview_url_mime_type"] = media.get("preview_url_mime_type", "")
+    media["header_icon_url"] = media.get("header_icon_url") or None
+    media["header_icon_width"] = media.get("header_icon_width", 0)
+    media["header_icon_height"] = media.get("header_icon_height", 0)
+    media["header_title_text"] = media.get("header_title_text", "")
+    media["preview_media_fbid"] = media.get("preview_media_fbid", "")
+
+    return MediaXma(
+        **media,
+    )
+
+
+def extract_media_gql(data):
+    """Extract media from GraphQL"""
+    media = deepcopy(data)
+    _normalize_media_gql_typename(media)
+    user = extract_user_short(media["owner"])
+    # if "full_name" in user:
+    #     user = extract_user_short(user)
+    # else:
+    #     user["pk"] = user.pop("id")
+    try:
+        media["media_type"] = MEDIA_TYPES_GQL[media["__typename"]]
+    except KeyError:
+        media["media_type"] = 0
+    if media.get("media_type") == 2 and not media.get("product_type"):
+        media["product_type"] = "feed"
+    sorted_resources = sorted(
+        # display_resources - user feed, thumbnail_resources - hashtag feed
+        media.get("display_resources", media.get("thumbnail_resources", [])),
+        key=lambda o: o["config_width"] * o["config_height"],
+    )
+    if sorted_resources:
+        media["thumbnail_url"] = sorted_resources[-1]["src"]
+    elif "thumbnail_src" in media:
+        media["thumbnail_url"] = media["thumbnail_src"]
+    if media.get("media_type") == 8:
+        # remove thumbnail_url and video_url for albums
+        # see resources
+        media.pop("thumbnail_url", "")
+        media.pop("video_url", "")
+    location = media.pop("location", None)
+    media_id = media.get("id")
+    media["pk"] = media_id
+    media["id"] = f"{media_id}_{user.pk}"
+    return Media(
+        code=media.get("shortcode"),
+        taken_at=media.get("taken_at_timestamp"),
+        location=extract_location(location) if location else None,
+        user=user,
+        view_count=media.get("video_view_count", 0),
+        play_count=media.get("play_count", media.get("video_play_count")),
+        has_liked=media.get("has_liked", media.get("viewer_has_liked")),
+        comment_count=json_value(
+            media,
+            "edge_media_to_comment",
+            "count",
+            default=json_value(media, "edge_media_preview_comment", "count", default=0),
+        ),
+        like_count=json_value(media, "edge_media_preview_like", "count"),
+        caption_text=json_value(media, "edge_media_to_caption", "edges", 0, "node", "text", default=""),
+        usertags=sorted(
+            [
+                extract_usertag(usertag["node"])
+                for usertag in media.get("edge_media_to_tagged_user", {}).get("edges", [])
+            ],
+            key=lambda tag: tag.user.pk,
+        ),
+        resources=[
+            extract_resource_gql(edge["node"]) for edge in media.get("edge_sidecar_to_children", {}).get("edges", [])
+        ],
+        sponsor_tags=[
+            extract_user_short(edge["node"]["sponsor"])
+            for edge in media.get("edge_media_to_sponsor_user", {}).get("edges", [])
+        ],
+        comments_preview=extract_media_comments_preview_gql(
+            media.get("edge_media_to_parent_comment") or media.get("edge_media_preview_comment")
+        ),
+        hoisted_comments=[
+            extract_media_inline_comment_gql(edge["node"])
+            for edge in media.get("edge_media_to_hoisted_comment", {}).get("edges", [])
+        ],
+        **media,
+    )
+
+
+def extract_media_comments_preview_gql(data):
+    if not data:
+        return None
+    page_info = data.get("page_info") or {}
+    return {
+        "count": data.get("count", 0),
+        "has_next_page": page_info.get("has_next_page", False),
+        "end_cursor": page_info.get("end_cursor"),
+        "comments": [extract_media_inline_comment_gql(edge["node"]) for edge in data.get("edges", [])],
+    }
+
+
+def extract_media_inline_comment_gql(data, replied_to_comment_id=None):
+    comment = deepcopy(data)
+    comment["pk"] = str(comment.get("id"))
+    comment["user"] = extract_user_short(comment.get("owner"))
+    comment["created_at_utc"] = comment.get("created_at")
+    comment["has_liked"] = comment.get("has_liked", comment.get("viewer_has_liked"))
+    comment["like_count"] = json_value(comment, "edge_liked_by", "count")
+    if replied_to_comment_id is not None:
+        comment["replied_to_comment_id"] = str(replied_to_comment_id)
+    threaded_comments = comment.get("edge_threaded_comments") or {}
+    comment["replies_count"] = threaded_comments.get("count", 0)
+    comment["replies"] = [
+        extract_media_inline_comment_gql(edge["node"], replied_to_comment_id=comment["pk"])
+        for edge in threaded_comments.get("edges", [])
+    ]
+    return comment
+
+
+def extract_resource_v1(data):
+    data = deepcopy(data)
+    if data.get("video_versions"):
+        data["video_url"] = sorted(data["video_versions"], key=lambda o: o["height"] * o["width"])[-1]["url"]
+    candidates = data.get("image_versions2", {}).get("candidates", [])
+    data["thumbnail_url"] = (
+        sorted(
+            candidates,
+            key=lambda o: o["height"] * o["width"],
+        )[-1]["url"]
+        if candidates
+        else None
+    )
+    usertags = data.get("usertags") or {}
+    data["usertags"] = sorted(
+        [extract_usertag(usertag) for usertag in usertags.get("in", [])],
+        key=lambda tag: tag.user.pk,
+    )
+    return Resource(**data)
+
+
+def extract_resource_gql(data):
+    data = deepcopy(data)
+    _normalize_media_gql_typename(data)
+    data["media_type"] = MEDIA_TYPES_GQL[data["__typename"]]
+    return Resource(pk=data["id"], thumbnail_url=data["display_url"], **data)
+
+
+def extract_usertag(data):
+    """Extract user tag"""
+    x, y = data.get("position", [data.get("x"), data.get("y")])
+    return Usertag(user=extract_user_short(data["user"]), x=x, y=y)
+
+
+def extract_user_short(data):
+    """Extract User Short info"""
+    data["pk"] = data.get("id", data.get("pk", None))
+    assert data["pk"], f'User without pk "{data}"'
+    if "latest_reel_media" not in data and "1llatest_reel_media" in data:
+        data["latest_reel_media"] = data.get("1llatest_reel_media")
+    friendship_status = data.get("friendship_status")
+    if isinstance(friendship_status, dict):
+        friendship_status.setdefault("user_id", str(data["pk"]))
+        friendship_status.setdefault("following", False)
+        friendship_status.setdefault("incoming_request", False)
+        friendship_status.setdefault("is_bestie", False)
+        friendship_status.setdefault("is_feed_favorite", False)
+        friendship_status.setdefault("is_private", False)
+        friendship_status.setdefault("is_restricted", False)
+        friendship_status.setdefault("outgoing_request", False)
+    return UserShort(**data)
+
+
+def extract_viewer(data):
+    """Extract Viewer info"""
+    user = data.pop("user")
+    user["pk"] = user.get("id", user.get("pk", None))
+    assert user["pk"], f'User without pk "{user}"'
+    return Viewer(**user, **data)
+
+
+def extract_broadcast_channel(data):
+    """Extract broadcast channel infos"""
+    channels = data.get("pinned_channels_info", {}).get("pinned_channels_list", [])
+    return [Broadcast(**channel) for channel in channels]
+
+
+def extract_user_gql(data):
+    """For Public GraphQL API"""
+    data["broadcast_channel"] = extract_broadcast_channel(data)
+    return User(
+        pk=data["id"],
+        media_count=data["edge_owner_to_timeline_media"]["count"],
+        follower_count=data["edge_followed_by"]["count"],
+        following_count=data["edge_follow"]["count"],
+        is_business=data["is_business_account"],
+        public_email=data["business_email"],
+        contact_phone_number=data["business_phone_number"],
+        **data,
+    )
+
+
+def extract_user_v1(data):
+    """For Private API"""
+    data["broadcast_channel"] = extract_broadcast_channel(data)
+    data["external_url"] = data.get("external_url") or None
+    data["public_email"] = data.get("public_email") or data.get("business_email")
+    data["contact_phone_number"] = data.get("contact_phone_number") or data.get("business_phone_number")
+    versions = data.get("hd_profile_pic_versions")
+    pic_hd = versions[-1] if versions else data.get("hd_profile_pic_url_info", {})
+    data["profile_pic_url_hd"] = pic_hd.get("url")
+    return User(**data)
+
+
+def extract_location(data):
+    """Extract location info"""
+    if not data:
+        return None
+    if "place" in data and isinstance(data["place"], dict):
+        place_location = data["place"].get("location")
+        if place_location:
+            data = place_location
+    data["pk"] = data.get("id", data.get("pk", data.get("location_id", None)))
+    external_id = data.get("external_id") or data.get("facebook_places_id")
+    if external_id in (None, "", "None"):
+        data["external_id"] = None
+    else:
+        data["external_id"] = int(external_id)
+    data["external_id_source"] = data.get("external_id_source", data.get("external_source"))
+    data["address"] = data.get("address", data.get("location_address"))
+    data["city"] = data.get("city", data.get("location_city"))
+    data["zip"] = data.get("zip", data.get("location_zip"))
+    address_json = data.get("address_json", "{}")
+    if isinstance(address_json, str):
+        address = json.loads(address_json)
+        if isinstance(address, dict) and address:
+            data["address"] = address.get("street_address")
+            data["city"] = address.get("city_name")
+            data["zip"] = address.get("zip_code")
+    return Location(**data)
+
+
+def extract_comment(data):
+    """Extract comment"""
+    data["has_liked"] = data.get("has_liked_comment")
+    data["like_count"] = data.get("comment_like_count")
+    return Comment(**data)
+
+
+def extract_collection(data):
+    """Extract collection for authorized account
+    Example:
+    {'collection_id': '17851406186124602',
+    'collection_name': 'Repost',
+    'collection_type': 'MEDIA',
+    'collection_media_count': 1,
+    'cover_media': {...}
+    """
+    data = {key.replace("collection_", ""): val for key, val in data.items()}
+    # data['pk'] = data.get('id')
+    return Collection(**data)
+
+
+def extract_media_oembed(data):
+    """Return short version of Media"""
+    return MediaOembed(**data)
+
+
+def extract_direct_thread(data):
+    data["pk"] = data.get("thread_v2_id")
+    data["id"] = data.get("thread_id")
+    data["messages"] = []
+    for item in data["items"]:
+        item["thread_id"] = data["id"]
+        data["messages"].append(extract_direct_message(item))
+    data["users"] = [extract_user_short(u) for u in data["users"]]
+    inviter = data.get("inviter")
+    if inviter:
+        data["inviter"] = extract_user_short(inviter)
+    else:
+        data["inviter"] = None
+    data["left_users"] = [extract_user_short(u) for u in data.get("left_users", [])]
+    data.setdefault("is_close_friend_thread", False)
+    data["last_activity_at"] = _direct_timestamp_from_microseconds(data["last_activity_at"])
+
+    # Convert last_seen_at timestamps
+    last_seen_at = data.get("last_seen_at", {})
+    for user_id, seen_info in last_seen_at.items():
+        if "timestamp" in seen_info:
+            seen_info["timestamp"] = _direct_timestamp_from_microseconds(seen_info["timestamp"])
+        if "created_at" in seen_info:
+            seen_info["created_at"] = _direct_timestamp_from_microseconds(seen_info["created_at"])
+        # Convert disappearing messages seen state timestamps
+        disappearing_state = seen_info.get("disappearing_messages_seen_state")
+        if disappearing_state:
+            if "timestamp" in disappearing_state:
+                disappearing_state["timestamp"] = _direct_timestamp_from_microseconds(disappearing_state["timestamp"])
+            if "created_at" in disappearing_state:
+                disappearing_state["created_at"] = _direct_timestamp_from_microseconds(disappearing_state["created_at"])
+
+    return DirectThread(**data)
+
+
+def extract_direct_short_thread(data):
+    data["users"] = [extract_user_short(u) for u in data["users"]]
+    data["id"] = data.get("thread_id")
+    return DirectShortThread(**data)
+
+
+def extract_direct_response(data):
+    return DirectResponse(**data)
+
+
+def _direct_timestamp_from_microseconds(timestamp):
+    return datetime.datetime.fromtimestamp(int(timestamp) // 1_000_000)
+
+
+def _preserve_direct_raw_xma(data):
+    raw_xma = {
+        key: deepcopy(data[key])
+        for key in ("xma_clip", "xma_media_share", "xma_story_share", "xma_profile", "generic_xma")
+        if data.get(key)
+    }
+    if raw_xma:
+        data["raw_xma"] = raw_xma
+
+
+def _convert_direct_visual_media_timestamps(visual_media):
+    if not visual_media:
+        return
+
+    if "media" in visual_media and visual_media["media"]:
+        media = visual_media["media"]
+        if "expiring_media_action_summary" in media and media["expiring_media_action_summary"]:
+            media["expiring_media_action_summary"]["timestamp"] = _direct_timestamp_from_microseconds(
+                media["expiring_media_action_summary"]["timestamp"]
+            )
+
+        if "image_versions2" in media and media["image_versions2"]:
+            candidates = media["image_versions2"].get("candidates", [])
+            for candidate in candidates:
+                if "url_expiration_timestamp_us" in candidate and candidate["url_expiration_timestamp_us"]:
+                    candidate["url_expiration_timestamp_us"] = _direct_timestamp_from_microseconds(
+                        candidate["url_expiration_timestamp_us"]
+                    )
+
+        if "video_versions" in media and media["video_versions"]:
+            for video_version in media["video_versions"]:
+                if "url_expiration_timestamp_us" in video_version and video_version["url_expiration_timestamp_us"]:
+                    video_version["url_expiration_timestamp_us"] = _direct_timestamp_from_microseconds(
+                        video_version["url_expiration_timestamp_us"]
+                    )
+
+    if "expiring_media_action_summary" in visual_media and visual_media["expiring_media_action_summary"]:
+        visual_media["expiring_media_action_summary"]["timestamp"] = _direct_timestamp_from_microseconds(
+            visual_media["expiring_media_action_summary"]["timestamp"]
+        )
+
+
+def extract_reply_message(data):
+    data["id"] = data.get("item_id")
+    _preserve_direct_raw_xma(data)
+    if "media_share" in data:
+        ms = data["media_share"]
+        if not ms.get("code"):
+            ms["code"] = InstagramIdCodec.encode(ms["id"])
+        data["media_share"] = extract_media_v1(ms)
+    if "media" in data:
+        data["media"] = extract_direct_media(data["media"])
+    clip = data.get("clip", {})
+    if clip:
+        if "clip" in clip:
+            # Instagram ¯\_(ツ)_/¯
+            clip = clip.get("clip")
+        data["clip"] = extract_media_v1(clip)
+    generic_xma = data.get("generic_xma", [])
+    if generic_xma:
+        items = [extract_media_v1_xma(item) for item in generic_xma]
+        data["generic_xma"] = [item for item in items if item]
+    visual_media = data.get("visual_media", {})
+    if visual_media:
+        _convert_direct_visual_media_timestamps(visual_media)
+
+    data["timestamp"] = _direct_timestamp_from_microseconds(data["timestamp"])
+    data["user_id"] = str(data["user_id"])
+
+    return ReplyMessage(**data)
+
+
+def extract_direct_message(data):
+    data["id"] = data.get("item_id")
+    _preserve_direct_raw_xma(data)
+    if "replied_to_message" in data:
+        data["reply"] = extract_reply_message(data["replied_to_message"])
+    if "media_share" in data:
+        ms = data["media_share"]
+        if not ms.get("code"):
+            ms["code"] = InstagramIdCodec.encode(ms["id"])
+        data["media_share"] = extract_media_v1(ms)
+    if "media" in data:
+        data["media"] = extract_direct_media(data["media"])
+    if "voice_media" in data:
+        if "media" in data["voice_media"]:
+            data["media"] = extract_direct_media(data["voice_media"]["media"])
+    clip = data.get("clip", {})
+    if clip:
+        if "clip" in clip:
+            # Instagram ¯\_(ツ)_/¯
+            clip = clip.get("clip")
+        data["clip"] = extract_media_v1(clip)
+    # Handle xma_clip (new Instagram API format for clip/reel shares)
+    xma_clip = data.get("xma_clip", {})
+    if xma_clip:
+        xma_share = extract_media_v1_xma(xma_clip[0])
+        if xma_share:
+            data["xma_share"] = xma_share
+    #  Handle xma_media_share (only if xma_share not already set above by xma_clip)
+    if "xma_share" not in data or data["xma_share"] is None:
+        xma_media_share = data.get("xma_media_share", {})
+        if xma_media_share:
+            xma_share = extract_media_v1_xma(xma_media_share[0])
+            if xma_share:
+                data["xma_share"] = xma_share
+    generic_xma = data.get("generic_xma", [])
+    if generic_xma:
+        items = [extract_media_v1_xma(item) for item in generic_xma]
+        data["generic_xma"] = [item for item in items if item]
+
+    # Convert main timestamp
+    data["timestamp"] = _direct_timestamp_from_microseconds(data["timestamp"])
+    data["user_id"] = str(data.get("user_id", ""))
+    data["client_context"] = data.get("client_context", "")
+
+    # Convert reaction timestamps
+    reactions = data.get("reactions", {})
+    if reactions and "emojis" in reactions:
+        for emoji_reaction in reactions["emojis"]:
+            if "timestamp" in emoji_reaction:
+                emoji_reaction["timestamp"] = _direct_timestamp_from_microseconds(emoji_reaction["timestamp"])
+
+    # Convert visual media timestamps
+    visual_media = data.get("visual_media", {})
+    if visual_media:
+        _convert_direct_visual_media_timestamps(visual_media)
+
+    return DirectMessage(**data)
+
+
+def extract_direct_media(data):
+    media = deepcopy(data)
+    if media.get("video_versions"):
+        # Select Best Quality by Resolutiuon
+        media["video_url"] = sorted(media["video_versions"], key=lambda o: o["height"] * o["width"])[-1]["url"]
+    if "image_versions2" in media:
+        media["thumbnail_url"] = sorted(
+            media["image_versions2"]["candidates"],
+            key=lambda o: o["height"] * o["width"],
+        )[-1]["url"]
+    if "user" in media:
+        media["user"] = extract_user_short(media.get("user"))
+    if "audio" in media:
+        media["audio_url"] = media["audio"].get("audio_src")
+    return DirectMedia(**media)
+
+
+def extract_account(data):
+    data["pk"] = str(data["pk"])
+    data["external_url"] = data.get("external_url") or None
+    return Account(**data)
+
+
+def extract_hashtag_gql(data):
+    data["media_count"] = data.get("edge_hashtag_to_media", {}).get("count")
+    data["profile_pic_url"] = data.get("profile_pic_url") or None
+    return Hashtag(**data)
+
+
+def extract_hashtag_v1(data):
+    data["allow_following"] = data.get("allow_following") == 1
+    data["profile_pic_url"] = data.get("profile_pic_url") or None
+    return Hashtag(**data)
+
+
+def extract_story_v1(data):
+    """Extract story from Private API"""
+    story = deepcopy(data)
+    story["pk"] = str(story.get("pk"))
+    if story.get("video_versions"):
+        # Select Best Quality by Resolutiuon
+        story["video_url"] = sorted(story["video_versions"], key=lambda o: o["height"] * o["width"])[-1]["url"]
+    if story["media_type"] == 2 and not story.get("product_type"):
+        story["product_type"] = "story"
+    if "image_versions2" in story:
+        story["thumbnail_url"] = sorted(
+            story["image_versions2"]["candidates"],
+            key=lambda o: o["height"] * o["width"],
+        )[-1]["url"]
+    story["mentions"] = [StoryMention(**mention) for mention in story.get("reel_mentions", [])]
+    story["locations"] = [StoryLocation(**location) for location in story.get("story_locations", [])]
+    story["hashtags"] = [StoryHashtag(**hashtag) for hashtag in story.get("story_hashtags", [])]
+    story["stickers"] = data.get("story_link_stickers") or []
+    story["polls"] = []
+    for poll in story.get("story_polls") or []:
+        poll_sticker = poll.get("poll_sticker") or poll
+        tallies = poll_sticker.get("tallies") or []
+        options = [item.get("text") for item in tallies if item.get("text") is not None]
+        story["polls"].append(
+            StoryPoll(
+                id=poll_sticker.get("poll_id") or poll_sticker.get("id"),
+                type=poll.get("type") or poll_sticker.get("type") or "poll",
+                x=poll.get("x", poll_sticker.get("x", 0.5)),
+                y=poll.get("y", poll_sticker.get("y", 0.5)),
+                z=poll.get("z", poll_sticker.get("z", 0)),
+                width=poll.get("width", poll_sticker.get("width", 0.0)),
+                height=poll.get("height", poll_sticker.get("height", 0.0)),
+                rotation=poll.get("rotation", poll_sticker.get("rotation", 0.0)),
+                is_multi_option=poll_sticker.get(
+                    "is_multi_option",
+                    poll_sticker.get("is_multi_option_poll", True),
+                ),
+                is_shared_result=poll_sticker.get("is_shared_result", False),
+                viewer_can_vote=poll_sticker.get("viewer_can_vote", True),
+                finished=poll_sticker.get("finished", False),
+                color=poll_sticker.get("color", "black"),
+                poll_type=poll_sticker.get("poll_type", ""),
+                question=poll_sticker.get("question", ""),
+                options=options or poll_sticker.get("options") or [],
+                extra=poll_sticker,
+            )
+        )
+    feed_medias = []
+    story_feed_medias = data.get("story_feed_media") or []
+    for feed_media in story_feed_medias:
+        feed_media["media_pk"] = int(feed_media["media_id"])
+        feed_medias.append(StoryMedia(**feed_media))
+    story["medias"] = feed_medias
+    story["links"] = []
+    for sticker in story.get("story_link_stickers", []):
+        story_link = sticker.get("story_link") or {}
+        story_link_url = story_link.get("url")
+        if story_link_url:
+            story["links"].append(StoryLink(**{"webUri": story_link_url}))
+    for cta in story.get("story_cta", []):
+        for link in cta.get("links", []):
+            story["links"].append(StoryLink(**link))
+    story["user"] = extract_user_short(story.get("user"))
+    story["sponsor_tags"] = [extract_user_short(tag["sponsor"]) for tag in story.get("sponsor_tags", [])]
+    story["is_paid_partnership"] = story.get("is_paid_partnership")
+    if not story.get("code"):
+        story["code"] = InstagramIdCodec.encode(story["pk"])
+    if not story.get("taken_at"):
+        story["taken_at"] = story.get("device_timestamp") or story.get("taken_at_timestamp")
+    return Story(**story)
+
+
+def extract_story_archive_day(data):
+    """Extract story archive day from Private API"""
+    return StoryArchiveDay(**deepcopy(data))
+
+
+def extract_story_gql(data):
+    """Extract story from Public API"""
+    story = deepcopy(data)
+    if "video_resources" in story:
+        # Select Best Quality by Resolutiuon
+        story["video_url"] = sorted(
+            story["video_resources"],
+            key=lambda o: o["config_height"] * o["config_width"],
+        )[-1]["src"]
+    story["product_type"] = "story"
+    story["thumbnail_url"] = story.get("display_url")
+    story["mentions"] = []
+    story["medias"] = []
+    for item in story.get("tappable_objects", []):
+        if item["__typename"] == "GraphTappableMention":
+            item["id"] = 1
+            item["user"] = extract_user_short(item)
+            story["mentions"].append(StoryMention(**item))
+        if item["__typename"] == "GraphTappableFeedMedia":
+            media = item.get("media")
+            if media:
+                item["media_pk"] = int(media["id"])
+                item["media_code"] = media["shortcode"]
+            story["medias"].append(StoryMedia(**item))
+    story["locations"] = []
+    story["hashtags"] = []
+    story["stickers"] = []
+    story["links"] = []
+    story_cta_url = story.get("story_cta_url", [])
+    if story_cta_url:
+        story["links"] = [StoryLink(**{"webUri": story_cta_url})]
+    story["user"] = extract_user_short(story.get("owner"))
+    story["pk"] = str(story["id"])
+    story["id"] = f"{story['id']}_{story['owner']['id']}"
+    story["code"] = InstagramIdCodec.encode(story["pk"])
+    story["taken_at"] = story["taken_at_timestamp"]
+    story["media_type"] = 2 if story["is_video"] else 1
+    story["sponsor_tags"] = [
+        extract_user_short(edge["node"]["sponsor"])
+        for edge in story.get("edge_media_to_sponsor_user", {}).get("edges", [])
+    ]
+    return Story(**story)
+
+
+def extract_highlight_v1(data):
+    highlight = deepcopy(data)
+    highlight["pk"] = highlight["id"].split(":")[1]
+    highlight["items"] = [extract_story_v1(item) for item in highlight.get("items", [])]
+    return Highlight(**highlight)
+
+
+def extract_guide_v1(data):
+    item = deepcopy(data.get("summary") or {})
+    item["cover_media"] = extract_media_v1(item["cover_media"])
+    return Guide(**item)
+
+
+def extract_track(data):
+    data["cover_artwork_uri"] = data.get("cover_artwork_uri") or None
+    data["cover_artwork_thumbnail_uri"] = data.get("cover_artwork_thumbnail_uri") or None
+    items = re.findall(r"<BaseURL>(.+?)</BaseURL>", data["dash_manifest"])
+    data["uri"] = html.unescape(items[0]) if items else None
+    data["territory_validity_periods"] = data.get("territory_validity_periods") or {}
+    return Track(**data)
+
+
+def _extract_about_lispy(c, data):
+    params = {}
+    try:
+        params["country"] = c.split('"')[1]
+    except IndexError:
+        pass
+    try:
+        s = str(data).split("space_evenly")[1].split("stretch")
+        try:
+            params["username"] = s[1].split("center")[1].split(": '")[1].split("',")[0]
+        except IndexError:
+            pass
+        try:
+            params["date"] = s[4].split("&")[1].split("'")[2]
+        except IndexError:
+            pass
+    except IndexError:
+        pass
+    return About(**params)
+
+
+def extract_about_v1(data):
+    c = json_value(data, "layout", "bloks_payload", "data", 0, "data")
+    params = {}
+    if c:
+        if "initial_lispy" in c:
+            return _extract_about_lispy(c["initial_lispy"], data)
+        params["country"] = c["initial"]
+    date_finded = False
+    dumped = json.dumps(data)
+    params["is_verified"] = '"Verified"' in dumped
+    ddata = dumped.split('")":')
+    for i, v in enumerate(ddata):
+        if '"bold"}' in v:
+            params["username"] = v.strip().split(",")[0][1:-1]
+        if date_finded:
+            params["date"] = v.strip().split(",")[0][1:-1]
+        if "Former usernames" in v:
+            params["former_usernames"] = ddata[i + 2].strip().split(",")[0][1:-1]
+        date_finded = '"Date joined"' in v
+    return About(**params)

@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "scenarios": {
+    "profile": {
+      "sessionState": "ready",
+      "profile": {
+        "id": 884422,
+        "username": "trail.kitchen",
+        "fullName": "Trail Kitchen",
+        "biography": "Outdoor cooking and simple camp recipes",
+        "profileUrl": "https://www.instagram.com/trail.kitchen/",
+        "followers": 12500,
+        "category": "Food & Beverage",
+        "publicEmail": "hello@trailkitchen.example"
+      }
+    },
+    "no_email": {
+      "sessionState": "ready",
+      "profile": {
+        "pk": "993311",
+        "username": "garden.notebook",
+        "fullName": "Garden Notebook",
+        "biography": "Balcony gardening ideas",
+        "followers": "4200",
+        "category": "Home & Garden"
+      }
+    },
+    "rate_limit": {
+      "sessionState": "rate_limited",
+      "error": {
+        "code": "THROTTLED",
+        "classification": "transient",
+        "message": "Fixture provider asked the local collector to retry later"
+      }
+    },
+    "auth_required": {
+      "sessionState": "signed_out",
+      "authRequired": {
+        "reason": "authentication_required"
+      }
+    },
+    "session_expired": {
+      "sessionState": "expired",
+      "authRequired": {
+        "reason": "session_expired"
+      },
+      "error": {
+        "code": "SESSION_EXPIRED",
+        "classification": "authentication",
+        "message": "The local account session needs to be renewed"
+      }
+    },
+    "challenge": {
+      "sessionState": "challenge_required",
+      "authRequired": {
+        "reason": "verification_challenge_required"
+      }
+    }
+  }
+}

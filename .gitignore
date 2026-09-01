@@ -1,0 +1,8 @@
+node_modules/
+dist/
+*.log
+debug-shot.png
+.DS_Store
+__pycache__/
+*.pyc
+*.pyo

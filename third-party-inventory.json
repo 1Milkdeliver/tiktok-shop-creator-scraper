@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "generatedFrom": {
+    "packageLock": {
+      "path": "package-lock.json",
+      "sha256": "ac423ef58f3ddf28b1d3689f99835f3110d218113b54ebf2e013c0b8c5a8f782"
+    },
+    "pythonRequirements": {
+      "path": "runtime/python/requirements.lock",
+      "sha256": "30761195741f648b47b6835a2bf9ff0afc3c5895b390e6ea313ee73945f65d98",
+      "thirdPartyPackages": [
+        { "name": "aiosqlite", "lockedVersion": "0.22.1", "license": "MIT" },
+        { "name": "annotated-types", "lockedVersion": "0.8.0", "license": "MIT" },
+        { "name": "anyio", "lockedVersion": "4.14.2", "license": "MIT" },
+        { "name": "beautifulsoup4", "lockedVersion": "4.15.0", "license": "MIT" },
+        { "name": "certifi", "lockedVersion": "2026.7.22", "license": "MPL-2.0" },
+        { "name": "charset-normalizer", "lockedVersion": "3.5.1", "license": "MIT" },
+        { "name": "colorama", "lockedVersion": "0.4.6", "license": "BSD License" },
+        { "name": "defusedxml", "lockedVersion": "0.7.1", "license": "PSFL" },
+        { "name": "fake-useragent", "lockedVersion": "2.2.0", "license": "Apache-2.0" },
+        { "name": "h11", "lockedVersion": "0.16.0", "license": "MIT" },
+        { "name": "httpcore", "lockedVersion": "1.0.9", "license": "BSD-3-Clause" },
+        { "name": "httpx", "lockedVersion": "0.28.1", "license": "BSD-3-Clause" },
+        { "name": "idna", "lockedVersion": "3.19", "license": "BSD-3-Clause" },
+        { "name": "instagrapi", "lockedVersion": "2.18.14", "license": "MIT" },
+        { "name": "loguru", "lockedVersion": "0.7.3", "license": "MIT" },
+        { "name": "pillow", "lockedVersion": "12.3.0", "license": "MIT-CMU" },
+        { "name": "py-machineid", "lockedVersion": "1.0.0", "license": "MIT" },
+        { "name": "pycountry", "lockedVersion": "26.2.16", "license": "LGPL-2.1-only" },
+        { "name": "pycryptodomex", "lockedVersion": "3.23.0", "license": "BSD, Public Domain" },
+        { "name": "pydantic", "lockedVersion": "2.13.4", "license": "MIT" },
+        { "name": "pydantic-core", "lockedVersion": "2.46.4", "license": "MIT" },
+        { "name": "pyotp", "lockedVersion": "2.10.0", "license": "MIT" },
+        { "name": "pysocks", "lockedVersion": "1.7.1", "license": "BSD" },
+        { "name": "requests", "lockedVersion": "2.34.2", "license": "Apache-2.0" },
+        { "name": "soupsieve", "lockedVersion": "2.9.2", "license": "MIT" },
+        { "name": "twscrape", "lockedVersion": "0.20.1", "license": "MIT" },
+        { "name": "typing-extensions", "lockedVersion": "4.16.0", "license": "PSF-2.0" },
+        { "name": "typing-inspection", "lockedVersion": "0.4.4", "license": "MIT" },
+        { "name": "urllib3", "lockedVersion": "2.7.0", "license": "MIT" },
+        { "name": "win32-setctime", "lockedVersion": "1.2.0", "license": "MIT" },
+        { "name": "winregistry", "lockedVersion": "2.1.5", "license": "MIT" },
+        { "name": "ytscrape", "lockedVersion": "0.1.5", "license": "MIT" }
+      ]
+    }
+  },
+  "project": {
+    "name": "tiktok-shop-creator-scraper",
+    "license": "GPL-3.0"
+  },
+  "embeddedPythonRuntime": {
+    "version": "3.11.9",
+    "architecture": "amd64",
+    "license": "PSF-2.0",
+    "source": "https://www.python.org/ftp/python/3.11.9/python-3.11.9-embed-amd64.zip",
+    "pythonExeSha256": "5f7b89a612c9b8af1d6456cdfcd1dbe5ca630849e79aebced9bee9a6694952ec"
+  },
+  "npmProductionRoots": [
+    { "name": "@fontsource-variable/inter", "requestedVersion": "^5.3.0", "lockedVersion": "5.3.0", "license": "OFL-1.1" },
+    { "name": "@fontsource-variable/noto-sans-sc", "requestedVersion": "^5.3.0", "lockedVersion": "5.3.0", "license": "OFL-1.1" },
+    { "name": "@primer/octicons", "requestedVersion": "^19.33.0", "lockedVersion": "19.33.0", "license": "MIT" },
+    { "name": "electron-updater", "requestedVersion": "^6.8.9", "lockedVersion": "6.8.9", "license": "MIT" },
+    { "name": "exceljs", "requestedVersion": "^4.4.0", "lockedVersion": "4.4.0", "license": "MIT" },
+    { "name": "png2icons", "requestedVersion": "^2.0.1", "lockedVersion": "2.0.1", "license": "MIT" },
+    { "name": "pngjs", "requestedVersion": "^7.0.0", "lockedVersion": "7.0.0", "license": "MIT" },
+    { "name": "puppeteer-core", "requestedVersion": "^24.0.0", "lockedVersion": "24.43.1", "license": "Apache-2.0" },
+    { "name": "sqlite3", "requestedVersion": "^5.1.7", "lockedVersion": "5.1.7", "license": "BSD-3-Clause" }
+  ],
+  "buildAndRuntimeTools": [
+    { "name": "electron", "lockedVersion": "33.4.11", "license": "MIT", "reason": "Packaged Electron runtime" },
+    { "name": "electron-builder", "lockedVersion": "25.1.8", "license": "MIT", "reason": "Release assembly tool; not bundled with the application" }
+  ]
+}

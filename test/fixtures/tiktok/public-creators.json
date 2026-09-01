@@ -1,0 +1,25 @@
+{
+  "creators": [
+    {
+      "id": "tt-public-101",
+      "handle": "garden.day",
+      "displayName": "Garden Day",
+      "followers": 18200,
+      "bio": "Small-space gardening and home tools. hello@gardenday.example",
+      "contactEmail": "hello@gardenday.example",
+      "categories": ["Home & Garden"],
+      "verticalCategories": ["Gardening"],
+      "profileUrl": "https://www.tiktok.com/@garden.day"
+    },
+    {
+      "id": "tt-public-202",
+      "handle": "trail.kitchen",
+      "displayName": "Trail Kitchen",
+      "followers": 9400,
+      "bio": "Outdoor recipes and camping cookware.",
+      "categories": ["Food & Beverage"],
+      "verticalCategories": ["Outdoor Cooking"],
+      "profileUrl": "https://www.tiktok.com/@trail.kitchen"
+    }
+  ]
+}
