@@ -358,6 +358,12 @@
   .activity-badge.unknown { color:#59636e;background:#eaeef2; }
   .library-update-panel { display:none;margin-bottom:16px;padding:16px;background:#fff;border:1px solid var(--border);border-radius:6px;box-shadow:var(--shadow); }
   .library-update-panel.open { display:block; }
+  .contact-settings { display:flex; flex-wrap:wrap; align-items:center; gap:12px 20px; margin:16px 0; }
+  .contact-settings label { display:flex; align-items:center; gap:8px; }
+  .contact-settings select { min-height:38px; padding:6px 10px; border:1px solid var(--border); border-radius:6px; background:#fff; }
+  .contact-actions { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:12px 0; }
+  .contact-log { min-height:160px; max-height:240px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; padding:14px; border-radius:6px; background:#171b21; color:#dce5ef; font:13px/1.8 Consolas,monospace; }
+  .contact-log:focus-visible { outline:2px solid var(--primary,#216cab); outline-offset:3px; }
   .library-update-summary { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0; }
   .library-update-summary div { padding:10px 12px;background:#f6f8fa;border-radius:6px; }
   .library-update-summary span { display:block;color:var(--sub);font-size:12px; }
@@ -760,6 +766,23 @@
       <div class="creator-dashboard-card"><span data-i18n="creators.dashboardUpdated">最近更新</span><strong id="creatorDashUpdated">—</strong><small data-i18n="creators.dashboardUpdatedHint">最后一次数据刷新</small></div>
       <div class="creator-dashboard-card"><span data-i18n="creators.dashboardStorage">数据库占用</span><strong id="creatorDashStorage">—</strong><small data-i18n="creators.dashboardStorageHint">仅本地结构化数据</small></div>
     </div>
+    <div class="library-update-panel" id="contactPanel">
+      <div class="page-heading"><div><h2 data-i18n="contacts.title">补全联系方式</h2><p data-i18n="contacts.subtitle">对达人库中已发现的达人，读取团长后台允许查看的全部联系方式。</p></div><button type="button" class="btn-link" id="contactClose" data-i18n="contacts.close">收起</button></div>
+      <div class="hint" data-i18n="contacts.hint">WhatsApp、LINE、邮箱、Zalo、Viber、Facebook 及其他联系方式均独立保存。使用 Partner Center 团长 Cookie，不代发消息，不需要逐个打开聊天页面。空白不代表抓取成功，请结合“联系方式状态”查看。</div>
+      <div class="contact-actions"><button type="button" class="btn btn-secondary" id="contactImport" data-i18n="contacts.import">导入团长 Cookie JSON</button><button type="button" class="btn-link" id="contactClear" data-i18n="contacts.clear">移除授权</button><span id="contactAuth" role="status"></span></div>
+      <p class="hint" data-i18n="contacts.private">授权仅在本次软件运行期间保留；退出后需重新导入，不会写入导出文件或日志。</p>
+      <div class="contact-settings">
+        <label><span data-i18n="contacts.market">团长地区</span><select id="contactRegion"><option value="MY">MY · 马来西亚 / Malaysia</option><option value="TH">TH · 泰国 / Thailand</option><option value="VN">VN · 越南 / Vietnam</option><option value="PH">PH · 菲律宾 / Philippines</option><option value="SG">SG · 新加坡 / Singapore</option><option value="ID">ID · 印度尼西亚 / Indonesia</option><option value="GB">GB · 英国 / United Kingdom</option><option value="US">US · 美国 / United States</option></select></label>
+        <label><span data-i18n="contacts.mode">补全内容</span><select id="contactMode"><option value="contacts" data-i18n="contacts.only">仅联系方式</option><option value="full" data-i18n="contacts.full">完整资料 + 联系方式（待实测）</option></select></label>
+        <label><input type="checkbox" id="contactUnchecked" checked><span data-i18n="contacts.unchecked">跳过已检查达人（可继续未完成部分）</span></label>
+        <button type="button" class="btn-link" id="contactPreview" data-i18n="contacts.preview">刷新范围</button>
+      </div>
+      <p id="contactScope" role="status" aria-live="polite"></p>
+      <p class="hint" data-i18n="contacts.pacing">范围 = 当前达人库筛选 ∩ 所选地区。逐位保存，串行间隔 10 秒；遇到限流、验证码或会话失效即停止。平台未提供的字段不会覆盖库中已有值。普通卖家采集仍保持原有流程。</p>
+      <div class="contact-actions"><button type="button" class="btn btn-primary" id="contactStart" disabled data-i18n="contacts.start">开始补全</button><button type="button" class="btn btn-secondary" id="contactStop" disabled data-i18n="contacts.stop">停止并保留进度</button></div>
+      <p id="contactProgress" role="status" aria-live="polite">0 / 0</p>
+      <pre class="contact-log" id="contactLog" tabindex="0" aria-label="联系方式任务日志">尚未开始。任务执行后，这里显示实时进度；不显示联系方式原值。</pre>
+    </div>
     <div class="library-update-panel" id="libraryUpdatePanel">
       <div class="page-heading" style="margin-bottom:0"><div><h2 data-i18n="creators.updateTitle">更新达人数据</h2><p data-i18n="creators.updateHint">复用达人库名单，更新当前地区和筛选范围，不重复搜索达人。</p></div><button class="btn-link" id="libraryUpdateClose" data-i18n="action.cancel">取消</button></div>
       <div class="library-update-summary"><div><span data-i18n="creators.updateScope">更新范围</span><strong id="libraryUpdateCount">—</strong></div><div><span data-i18n="creators.updateAccounts">并行账号</span><strong id="libraryUpdateAccounts">—</strong></div><div><span data-i18n="creators.updateEstimate">预计耗时</span><strong id="libraryUpdateEstimate">—</strong></div></div>
@@ -771,7 +794,8 @@
       <div class="creator-toolbar">
         <div class="creator-search-wrap"><input id="creatorSearch" type="search" data-i18n-placeholder="creators.search" placeholder="搜索昵称、账号、ID 或邮箱"></div>
         <button class="btn btn-secondary" id="creatorCatToggle" data-i18n="creators.catPanelBtn">🗂 类目筛选</button>
-        <label class="check-label"><input id="creatorHasEmail" type="checkbox"> <span data-i18n="creators.hasEmail">仅有邮箱</span></label>
+        <label class="check-label"><input id="creatorHasEmail" type="checkbox"> <span data-i18n="creators.hasEmail">有邮箱</span></label>
+        <label class="check-label"><input id="creatorHasWhatsapp" type="checkbox"> <span data-i18n="creators.hasWhatsapp">有 WhatsApp</span></label>
         <label class="check-label"><input id="creatorActiveOnly" type="checkbox"> <span data-i18n="creators.activeOnly">活跃达人</span></label>
         <button class="btn btn-secondary" id="creatorRefresh" data-i18n="creators.refresh">刷新</button>
         <button class="btn btn-secondary" id="creatorImport" data-i18n="creators.import">📥 导入达人数据</button>
@@ -808,6 +832,7 @@
       <div class="creator-table-tools">
         <div class="creator-table-tools-left"><strong data-i18n="creators.dataTable">达人数据</strong><span class="creator-result-label" id="creatorResultLabel">—</span></div>
         <div class="creator-table-tools-right">
+          <button type="button" class="btn btn-primary" id="contactOpen" aria-expanded="false" aria-controls="contactPanel" data-i18n="contacts.title">补全联系方式</button>
           <button class="btn btn-secondary" id="creatorReset" data-i18n="creators.reset">重置筛选</button>
           <button class="btn btn-secondary" id="creatorDensity" data-i18n="creators.compact">紧凑显示</button>
           <button class="btn btn-secondary" id="creatorColumns" aria-expanded="false" data-i18n="creators.columns">管理字段</button>
@@ -822,8 +847,10 @@
         </div>
         <div class="creator-column-drawer-actions">
           <button type="button" class="btn-link" id="creatorColumnsAll" data-i18n="creators.allColumns">全部显示</button>
+          <button type="button" class="btn-link" id="creatorColumnsNone" data-i18n="creators.clearColumns" aria-describedby="creatorColumnFixedHint">取消全选</button>
           <span class="creator-column-drawer-count" id="creatorColumnCount"></span>
         </div>
+        <p id="creatorColumnFixedHint" class="hint" style="margin:0;padding:8px 18px" data-i18n="creators.fixedColumn">达人主页为固定列，其余字段可取消。</p>
         <div class="creator-column-groups" id="creatorColumnGroups"></div>
       </aside>
       <div class="creator-table-wrap"><table class="creator-table"><thead><tr id="creatorHeadRow"></tr></thead><tbody id="creatorRows"></tbody></table></div>
@@ -1068,6 +1095,8 @@ https://www.tiktok.com/@makeup.lover'></textarea>
   </div>
 </div>
 
+<script src="lib/contact-fields.js"></script>
+<script src="lib/partner-profile-fields.js"></script>
 <script>
 // ═══════════ 界面中英切换 (UI i18n) ═══════════
 const I18N = {
@@ -1119,7 +1148,10 @@ const I18N = {
   'creators.maxGmv': { zh: '最高GMV($)', en: 'Max GMV ($)' },
   'creators.category': { zh: '类目（如 Beauty）', en: 'Category (e.g. Beauty)' },
   'creators.export': { zh: '⬇ 导出当前筛选', en: '⬇ Export filtered' },
-  'creators.hasEmail': { zh: '仅有邮箱', en: 'Email only' },
+  'creators.hasEmail': { zh: '有邮箱', en: 'Has email' },
+  'creators.hasWhatsapp': { zh: '有 WhatsApp', en: 'Has WhatsApp' },
+  'creators.clearColumns': { zh: '取消全选', en: 'Deselect all' },
+  'creators.fixedColumn': { zh: '达人主页为固定列，其余字段可取消。', en: 'Creator Page is fixed; all other columns can be hidden.' },
   'creators.activeOnly': { zh: '活跃达人', en: 'Active only' },
   'creators.refresh': { zh: '刷新', en: 'Refresh' },
   'creators.import': { zh: '📥 导入达人数据', en: '📥 Import creators' },
@@ -1559,6 +1591,8 @@ const FIELDS = [
   { k: 'pps_score', n: 'PPS评分', e: 'PPS Score' }, { k: 'is_fast_growing', n: '快速增长', e: 'Fast Growing' }, { k: 'has_collaborated', n: '已合作', e: 'Collaborated' },
   { k: 'creator_permission_tag', n: '达人类目权限', e: 'Category Permission' }, { k: 'is_live_auction', n: '直播拍卖', e: 'Live Auction' },
   { k: '简介', n: '简介', e: 'Bio', detail: true }, { k: '合作邮箱', n: '合作邮箱', e: 'Contact Email', detail: true }, { k: 'MCN机构', n: 'MCN机构', e: 'MCN Agency', detail: true }, { k: '垂直类目', n: '垂直类目', e: 'Vertical Category', detail: true },
+  ...window.CreatorContactFields.FIELDS,
+  ...window.PartnerProfileFields.FIELDS,
   { k: 'last_publish_time', n: '最后发布时间', e: 'Last Published' }, { k: 'activity_status', n: '活跃状态', e: 'Activity Status' }, { k: 'activity_reason', n: '判断原因', e: 'Activity Reason' },
 ];
 const UPDATE_FIELD_GROUPS = {
@@ -1572,7 +1606,7 @@ function renderScrapeFieldPreview() {
   const box = document.getElementById('scrapeFieldPreview');
   if (!box) return;
   const mode = (document.querySelector('input[name=scrapeMode]:checked') || {}).value || 'fast';
-  const available = mode === 'full' ? FIELDS : FIELDS.filter(field => !field.detail);
+  const available = FIELDS.filter(field => !field.contact && !field.partner && (mode === 'full' || !field.detail));
   box.innerHTML = available.map(field => {
     const label = uiLang === 'zh' ? field.n : field.e;
     return `<span class="scrape-field-chip" title="${label}">${label}</span>`;
@@ -2414,8 +2448,9 @@ const COLUMN_GROUPS = [
   { key: 'sales', zh: '带货数据', en: 'Sales Data', fields: ['category', 'med_gmv_revenue', 'med_gmv_revenue_range', 'video_gmv', 'live_gmv', 'units_sold', 'units_sold_range', 'pps_score'] },
   { key: 'content', zh: '内容表现', en: 'Content', fields: ['video_avg_view_cnt', 'video_play_cnt_med', 'video_engagement', 'ec_video_engagement', 'ec_video_gpm', 'ec_live_gpm', 'ec_live_avg_uv', 'is_fast_growing'] },
   { key: 'audience', zh: '粉丝画像', en: 'Audience', fields: ['top_follower_ages', 'top_follower_gender'] },
-  { key: 'contact', zh: '联系方式', en: 'Contact', fields: ['简介', '合作邮箱', 'MCN机构'] },
+  { key: 'contact', zh: '联系方式', en: 'Contact', fields: ['简介', '合作邮箱', ...window.CreatorContactFields.FIELDS.map(f => f.k), 'MCN机构'] },
   { key: 'extra', zh: '其他', en: 'Other', fields: ['has_collaborated', 'creator_permission_tag', 'is_live_auction', '垂直类目', 'last_refreshed_at'] },
+  { key: 'partnerProfile', zh: '团长详情与采集状态', en: 'Partner Profile & Collection Status', fields: window.PartnerProfileFields.FIELDS.map(f => f.k) },
 ];
 function renderCreatorColumns() {
   const box = document.getElementById('creatorColumnGroups');
@@ -2450,6 +2485,8 @@ function updateColumnCount() {
   const total = [...FIELDS, { k: 'last_refreshed_at' }].filter(f => !LIBRARY_SKIP.has(f.k)).length;
   const visible = total - hiddenCreatorColumns.size;
   el.textContent = uiLang === 'zh' ? `${visible} / ${total} 显示` : `${visible} / ${total} shown`;
+  document.getElementById('creatorColumnsAll').disabled = hiddenCreatorColumns.size === 0;
+  document.getElementById('creatorColumnsNone').disabled = visible <= 1;
 }
 
 // ── TikTok-style filter bar: one dropdown per field ──
@@ -2973,6 +3010,7 @@ async function loadCreators() {
   const filters = {
     search: document.getElementById('creatorSearch').value.trim(),
     hasEmail: document.getElementById('creatorHasEmail').checked,
+    hasWhatsapp: document.getElementById('creatorHasWhatsapp').checked,
     activityStatus: document.getElementById('creatorActiveOnly').checked ? 'active' : undefined,
     sortBy: creatorSort.key,
     sortDirection: creatorSort.direction,
@@ -3056,6 +3094,7 @@ async function exportCreatorLibraryFromCurrentFilters() {
   const filters = {
     search: document.getElementById('creatorSearch').value.trim(),
     hasEmail: document.getElementById('creatorHasEmail').checked,
+    hasWhatsapp: document.getElementById('creatorHasWhatsapp').checked,
     activityStatus: document.getElementById('creatorActiveOnly').checked ? 'active' : undefined,
     sortBy: creatorSort.key,
     sortDirection: creatorSort.direction,
@@ -3063,9 +3102,11 @@ async function exportCreatorLibraryFromCurrentFilters() {
   };
   // confirm before exporting (let the user see the scope they are about to save)
   const activeFilters = FILTER_DEFS.filter(d => filterSelectionCount(d, appliedFilterState.get(d.key)) > 0);
-  const scopeDesc = activeFilters.length
-    ? activeFilters.map(d => `${uiLang === 'zh' ? d.n : d.e}: ${filterSelectionCount(d, appliedFilterState.get(d.key))} 项`).join('、')
-    : (uiLang === 'zh' ? '无字段筛选（全部达人）' : 'no field filters (all creators)');
+  const scopeParts = activeFilters.map(d => `${uiLang === 'zh' ? d.n : d.e}: ${filterSelectionCount(d, appliedFilterState.get(d.key))} 项`);
+  if (filters.hasEmail) scopeParts.push(I18N['creators.hasEmail'][uiLang]);
+  if (filters.hasWhatsapp) scopeParts.push(I18N['creators.hasWhatsapp'][uiLang]);
+  if (filters.activityStatus) scopeParts.push(I18N['creators.activeOnly'][uiLang]);
+  const scopeDesc = scopeParts.length ? scopeParts.join('、') : (uiLang === 'zh' ? '无字段筛选（全部达人）' : 'no field filters (all creators)');
   const formatLabel = format === 'xlsx' ? 'Excel' : 'CSV';
   if (!confirm(uiLang === 'zh'
     ? `确定导出当前筛选结果吗？\n\n筛选范围：${scopeDesc}\n搜索：${filters.search || '无'}\n格式：${formatLabel}\n字段：${fields ? fields.length + ' 项' : '全部'}\n\n输出：${outDir.replace(/[\\/]+$/, '')}\\达人筛选-日期-时间.${format}`
@@ -3084,7 +3125,7 @@ async function exportCreatorLibraryFromCurrentFilters() {
 }
 document.getElementById('creatorExport').onclick = exportCreatorLibraryFromCurrentFilters;
 document.getElementById('exportFilteredCreators').onclick = exportCreatorLibraryFromCurrentFilters;
-document.getElementById('creatorReset').onclick = () => { document.getElementById('creatorSearch').value = ''; document.getElementById('creatorHasEmail').checked = false; document.getElementById('creatorActiveOnly').checked = false; resetFieldFilters(); };
+document.getElementById('creatorReset').onclick = () => { document.getElementById('creatorSearch').value = ''; document.getElementById('creatorHasEmail').checked = false; document.getElementById('creatorHasWhatsapp').checked = false; document.getElementById('creatorActiveOnly').checked = false; resetFieldFilters(); };
 document.getElementById('creatorDensity').onclick = event => { const compact = document.querySelector('.creator-table').classList.toggle('compact'); event.currentTarget.textContent = I18N[compact ? 'creators.comfortable' : 'creators.compact'][uiLang]; };
 // ── field manager drawer (open/close) ──
 function setColumnDrawer(open) {
@@ -3109,8 +3150,16 @@ document.addEventListener('keydown', e => {
   setColumnDrawer(false);       // close the field manager drawer
   closeFilterDrops(true);       // close any open filter dropdown and restore focus
 });
-document.getElementById('creatorColumnsAll').onclick = () => { hiddenCreatorColumns.clear(); renderCreatorColumns(); renderCreatorHead(); document.querySelectorAll('.creator-table [data-field]').forEach(cell => cell.hidden = false); };
+function setAllCreatorColumns(visible) {
+  hiddenCreatorColumns.clear();
+  if (!visible) [...FIELDS, {k:'last_refreshed_at'}].filter(field => field.k !== 'handle' && !LIBRARY_SKIP.has(field.k)).forEach(field => hiddenCreatorColumns.add(field.k));
+  renderCreatorColumns(); renderCreatorHead();
+  document.querySelectorAll('.creator-table [data-field]').forEach(cell => cell.hidden = hiddenCreatorColumns.has(cell.dataset.field));
+}
+document.getElementById('creatorColumnsAll').onclick = () => setAllCreatorColumns(true);
+document.getElementById('creatorColumnsNone').onclick = () => setAllCreatorColumns(false);
 document.getElementById('creatorHasEmail').onchange = () => { creatorOffset = 0; loadCreators(); };
+document.getElementById('creatorHasWhatsapp').onchange = () => { creatorOffset = 0; loadCreators(); };
 document.getElementById('creatorActiveOnly').onchange = () => { creatorOffset = 0; loadCreators(); };
 document.getElementById('creatorSearch').oninput = () => {
   clearTimeout(creatorSearchTimer);
@@ -3128,7 +3177,7 @@ function formatUpdateDuration(seconds) {
 async function prepareLibraryUpdate() {
   const panel = document.getElementById('libraryUpdatePanel'); panel.classList.add('open');
   const region = (document.getElementById('shopRegionCustom').value.trim() || document.getElementById('shopRegion').value || 'US').toUpperCase();
-  const filters = { search:document.getElementById('creatorSearch').value.trim(), region, hasEmail:document.getElementById('creatorHasEmail').checked, ...buildFieldFilters() };
+  const filters = { search:document.getElementById('creatorSearch').value.trim(), region, hasEmail:document.getElementById('creatorHasEmail').checked, hasWhatsapp:document.getElementById('creatorHasWhatsapp').checked, activityStatus:document.getElementById('creatorActiveOnly').checked ? 'active' : undefined, ...buildFieldFilters() };
   const result = await window.api.listCreatorIds(filters);
   libraryUpdateIds = result?.ok ? result.ids : [];
   const accounts = Math.max(1, cookieList.length);
@@ -3282,5 +3331,6 @@ window.api.getVersion().then(v => {
   if (fv) fv.textContent = ver;
 }).catch(() => { });
 </script>
+<script src="lib/contact-ui.js"></script>
 </body>
 </html>

@@ -8,6 +8,11 @@ const os = require('os');
 const fs = require('fs');
 const { MultiRunner } = require('./lib/multirunner');
 const { CreatorDatabase } = require('./lib/database');
+const { PartnerContactClient, ContactJob, ContactError, MARKETS } = require('./lib/partner-contacts');
+let partnerContactClient = null;
+let contactPreparing = false;
+const contactJob = new ContactJob();
+const contactsBusy = () => contactPreparing || contactJob.state.running;
 
 let mainWindow = null;
 let creatorDb = null;
@@ -250,6 +255,8 @@ ipcMain.handle('creator-db-export', async (event, payload) => {
       '简介': { zh: '简介', en: 'Bio' }, '合作邮箱': { zh: '合作邮箱', en: 'Contact Email' }, 'MCN机构': { zh: 'MCN机构', en: 'MCN Agency' }, '垂直类目': { zh: '垂直类目', en: 'Vertical Category' },
       last_publish_time: { zh: '最后发布时间', en: 'Last Published' }, activity_status: { zh: '活跃状态', en: 'Activity Status' }, activity_reason: { zh: '判断原因', en: 'Activity Reason' },
       last_refreshed_at: { zh: '最近更新', en: 'Last Updated' },
+      ...require('./lib/contact-fields').LABELS,
+      ...require('./lib/partner-profile-fields').LABELS,
     };
     const label = k => (FIELD_LABELS[k] && FIELD_LABELS[k][headerLang]) || k;
     // export strategy:
@@ -336,6 +343,8 @@ ipcMain.handle('update-export-file', async (event, filePath) => {
     // reuse the export handler logic against the same output path
     const { exportCsv, exportXlsx, createCsvStream, ensureDir } = require('./lib/exporter');
     const FIELD_LABELS = {
+      ...require('./lib/contact-fields').LABELS,
+      ...require('./lib/partner-profile-fields').LABELS,
       handle: { zh: '达人主页', en: 'Creator Page' }, nickname: { zh: '昵称', en: 'Nickname' }, creator_oecuid: { zh: '达人ID', en: 'Creator ID' },
       avatar: { zh: '头像', en: 'Avatar' }, selection_region: { zh: '地区', en: 'Region' }, follower_cnt: { zh: '粉丝数', en: 'Followers' },
       category: { zh: '类目', en: 'Category' }, med_gmv_revenue: { zh: '总GMV', en: 'Total GMV' }, med_gmv_revenue_range: { zh: 'GMV区间', en: 'GMV Range' },
@@ -489,6 +498,9 @@ const IMPORT_FIELD_ALIASES = {
 // build a lookup: normalized label -> internal field
 const IMPORT_LABEL_MAP = (() => {
   const m = new Map();
+  for (const f of [...require('./lib/contact-fields').FIELDS,...require('./lib/partner-profile-fields').FIELDS]) {
+    for (const alias of [f.k, f.n, f.e]) m.set(alias.toLowerCase().trim(), f.k);
+  }
   for (const [field, aliases] of Object.entries(IMPORT_FIELD_ALIASES)) {
     for (const a of aliases) m.set(a.toLowerCase().trim(), field);
   }
@@ -648,6 +660,7 @@ ipcMain.handle('creator-db-import', async (event, payload) => {
 
 // IPC: continue scraping based on a history entry (incremental, skips saved IDs)
 ipcMain.handle('continue-history', async (event, filePath) => {
+  if (contactsBusy()) return {ok:false,error:'联系方式补全进行中，请稍后再试。'};
   try {
     const entry = (appData.history || []).find(h => path.resolve(h.outPath || '') === path.resolve(filePath || ''));
     if (!entry || !entry.config) return { ok: false, error: '该历史记录缺少抓取配置，无法继续（旧版本生成）' };
@@ -683,6 +696,7 @@ ipcMain.handle('continue-history', async (event, filePath) => {
 
 // IPC: refresh a history entry (re-scrape all, overwrite the file)
 ipcMain.handle('refresh-history', async (event, filePath) => {
+  if (contactsBusy()) return {ok:false,error:'联系方式补全进行中，请稍后再试。'};
   try {
     const entry = (appData.history || []).find(h => path.resolve(h.outPath || '') === path.resolve(filePath || ''));
     if (!entry || !entry.config) return { ok: false, error: '该历史记录缺少抓取配置，无法刷新（旧版本生成）' };
@@ -794,6 +808,16 @@ function createWindow() {
   let allowClose = false;
   mainWindow.on('close', (e) => {
     if (allowClose) return;
+    if (contactsBusy()) {
+      e.preventDefault();
+      dialog.showMessageBox(mainWindow, {type:'question',title:'联系方式补全进行中',message:'停止补全并退出？',detail:'已获取的联系方式已逐位保存到达人库。下次可跳过已检查达人，继续未完成部分。',buttons:['停止并退出','取消'],defaultId:1,cancelId:1}).then(async ({response}) => {
+        if (response !== 0) return;
+        while (contactPreparing) await new Promise(resolve => setTimeout(resolve,50));
+        contactJob.stop(); await contactJob.done;
+        allowClose = true; mainWindow?.close();
+      });
+      return;
+    }
     const busy = !!(runner && runner.running);
     if (!busy) return; // nothing in progress → close freely
     e.preventDefault();
@@ -1020,7 +1044,7 @@ function setupAutoUpdaterEvents() {
       cancelId: 1,
       icon: path.join(__dirname, 'icon-256.png'),
     });
-    if (response === 0 && !runner.running) {
+    if (response === 0 && !runner.running && !contactsBusy()) {
       // user chose immediate restart (and no scrape is running)
       setUpdateState({ phase: 'installing', percent: 100, message: '正在静默安装更新…' });
       // Stop any running scrape + close browsers first so the app can exit cleanly
@@ -1080,6 +1104,53 @@ ipcMain.handle('choose-dir', async () => {
 });
 
 // IPC: pick an import file (CSV/XLSX)
+ipcMain.handle('partner-contacts-import', async () => {
+  if (contactsBusy()) return {ok:false, error:'请先停止联系方式补全，再更换团长账号。'};
+  const selected = await dialog.showOpenDialog(mainWindow, {title:'导入团长 Partner Center Cookie JSON', properties:['openFile'], filters:[{name:'Cookie JSON / TXT', extensions:['json','txt']}]});
+  if (selected.canceled || !selected.filePaths.length) return {ok:false, canceled:true};
+  if (contactsBusy()) return {ok:false, error:'联系方式补全正在运行，请稍后再导入。'};
+  try {
+    const file = selected.filePaths[0];
+    if (fs.statSync(file).size > 1024 * 1024) return {ok:false,error:'Cookie 文件过大，请选择 JSON 导出文件。'};
+    const cookies = JSON.parse(fs.readFileSync(file,'utf8').replace(/^\uFEFF/,''));
+    partnerContactClient = new PartnerContactClient(cookies);
+    // Credentials stay in main-process memory, not renderer/logs/exports/history.
+    return {ok:true};
+  } catch (error) { return {ok:false,error:error instanceof ContactError ? error.message : '无法读取有效 Cookie JSON，请重新导出文件。'}; }
+});
+ipcMain.handle('partner-contacts-clear', () => {
+  if (contactsBusy()) return {ok:false,error:'请先停止联系方式补全。'};
+  partnerContactClient = null; return {ok:true};
+});
+ipcMain.handle('partner-contacts-status', () => ({...contactJob.snapshot(), connected:!!partnerContactClient}));
+ipcMain.handle('partner-contacts-preview', async (event, payload = {}) => {
+  try {
+    const region = String(payload.region || '').toUpperCase();
+    if (!creatorDb || !Object.hasOwn(MARKETS,region)) return {ok:false,error:'请选择已适配的地区。'};
+    const query = payload.mode === 'full' ? 'partnerProfileTargets' : 'contactTargets';
+    const ids = await creatorDb[query](payload.filters, region, payload.onlyUnchecked !== false);
+    return {ok:true,total:ids.length};
+  } catch (_) { return {ok:false,error:'无法读取当前筛选范围，请重试。'}; }
+});
+ipcMain.handle('partner-contacts-start', async (event, payload = {}) => {
+  if (contactsBusy() || runner.running) return {ok:false,error:'已有抓取或联系方式补全任务在运行，请先停止。'};
+  if (!creatorDb || !partnerContactClient) return {ok:false,error:'请先导入团长 Partner Center Cookie。'};
+  contactPreparing = true;
+  try {
+    const region = String(payload.region || '').toUpperCase();
+    if (!Object.hasOwn(MARKETS,region)) return {ok:false,error:'请选择已适配的地区。'};
+    const mode = payload.mode === 'full' ? 'full' : 'contacts';
+    const query = mode === 'full' ? 'partnerProfileTargets' : 'contactTargets';
+    const targets = await creatorDb[query](payload.filters, region, payload.onlyUnchecked !== false);
+    if (!targets.length) return {ok:false,error:'当前地区和筛选条件下没有待补全的达人。'};
+    if (targets.length !== payload.expectedTotal) return {ok:false,error:'筛选范围已变化，请刷新范围后重新开始。'};
+    contactJob.start({client:partnerContactClient, db:creatorDb, region, targets, mode, resume:payload.onlyUnchecked !== false});
+    return {ok:true};
+  } catch (_) { return {ok:false,error:'无法启动联系方式补全，请刷新范围后重试。'}; }
+  finally { contactPreparing = false; }
+});
+ipcMain.handle('partner-contacts-stop', () => { contactJob.stop(); return {ok:true}; });
+
 ipcMain.handle('choose-file', async (event, exts) => {
   const filters = Array.isArray(exts) && exts.length
     ? exts.map(e => ({ name: e.toUpperCase(), extensions: [e.replace(/^\./, '')] }))
@@ -1118,6 +1189,7 @@ function saveCookiesToFiles(pasted) {
 
 // IPC: test scrape with isolated environment (1 keyword, 1 page) to verify everything works
 ipcMain.handle('test-scrape', async (event, config) => {
+  if (contactsBusy()) return {error:'联系方式补全进行中，请稍后再试。'};
   if (runner.running) return { error: '抓取进行中，请稍后再试' };
   try {
     const pasted = config.pastedCookies || [];
@@ -1154,6 +1226,7 @@ ipcMain.handle('test-scrape', async (event, config) => {
 
 // IPC: start scrape (cookies as array of JSON strings)
 ipcMain.handle('start-scrape', async (event, config) => {
+  if (contactsBusy()) return {error:'联系方式补全进行中，请稍后再试。'};
   if (runner.running) return { error: '已在运行中' };
   try {
     const pasted = config.pastedCookies || [];
@@ -1289,7 +1362,8 @@ if (!gotLock) {
     setupAutoUpdaterEvents();
     setTimeout(() => checkForUpdates(), 5000);
   });
-  app.on('window-all-closed', () => {
+  app.on('window-all-closed', async () => {
+    contactJob.stop(); await contactJob.done;
     // clean up scrape browsers so the on-quit auto-update install never hits
     // "app cannot be closed" (files would be locked by the running Chrome)
     try {
@@ -1297,7 +1371,7 @@ if (!gotLock) {
         if (s.browser) { try { Promise.race([s.browser.close(), new Promise(r => setTimeout(r, 2000))]).catch(() => { }); } catch (e) { } }
       }
     } catch (e) { }
-    if (creatorDb) creatorDb.close().catch(() => { });
+    if (creatorDb) await creatorDb.close().catch(() => { });
     app.quit();
   });
 }

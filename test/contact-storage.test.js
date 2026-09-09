@@ -1,0 +1,33 @@
+'use strict';
+const test = require('node:test'), assert = require('node:assert/strict');
+const fs = require('fs'), os = require('os'), path = require('path');
+const { CreatorDatabase } = require('../lib/database');
+const { exportCsv, exportXlsx } = require('../lib/exporter');
+test('contact-only updates preserve creator data and round-trip string values through SQLite and exports', async t => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'creator-contact-test-'));
+  const db = new CreatorDatabase(path.join(dir, 'test.db'));
+  // Keep isolated test artifacts; never open or delete the production library.
+  t.after(() => db.close());
+  await db.open();
+  await db.upsertCreators([{ creator_oecuid:'123', handle:'fixture', follower_cnt:1000, '合作邮箱':'original@example.com', last_publish_time:'2026-09-01' }], {region:'MY'});
+  const before = (await db.listCreators({region:'MY'})).rows[0];
+  assert.equal((await db.updateCreatorContacts('MY', '123', { whatsapp:'001234', line:'line-fixture', follower_cnt:'999', contact_status:'已获取', contact_checked_at:'2026-09-08T00:00:00Z' })).saved, 1);
+  await db.updateCreatorContacts('MY', '123', { whatsapp:'', '合作邮箱':'', contact_status:'未提供' });
+  assert.equal((await db.updateCreatorContacts('US', '123', {whatsapp:'wrong-region'})).saved, 0);
+  assert.equal((await db.updateCreatorContacts('MY', '456', {whatsapp:'missing-creator'})).saved, 0);
+  await db.close(); await db.open();
+  const result = await db.listCreators({region:'MY'}), row = result.rows[0];
+  assert.equal(result.total, 1); assert.equal(row.whatsapp, '001234'); assert.equal(row.line, 'line-fixture');
+  assert.deepEqual(await db.contactTargets({},'MY',true),[]);
+  assert.deepEqual(await db.contactTargets({},'MY',false),['123']);
+  assert.deepEqual(await db.contactTargets({minFollowers:2000},'MY',false),[]);
+  assert.deepEqual(await db.contactTargets({region:'US'},'MY',false),[]);
+  assert.equal(row.follower_count, before.follower_count); assert.equal(row.activity_status, before.activity_status);
+  assert.equal(row.last_refreshed_at, before.last_refreshed_at); assert.equal(row.contact_email, 'original@example.com');
+  const csv = path.join(dir,'contacts.csv'), xlsx = path.join(dir,'contacts.xlsx');
+  await exportCsv(csv,[row],['whatsapp','line']);
+  assert.match(fs.readFileSync(csv,'utf8'), /001234,line-fixture/);
+  await exportXlsx(xlsx,[row],['whatsapp','line']);
+  const ExcelJS = require('exceljs'), book = new ExcelJS.Workbook(); await book.xlsx.readFile(xlsx);
+  assert.equal(book.worksheets[0].getCell('A2').value, '001234');
+});
