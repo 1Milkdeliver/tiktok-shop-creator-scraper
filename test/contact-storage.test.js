@@ -3,6 +3,8 @@ const test = require('node:test'), assert = require('node:assert/strict');
 const fs = require('fs'), os = require('os'), path = require('path');
 const { CreatorDatabase } = require('../lib/database');
 const { exportCsv, exportXlsx } = require('../lib/exporter');
+const { ContactJob, ContactError } = require('../lib/partner-contacts');
+const { parseContacts } = require('../lib/contact-fields');
 test('contact-only updates preserve creator data and round-trip string values through SQLite and exports', async t => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'creator-contact-test-'));
   const db = new CreatorDatabase(path.join(dir, 'test.db'));
@@ -30,4 +32,36 @@ test('contact-only updates preserve creator data and round-trip string values th
   await exportXlsx(xlsx,[row],['whatsapp','line']);
   const ExcelJS = require('exceljs'), book = new ExcelJS.Workbook(); await book.xlsx.readFile(xlsx);
   assert.equal(book.worksheets[0].getCell('A2').value, '001234');
+});
+
+test('all discovered creators survive found, empty and failed contacts; failed refresh stays resumable', async t => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(),'all-creators-first-'));
+  const db = new CreatorDatabase(path.join(dir,'synthetic.db')); t.after(()=>db.close()); await db.open();
+  const jobId = await db.createScrapeJob({shopRegion:'MY'});
+  await db.upsertCreators(['101','102','103'].map(id=>({creator_oecuid:id,handle:'fixture-'+id,follower_cnt:1000})),{region:'MY',jobId});
+  await db.upsertCreators([{creator_oecuid:'104',handle:'outside-job'}],{region:'MY'});
+  assert.ok((await db.listCreators({})).rows.every(r=>r.contact_status==='待补全'));
+  const targets = await db.contactTargets({hasEmail:true,hasWhatsapp:true},'MY',true,jobId);
+  assert.deepEqual(targets,['101','102','103']);
+  const job = new ContactJob({intervalMs:0});
+  job.start({db,region:'MY',targets,client:{resolvePartner:async()=>{},fetchContacts:async(_region,id)=>{
+    if (id==='103') throw new ContactError('CHALLENGE','平台验证');
+    return parseContacts(id==='101'?[{field:1,value:'001234'},{field:2,value:'fixture@example.test'}]:[]);
+  }}}); await job.done;
+  const byId = Object.fromEntries((await db.listCreators({region:'MY'})).rows.map(r=>[r.creator_id,r]));
+  assert.equal(Object.keys(byId).length,4);
+  assert.equal(byId['101'].contact_status,'已获取');
+  assert.equal(byId['102'].contact_status,'未提供');
+  assert.match(byId['103'].contact_status,/待补全.*CHALLENGE/);
+  assert.equal(byId['103'].contact_checked_at,undefined);
+  assert.equal(byId['104'].contact_status,'待补全');
+  assert.equal(job.state.completed,2);
+  assert.deepEqual(await db.contactTargets({},'MY',true,jobId),['103']);
+  const refresh = new ContactJob({intervalMs:0});
+  refresh.start({db,region:'MY',targets:['101'],resume:false,client:{resolvePartner:async()=>{},fetchContacts:async()=>{throw new ContactError('AUTH','登录失效');}}});
+  await refresh.done; await db.close(); await db.open();
+  const kept = (await db.listCreators({search:'101'})).rows[0];
+  assert.equal(kept.whatsapp,'001234'); assert.equal(kept.contact_checked_at,byId['101'].contact_checked_at);
+  assert.match(kept.contact_status,/待补全.*AUTH/);
+  assert.deepEqual(await db.contactTargets({},'MY',true,jobId),['101','103']);
 });

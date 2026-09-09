@@ -5,7 +5,7 @@ const fs = require('fs'), os = require('os'), path = require('path'), vm = requi
 const { CreatorDatabase } = require('../lib/database');
 const { exportCsv } = require('../lib/exporter');
 
-test('WhatsApp and email filters share the same list, count, export and enrichment scope', async t => {
+test('WhatsApp and email filter viewing/export, but never gate contact enrichment', async t => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'library-contact-filters-'));
   const db = new CreatorDatabase(path.join(dir, 'test.db'));
   t.after(() => db.close());
@@ -36,8 +36,9 @@ test('WhatsApp and email filters share the same list, count, export and enrichme
   assert.equal(page.total, 2); assert.equal(page.rows.length, 1);
   assert.deepEqual((await db.listCreatorIds(filters)).sort(), ids(wa.rows));
   assert.deepEqual(await db.listCreatorIds({ ...filters, hasEmail: true }), ['both']);
-  assert.deepEqual((await db.contactTargets(filters, 'MY', false)).sort(), ids(wa.rows));
-  assert.deepEqual(await db.contactTargets({ ...filters, hasEmail: true }, 'MY', false), ['both']);
+  const allMy = await db.listCreatorIds({region:'MY'});
+  assert.deepEqual((await db.contactTargets(filters, 'MY', false)).sort(), allMy.sort());
+  assert.deepEqual((await db.contactTargets({ ...filters, hasEmail: true }, 'MY', false)).sort(), allMy);
   assert.deepEqual(await db.contactTargets(filters, 'TH', false), []);
   assert.deepEqual(await db.listCreatorIds({ ...filters, minFollowers: 2000 }), []);
   assert.equal((await db.listCreators({ ...filters, search: 'missing-fixture' })).total, 0);
