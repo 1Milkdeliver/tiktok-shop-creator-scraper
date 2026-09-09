@@ -171,7 +171,7 @@ The app needs your TikTok Shop Affiliate **login cookie** to access creator data
 
 ### Step 4 — Enrich WhatsApp, LINE and other contacts (optional)
 
-The parallel collection and persistence changes below are **unreleased development changes**; they do not modify an installed 1.4.0 app.
+The parallel collection and persistence changes below are available from **v1.5.0**. Installed 1.4.0 apps need an in-app upgrade. See [v1.5.0 release notes](docs/release-notes-1.5.0.md) for scope and validation limits.
 
 **New tasks: collect profiles and contacts concurrently.** “Enrich contacts alongside collection (parallel)” is enabled by default and can be disabled. Import Partner credentials through the task-page link before starting. Each committed discovery page immediately feeds this run's pending contact queue in the same market. Direct contact API reads overlap seller discovery/detail reads; **they do not wait for the whole run to finish or open individual chat pages**. Creator IDs are deduplicated; successful checks, including confirmed empty responses, are skipped by default. Old configurations without the option remain disabled.
 
@@ -201,7 +201,7 @@ Numbers are stored as text, with separate country codes when provided. **Full pr
 
 **Q: `1.3.2-contacts.2` reports `No published versions on GitHub` when checking for updates?**
 
-A: The old preview omitted an explicit stable-channel policy. The updater infers a custom `contacts` channel from its suffix and ignores stable releases when no matching preview is published. This is not an empty repository or a damaged library. Source now selects stable releases and prohibits downgrades, but the old preview cannot download this fix itself. Stop tasks, exit and back up local data, then perform one manual upgrade with the official installer without uninstalling/clearing data. Continue using in-app updates afterward. This source fix does not replace the published 1.4.0 installer.
+A: The old preview omitted an explicit stable-channel policy. The updater infers a custom `contacts` channel from its suffix and ignores stable releases when no matching preview is published. This is not an empty repository or a damaged library. Version 1.5.0 explicitly selects stable releases and prohibits downgrades, but a preview unable to discover updates cannot download this fix itself. Stop tasks, exit and back up local data, then perform one manual upgrade with the official installer without uninstalling/clearing data. Continue using in-app updates afterward. Normal stable installations still use in-app differential updates first.
 
 **Q: "Page did not load properly"?**  
 A: Check session validity, account permissions, networking and platform verification in the corresponding backend. Re-export the session if necessary; validity is not a fixed three days.
@@ -261,10 +261,10 @@ npm run build -- --publish never  # build → dist/tiktok-shop-creator-scraper-s
 
 The existing path is **version check → user consent → differential download/reconstruction → verification → silent installation when idle or on exit**. Existing users do not need to repeat a manual installer wizard. Publishers still provide a complete installer: the updater downloads ranges from it, and it also serves first installs and full-download fallback.
 
-See [1.4.0 dependencies and compatibility](docs/release-readiness-1.4.0.md) and [real differential/fallback verification](docs/incremental-update-verification-2026-09-09.md). **1.4.1 below is only a next-release example**, not a published version. Replace it consistently and author the corresponding bilingual release-notes file first:
+See [1.4.0 dependencies and compatibility](docs/release-readiness-1.4.0.md) and [real differential/fallback verification](docs/incremental-update-verification-2026-09-09.md). **1.5.1 below is only a next-release example**, not a published version. Replace it consistently and author the corresponding bilingual release-notes file first:
 
 ```bash
-# 1. Bump version (example: 1.4.0 → 1.4.1)
+# 1. Bump version (example: 1.5.0 → 1.5.1)
 npm version patch --no-git-tag-version
 
 # 2. Build installer
@@ -280,23 +280,23 @@ node scripts/verify-update-artifacts.js dist
 
 # 4. Commit and tag
 # Review and stage only source/docs; never credentials, databases or live-test artifacts
-git commit -m "release 1.4.1"
+git commit -m "release 1.5.1"
 git push origin main
-git tag v1.4.1
-git push origin v1.4.1
+git tag v1.5.1
+git push origin v1.5.1
 
 # 5. Create a draft Release and upload all 3 assets (small files first)
 #    ⚠️ Release notes use a FIXED format: English first ("What's new in vX.Y.Z"),
 #    then Chinese ("更新内容"). The update dialog lists every skipped version,
 #    so each version needs both languages.
-gh release create v1.4.1 --draft --title "v1.4.1" --notes-file docs/release-notes-1.4.1.md
-gh release upload v1.4.1 dist/latest.yml dist/tiktok-shop-creator-scraper-setup-1.4.1.exe.blockmap
-gh release upload v1.4.1 dist/tiktok-shop-creator-scraper-setup-1.4.1.exe
+gh release create v1.5.1 --draft --title "v1.5.1" --notes-file docs/release-notes-1.5.1.md
+gh release upload v1.5.1 dist/latest.yml dist/tiktok-shop-creator-scraper-setup-1.5.1.exe.blockmap
+gh release upload v1.5.1 dist/tiktok-shop-creator-scraper-setup-1.5.1.exe
 # Verify uploaded sizes, SHA-512 and latest.yml, then publish the draft
-gh release edit v1.4.1 --draft=false --latest
+gh release edit v1.5.1 --draft=false --latest
 
 # 6. Post-publication differential verification (network, isolated directory, NO installation)
-node scripts/verify-incremental-update.js --live 1.4.0 1.4.1
+node scripts/verify-incremental-update.js --live 1.5.0 1.5.1
 # Existing users: in-app prompt → consent to incremental download → silent install / install on exit
 ```
 

@@ -171,7 +171,7 @@
 
 ### 第四步：补全 WhatsApp、LINE 等联系方式（可选）
 
-以下并行采集与入库调整属于 **未发布的开发版**，不会自动改变已安装的 1.4.0。
+以下并行采集与入库调整从 **v1.5.0** 提供；已安装的 1.4.0 需要通过应用内更新升级。功能范围与验证限制见 [v1.5.0 更新说明](docs/release-notes-1.5.0.md)。
 
 **新任务：边采集资料，边抓联系方式。** 任务中心默认勾选“边采集边补全联系方式（并行）”（可关闭），开始前从任务页授权入口导入团长 Cookie。每页发现的达人提交到本地库后，立即加入本轮、同地区的待检查队列；联系方式接口读取与卖家列表/详情采集同时进行，**不等整轮结束，也不逐位打开聊天页面**。队列中按达人 ID 查重，已经成功检查（含明确未提供）的记录默认跳过。旧任务没有此选项时不会自动启用。
 
@@ -201,7 +201,7 @@
 
 **Q：`1.3.2-contacts.2` 点击检查更新，提示 `No published versions on GitHub`？**
 
-A：这是旧预览版没有明确使用正式更新通道的配置遗漏：更新器根据 `-contacts.2` 后缀只找 `contacts` 通道，因该通道没有公开版本而忽略正式版，并非仓库没有发布或达人库损坏。源码现已明确只查询正式版并禁止降级；但旧预览版无法自行下载这个修复。停止任务、退出并备份本地数据后，需要一次使用正式安装包覆盖升级（不用卸载或删库），之后继续用应用内更新。此修正不修改已经发布的 1.4.0 安装包。
+A：这是旧预览版没有明确使用正式更新通道的配置遗漏：更新器根据 `-contacts.2` 后缀只找 `contacts` 通道，因该通道没有公开版本而忽略正式版，并非仓库没有发布或达人库损坏。v1.5.0 已明确只查询正式版并禁止降级；但无法发现更新的旧预览版不能自行下载这个修复。停止任务、退出并备份本地数据后，需要一次使用正式安装包覆盖升级（不用卸载或删库），之后继续用应用内更新。正常正式版仍优先使用应用内增量更新。
 
 **Q：提示"页面未正常加载"？**  
 A：可能是会话失效、账号权限、网络或平台验证。先在对应后台确认可正常访问，需要时重新导出会话；有效期并非固定 3 天。
@@ -261,10 +261,10 @@ npm run build -- --publish never  # 打包 → dist/tiktok-shop-creator-scraper-
 
 现有更新链路是：**检查版本 → 用户确认 → 差分下载并重建 → 校验 → 空闲时静默安装 / 退出时安装**。不是让每位旧用户重新下载安装向导。发布方仍须提供完整安装包：更新器从该文件分段下载，也用它做首次安装或差分失败回退。
 
-参见 [1.4.0 依赖与兼容说明](docs/release-readiness-1.4.0.md)及[真实增量验证与回退测试](docs/incremental-update-verification-2026-09-09.md)。以下 **1.4.1 只是下一版示例**，不是已发布版本；发布时统一替换版本号并提前撰写对应的中英 Release notes 文件：
+参见 [1.4.0 依赖与兼容说明](docs/release-readiness-1.4.0.md)及[真实增量验证与回退测试](docs/incremental-update-verification-2026-09-09.md)。以下 **1.5.1 只是下一版示例**，不是已发布版本；发布时统一替换版本号并提前撰写对应的中英 Release notes 文件：
 
 ```bash
-# 1. bump 版本号（本例 1.4.0 → 1.4.1）
+# 1. bump 版本号（本例 1.5.0 → 1.5.1）
 npm version patch --no-git-tag-version
 
 # 2. 打包
@@ -280,22 +280,22 @@ node scripts/verify-update-artifacts.js dist
 
 # 4. 提交并打 tag
 # 先审查并仅暂存源码/文档变更，不暂存 Cookie、数据库或真实测试产物
-git commit -m "release 1.4.1"
+git commit -m "release 1.5.1"
 git push origin main
-git tag v1.4.1
-git push origin v1.4.1
+git tag v1.5.1
+git push origin v1.5.1
 
 # 5. 创建草稿 Release 并上传 3 个资产（先传小文件，避免超时）
 #    ⚠️ Release notes 固定格式：英文在前（"What's new in vX.Y.Z"），中文在后（"更新内容"）。
 #    更新弹窗会展示所有跳过的版本，每个版本都要双语。
-gh release create v1.4.1 --draft --title "v1.4.1" --notes-file docs/release-notes-1.4.1.md
-gh release upload v1.4.1 dist/latest.yml dist/tiktok-shop-creator-scraper-setup-1.4.1.exe.blockmap
-gh release upload v1.4.1 dist/tiktok-shop-creator-scraper-setup-1.4.1.exe
+gh release create v1.5.1 --draft --title "v1.5.1" --notes-file docs/release-notes-1.5.1.md
+gh release upload v1.5.1 dist/latest.yml dist/tiktok-shop-creator-scraper-setup-1.5.1.exe.blockmap
+gh release upload v1.5.1 dist/tiktok-shop-creator-scraper-setup-1.5.1.exe
 # 核对资产大小、SHA-512 与 latest.yml 后发布草稿
-gh release edit v1.4.1 --draft=false --latest
+gh release edit v1.5.1 --draft=false --latest
 
 # 6. 公开发布后的差分下载验证（联网，隔离目录，不执行安装）
-node scripts/verify-incremental-update.js --live 1.4.0 1.4.1
+node scripts/verify-incremental-update.js --live 1.5.0 1.5.1
 # 旧用户收到应用内提示 → 确认增量下载 → 静默安装 / 退出时安装
 ```
 

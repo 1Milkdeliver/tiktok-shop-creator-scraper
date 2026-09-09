@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-09-09
+
+Release scope, upgrade method and validation boundaries: [release notes](docs/release-notes-1.5.0.md).
+
 ### Changed / 更新内容
 
 - Contact-only enrichment explicitly processes the full starting filter/market scope without a software-imposed creator limit. Deduplicate and snapshot IDs so table pagination, changing results and caller mutations do not truncate or duplicate work.
@@ -13,7 +17,11 @@
 - Remove the 500-input truncation and sparse-page termination heuristic. Unchanged pagination or failed persistence reports an incomplete run and retains checkpoints; no claim of entire-platform coverage. Keep the seller detail callback's runner context so progress/resume recording can complete.
 - Share a write gate across seller/import transactions and contact patches, preserving verified contacts against late, stale or blank seller flushes. Task Stop/close stops both stages; contact-only Stop or errors never silently restart on later pages. Pause holds new contact reads; completed responses still save. UI distinguishes waiting, draining and contacts pending from full completion.
 - 新增“边采集边补全联系方式（并行）”：每页达人入库即加入联系方式队列，与列表/详情同时读取，不等整轮结束。联系方式继续单队列、安全间隔请求；网络并行、入库排队，防止相互覆盖。有无联系方式都保留；未提供与读取失败分开标记。空队列等待新达人不假报完成，资料结束后继续处理剩余联系方式。任务结束/退出停止两条流程，单独停止联系方式不会停止资料采集，也不会被新页面自动重启。保留查重、逐位入库和手动断点续抓，不删除用户数据库、不发送消息。
-- Verification: 76 offline tests pass, including 1,005 synthetic creators saved across a 503 / 502 Stop-and-reopen continuation, page-before-detail persistence, 501-ID input, sparse pagination, failed-save handling, streaming overlap through real main-process hooks, queue pacing/late arrivals, pause/stop races, region/job isolation, concurrent SQLite patches and truthful task UI states. These are fixture/SQLite tests, not live accuracy or speed measurements. No production library, credentials or live platform requests were used; no new installer release or in-place installation has been performed.
+- Accept confirmed successful empty contact envelopes as “not provided”, rather than treating an omitted contact list as a fatal response. Authentication, verification and malformed responses still pause safely.
+- Select stable GitHub releases explicitly, including when upgrading from a local preview build, and prohibit downgrades. Keep differential download/reconstruction, hash verification, full-download fallback and idle/on-exit installation; retain the same application identity and data directory.
+- Dependencies and database schema are unchanged from 1.4.0. No uninstall, database reset or production installation is required by the release tests.
+- 修复成功响应未附联系方式列表时误报异常的问题；确认为未提供时正常保存并继续。明确使用正式更新通道，保留原有增量下载、校验与应用内安装流程，不改变本地库目录。
+- Verification coverage includes 1,005 synthetic creators across Stop-and-reopen continuation, page-before-detail persistence, 501-ID input, sparse pagination, failed-save handling, streaming overlap through real main-process hooks, pacing/late arrivals, pause/stop races, region/job isolation, concurrent SQLite patches, truthful task UI and empty responses. Offline fixtures do not establish live accuracy or unlimited capacity; bounded live contact results and remaining limitations are documented in the release notes.
 
 ## [1.4.0] - 2026-09-09
 
