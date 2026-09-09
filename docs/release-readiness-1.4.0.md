@@ -2,6 +2,8 @@
 
 验证日期：2026-09-09。结果来自本机检查，不是 GitHub Actions 或全平台兼容认证。正式安装包以 GitHub `v1.4.0` Release 的资产为准；不要分发旧的安全检查失败候选包。
 
+**发布后补验（同日）：** 已补齐 1.3.0 → 1.3.1、1.3.1 → 1.4.0 的真实差分下载、重建及 SHA-512 / SHA-256 验证；新增 11 项更新回归后总计 45 项通过。[完整记录、实际下载量与边界](incremental-update-verification-2026-09-09.md)。下文“34 项”是发布前检查的历史记录，不应理解为覆盖了这次补验；安装/重启仍未执行。
+
 ## 升级了什么，为什么升级
 
 | 组件 | 上一候选包实际版本 | 1.4.0 版本 | 原因与应用侧适配 |
@@ -39,7 +41,7 @@
 ## 未验证范围
 
 - 未在 Windows 10、ARM64、32 位 Windows、macOS/Linux 上执行安装/运行矩阵；本次只发布 Windows x64 安装包。
-- 未运行 NSIS 安装/卸载、覆盖正在运行的旧版本或实际自动更新下载安装。元数据、模块和 IPC 检查不等同于安装端到端验证。
+- 未运行 NSIS 安装/卸载、覆盖正在运行的旧版本或实际自动更新安装/重启。发布后补验已实际下载并重建更新包，但没有运行旧版 UI 流程或执行安装，仍不等同于安装端到端验证。
 - 正式计入结果的兼容脚本不读取真实 Cookie 或发起平台采集；Chrome 验证使用合成 Cookie。首次无效启动的边界见上文。
 - 此前联系方式接口仅通过小样本真实验证，不代表每位达人都有 WhatsApp、LINE 或邮箱。没有提供的字段保持为空。
 - **完整资料自动补全仍是默认关闭、待实测的可选功能**。此前接口遇到平台验证；正常打开详情网页不等于完整自动采集已经可用。
@@ -49,7 +51,7 @@
 
 1. 安装前停止采集并退出应用，再备份原 userData 目录（含数据库及可能存在的 WAL/SHM 文件）。备份只保存在本机，不上传 GitHub。
 2. 保留原 appId、产品名和数据目录；依赖升级本身没有新增数据库 schema 变更。不删除、重建用户达人库。
-3. 使用 Release 中的 `tiktok-shop-creator-scraper-setup-1.4.0.exe`。现有 NSIS 脚本会结束旧应用进程，不要在任务运行中覆盖安装。
+3. 已安装用户优先重新打开软件，通过“检查更新”确认增量下载，空闲时静默安装或退出时安装；仅首次安装/应用内更新失败时手动使用 Release 的 exe。现有 NSIS 脚本会结束旧应用进程，不要在任务运行中手动覆盖安装。
 4. 安装包未签名，Windows 可能显示 SmartScreen 提示；先确认官方仓库和校验值，不要关闭系统防护。
 5. 回退前退出应用并另存当前数据，使用保留的历史安装包。跨驱动合成读写测试不保证所有历史应用 schema 均可逆；不要覆盖唯一备份或让不同版本同时写同一数据库。
 
@@ -81,3 +83,5 @@ node scripts/verify-update-artifacts.js dist
 ## English summary
 
 Electron, builder, Puppeteer and SQLite were upgraded with pinned versions and reviewed compatibility changes. The local audit reports zero known vulnerabilities. All 34 offline tests, synthetic cross-driver database/export checks, loopback-only real Chrome checks, packaged-module checks and isolated packaged-source IPC startup checks passed. No install-over-production or new live platform scraping was performed in these compatibility checks. The first startup harness attempt was invalid and excluded; its corrected isolated replacement passed. The Windows x64 installer is unsigned. Experimental full-profile collection remains off by default and pending live validation. Back up local data after stopping tasks and closing the app before upgrading.
+
+Post-release addendum: two real differential downloads/reconstructions passed published SHA-512/SHA-256 verification, and 11 new updater regressions bring the suite to 45 passing tests. Existing users should use in-app incremental updates and silent/on-exit installation; manual installation is a fallback. Installation/restart and the old runtime UI were not exercised. See the linked incremental verification record above.
