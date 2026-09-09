@@ -941,8 +941,8 @@ https://www.tiktok.com/@makeup.lover'></textarea>
         <div class="scrape-field-head"><strong data-i18n="scrapeFields.title">本次会抓取的字段</strong><span id="scrapeFieldCount"></span></div>
         <div class="scrape-field-chips" id="scrapeFieldPreview"></div>
       </div>
-      <label class="check-label" style="margin-top:14px"><input type="checkbox" id="autoContacts" checked> <span data-i18n="contacts.auto">采集后自动补全全部联系方式</span></label>
-      <div class="hint" data-i18n="contacts.autoHint">所有发现的达人先入库，再用团长授权补全本轮未检查的联系方式。有无联系方式都保存；读取失败保留待补全，不当作“未提供”。不自动发送消息。</div>
+      <label class="check-label" style="margin-top:14px"><input type="checkbox" id="autoContacts" checked> <span data-i18n="contacts.auto">边采集边补全联系方式（并行）</span></label>
+      <div class="hint" data-i18n="contacts.autoHint">每页达人入库后立即加入联系方式队列，与列表/详情采集同时运行，不等整轮结束。联系方式按安全间隔逐位请求；有无联系方式都保存。请先设置团长授权；读取失败保留待补全，不自动发送消息。</div>
     </div>
     <div style="margin-top:14px">
       <div style="font-size:13px;font-weight:600;color:var(--text-2);margin-bottom:8px" data-i18n="step4.scope">抓取范围</div>
@@ -1964,13 +1964,20 @@ async function poll() {
         }
         detail.textContent = (uiLang === 'zh' ? '抓取中' : 'Running') + SPINNER[spinIdx] + kwText + (info.total ? (uiLang === 'zh' ? `（已收集 ${info.total.toLocaleString()} 条）` : ` (${info.total.toLocaleString()} collected)`) : '') + speedText + phaseText;
       }
+    } else if (j.contacts?.running) {
+      syncMainButton('start', {disabled:true}); setStopButtonActive(true); lockOptions(true);
+      startSpin(uiLang === 'zh' ? '⏳ 联系方式采集中' : '⏳ Collecting contacts');
+      detail.textContent = uiLang === 'zh'
+        ? `资料已保存；联系方式已检查 ${j.contacts.completed} / ${j.contacts.total}，正在处理队列余项。`
+        : `Profiles saved; contacts checked ${j.contacts.completed} / ${j.contacts.total}. Draining the remaining queue.`;
     } else if (j.status === 'paused') {
       stopSpin();
       syncMainButton('resume', { disabled: false });
       setStatus(uiLang === 'zh' ? '⏸ 已暂停' : '⏸ Paused', '');
       detail.textContent = uiLang === 'zh' ? '已暂停' : 'Paused';
     } else if (j.result && j.result.ok) {
-      stopSpin(); setStatus(uiLang === 'zh' ? '✅ 完成' : '✅ Done', 'done');
+      const contactsPending = j.contacts && j.contacts.outcome !== 'completed';
+      stopSpin(); setStatus(contactsPending ? (uiLang === 'zh' ? '资料已保存 · 联系方式待继续' : 'Profiles saved · contacts pending') : (uiLang === 'zh' ? '✅ 完成' : '✅ Done'), contactsPending ? '' : 'done');
       // Auto-remove cookies that were CONFIRMED invalid during this run
       // (landed on login/blank page). Cookies merely "expired by date" but
       // still working are kept. doneAt guards against re-processing on polls.
@@ -1988,7 +1995,7 @@ async function poll() {
             : `⚠️ Auto-removed ${removedNames.length} confirmed-invalid account cookie(s) (redirected to login/blank page). Cookies merely expired-by-date but still working were kept.`);
         }
       }
-      showResult(j.result); detail.textContent = ''; syncMainButton('start', { disabled: false }); setStopButtonActive(false); lockOptions(false); refreshAppData();
+      showResult(j.result); detail.textContent = contactsPending ? (uiLang === 'zh' ? '联系方式尚未全部检查，原因和续抓入口见下方联系方式进度。' : 'Contacts are not fully checked. See contact progress below for the reason and resume controls.') : ''; syncMainButton('start', { disabled: false }); setStopButtonActive(false); lockOptions(false); refreshAppData();
     }
     else if (j.result && !j.result.ok) { stopSpin(); setStatus(uiLang === 'zh' ? '❌ 出错' : '❌ Error', 'error'); detail.textContent = ''; syncMainButton('start', { disabled: false }); setStopButtonActive(false); lockOptions(false); }
     renderLibraryUpdateProgress(j);
@@ -2015,12 +2022,12 @@ function showResult(r) {
   const detailText = r.details ? ` + ${r.details} 条详情` : '';
   if (inserted || updated) {
     box.innerHTML = uiLang === 'zh'
-      ? `✅ 抓取完成：${r.creators} 条达人${detailText}，已并入达人库<br>🆕 新增 ${inserted.toLocaleString()} 位 · 🔄 更新 ${updated.toLocaleString()} 位`
-      : `✅ Done: ${r.creators} creators${detailText}, merged into library<br>🆕 ${inserted.toLocaleString()} new · 🔄 ${updated.toLocaleString()} updated`;
+      ? `✅ 资料已保存：${r.creators} 条达人${detailText}，已并入达人库<br>🆕 新增 ${inserted.toLocaleString()} 位 · 🔄 更新 ${updated.toLocaleString()} 位`
+      : `✅ Profiles saved: ${r.creators} creators${detailText}, merged into library<br>🆕 ${inserted.toLocaleString()} new · 🔄 ${updated.toLocaleString()} updated`;
   } else {
     box.innerHTML = uiLang === 'zh'
-      ? `✅ 抓取完成：${r.creators} 条达人${detailText}（已并入达人库）`
-      : `✅ Done: ${r.creators} creators${detailText} (merged into library)`;
+      ? `✅ 资料已保存：${r.creators} 条达人${detailText}（已并入达人库）`
+      : `✅ Profiles saved: ${r.creators} creators${detailText} (merged into library)`;
   }
 }
 
@@ -2056,6 +2063,7 @@ document.getElementById('btnStart').onclick = async () => {
     await window.api.pause(); syncMainButton('resume'); return;
   }
   if (st && st.stopping) return; // ignore clicks while winding down
+  if (st?.contacts?.running) return; // the parallel contact queue is still draining
 
   // ---- start a new scrape ----
   if (!cookieList.length) { alert(I18N['alert.noCookie'][uiLang]); return; }

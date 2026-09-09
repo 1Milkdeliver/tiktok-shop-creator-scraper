@@ -53,4 +53,17 @@ test('actual contact UI shows unbounded scope, durable pause counts and recovery
   await listeners.DOMContentLoaded();
   assert.match(el('taskContactProgress').textContent,/正在准备本轮/);
   assert.equal(el('taskContactStop').disabled,false);assert.equal(el('contactStart').disabled,true);
+  status={...status,running:true,preparing:false,streaming:true,producerOpen:true,waitingForCreators:true,collecting:true,automatic:{outcome:'streaming'}};
+  await listeners.DOMContentLoaded();
+  assert.match(el('taskContactProgress').textContent,/资料采集仍在继续.*队列暂空.*尚未结束/);
+  assert.equal(el('contactStart').disabled,true);assert.equal(el('contactImport').disabled,true);
+  status={...status,collecting:false,producerOpen:false,waitingForCreators:false};
+  await listeners.DOMContentLoaded();
+  assert.match(el('taskContactProgress').textContent,/资料采集已结束.*继续处理已入队达人/);
+  context.uiLang='en';status={...status,collecting:true,collectionPaused:true,suspended:true};
+  await listeners.DOMContentLoaded();
+  assert.match(el('taskContactProgress').textContent,/Profile collection paused.*Contacts waiting/);
+  status={...status,running:false,outcome:'paused',suspended:false,collectionPaused:false};
+  await listeners.DOMContentLoaded();
+  assert.match(el('taskContactProgress').textContent,/Paused; progress saved.*Profile collection still running/);
 });

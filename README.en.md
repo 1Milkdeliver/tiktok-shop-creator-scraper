@@ -171,9 +171,18 @@ The app needs your TikTok Shop Affiliate **login cookie** to access creator data
 
 ### Step 4 — Enrich WhatsApp, LINE and other contacts (optional)
 
-The automatic handoff and persistence changes below are **unreleased development changes**; they do not modify an installed 1.4.0 app.
+The parallel collection and persistence changes below are **unreleased development changes**; they do not modify an installed 1.4.0 app.
 
-**New tasks: save creators first, then enrich contacts.** The task page enables “Automatically enrich all contact types after collection” by default; it can be disabled. Each discovered page is saved to the local library before details. Once collection finishes, enrich only this run’s pending creators in its market, never unrelated tasks or markets. Creators remain with or without contacts: a confirmed empty response is “Not provided”; failed reads remain pending and preserve old values. Missing Partner authorization, Stop or failed storage prevents automatic handoff. The task page links to authorization, logs and resume controls. Old task configurations without this explicit option remain disabled.
+**New tasks: collect profiles and contacts concurrently.** “Enrich contacts alongside collection (parallel)” is enabled by default and can be disabled. Import Partner credentials through the task-page link before starting. Each committed discovery page immediately feeds this run's pending contact queue in the same market. Direct contact API reads overlap seller discovery/detail reads; **they do not wait for the whole run to finish or open individual chat pages**. Creator IDs are deduplicated; successful checks, including confirmed empty responses, are skipped by default. Old configurations without the option remain disabled.
+
+```text
+Discover page -> Commit base rows -> Continue discovery / profiles -> Incremental profile updates
+                                 -> Contact queue -> API reads -> Merge email, WhatsApp, LINE, etc.
+```
+
+Parallel means two overlapping collection stages, not unbounded requests. The contact consumer remains serial, with at least 10 seconds after a successful save before the next creator request. No fixed speedup is promised. Base transactions and contact patches share a write gate; later seller refreshes preserve verified contacts. An empty queue waits for new creators rather than announcing completion. Once discovery ends, remaining contacts drain, with both stages visible in task progress.
+
+Creators remain with or without contacts. Confirmed empty responses are “Not provided”; failed reads remain pending without clearing old values. Missing authorization or an unsupported market does not block base saves; import during collection does not silently restart the queue. Actual contact throttling, verification, login/access or data errors stop the contact consumer; later discovered creators remain saved and pending, without automatic restart. Task Stop and closing an active task stop both stages. The contact panel's Stop affects only contacts, allowing profiles to continue. Pausing profiles prevents new contact reads; completed responses still commit. After restart, reimport Partner credentials and resume from the library using the same filters with Skip checked creators.
 
 Input lists are no longer truncated to 500 creators; sparse pages no longer terminate search early. Only the account-visible, platform-returned scope is processed, not guaranteed coverage of all TikTok creators. Unchanged pagination retains a checkpoint and reports incomplete collection. Writes merge into the existing library; missing contacts never cause a creator or database to be deleted.
 
