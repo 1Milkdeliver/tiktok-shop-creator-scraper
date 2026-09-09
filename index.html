@@ -778,8 +778,9 @@
         <button type="button" class="btn-link" id="contactPreview" data-i18n="contacts.preview">刷新范围</button>
       </div>
       <p id="contactScope" role="status" aria-live="polite"></p>
-      <p class="hint" data-i18n="contacts.pacing">范围 = 当前达人库筛选 ∩ 所选地区。逐位保存，串行间隔 10 秒；遇到限流、验证码或会话失效即停止。平台未提供的字段不会覆盖库中已有值。普通卖家采集仍保持原有流程。</p>
-      <div class="contact-actions"><button type="button" class="btn btn-primary" id="contactStart" disabled data-i18n="contacts.start">开始补全</button><button type="button" class="btn btn-secondary" id="contactStop" disabled data-i18n="contacts.stop">停止并保留进度</button></div>
+      <p class="hint" data-i18n="contacts.pacing">不设固定条数上限：启动时锁定当前筛选与所选地区，去重后持续抓完该范围，逐位入库。实际出现限流、验证或登录/权限异常时暂停。</p>
+      <p class="hint" data-i18n="contacts.recovery">仅联系方式模式遇到短暂网络故障自动等待重试，可随时停止；写库失败或返回结构异常保留进度暂停，不会误报完成。</p>
+      <div class="contact-actions"><button type="button" class="btn btn-primary" id="contactStart" disabled data-i18n="contacts.start">开始 / 继续补全</button><button type="button" class="btn btn-secondary" id="contactStop" disabled data-i18n="contacts.stop">停止并保留进度</button></div>
       <p id="contactProgress" role="status" aria-live="polite">0 / 0</p>
       <pre class="contact-log" id="contactLog" tabindex="0" aria-label="联系方式任务日志">尚未开始。任务执行后，这里显示实时进度；不显示联系方式原值。</pre>
     </div>

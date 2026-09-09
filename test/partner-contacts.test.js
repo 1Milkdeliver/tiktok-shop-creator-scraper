@@ -75,3 +75,77 @@ test('DB failure is not counted as success or retried', async () => {
   job.start({region:'MY',targets:['123'],client:{resolvePartner:async()=>{},fetchContacts:async()=>({contact_status:'已获取'})},db:{updateCreatorContacts:async()=>{throw new Error('sensitive data');}}});
   await job.done; assert.equal(job.state.completed,0); assert.equal(job.state.errorCode,'SAVE'); assert.doesNotMatch(JSON.stringify(job.snapshot()),/sensitive data/);
 });
+
+test('job snapshots and deduplicates the full scope without accepting later mutations', async () => {
+  const targets = ['123','456','123'], calls = [];
+  const job = new ContactJob({intervalMs:0});
+  job.start({region:'MY',targets,client:{resolvePartner:async()=>{},fetchContacts:async(_region,id)=>{
+    calls.push(id); return {contact_status:'未提供'};
+  }},db:{updateCreatorContacts:async()=>({saved:1})}});
+  targets.splice(0, targets.length, '789');
+  await job.done;
+  assert.deepEqual(calls,['123','456']);
+  assert.equal(job.state.total,2); assert.equal(job.state.completed,2);
+  assert.equal(job.state.outcome,'completed');
+  assert.throws(()=>job.start({targets:[123]}),{code:'CREATOR_ID'});
+});
+
+test('transient reads recover beyond a fixed retry count, without duplicate writes or skipping IDs', async () => {
+  const failures = [new ContactError('NETWORK','private transport detail'),new ContactError('TIMEOUT','timeout'),
+    ...[500,502,503,504,503,503].map(status => {
+      try { decodeResponse(status,{},'private body'); } catch (error) { return error; }
+    })];
+  const job = new ContactJob({intervalMs:0,retryDelaysMs:[0]}), calls = [], saved = [];
+  let contextCalls = 0;
+  job.start({region:'MY',targets:['123','456'],client:{resolvePartner:async()=>{
+    if (++contextCalls === 1) throw new ContactError('NETWORK','private context detail');
+  },fetchContacts:async(_region,id)=>{
+    calls.push(id);
+    if (failures.length) throw failures.shift();
+    return {contact_status:'已获取'};
+  }},db:{updateCreatorContacts:async(_region,id)=>{saved.push(id);return {saved:1};}}});
+  await job.done;
+  assert.equal(contextCalls,2);
+  assert.deepEqual(calls,[...Array(9).fill('123'),'456']);
+  assert.deepEqual(saved,['123','456']);
+  assert.equal(job.state.retryCount,9); assert.equal(job.state.retryAt,null);
+  assert.equal(job.state.completed,2); assert.equal(job.state.outcome,'completed');
+  assert.equal(job.state.errorCode,undefined);
+  assert.doesNotMatch(JSON.stringify(job.snapshot()),/private/);
+});
+
+test('Stop cancels a long recovery wait immediately, without marking the creator checked', {timeout:3000}, async () => {
+  const job = new ContactJob({retryDelaysMs:[300000]}); let calls = 0, writes = 0;
+  const originalLog = job.log.bind(job);
+  job.log = text => { originalLog(text); if (job.state.retryAt) queueMicrotask(()=>job.stop()); };
+  const started = Date.now();
+  job.start({region:'MY',targets:['123'],client:{resolvePartner:async()=>{},fetchContacts:async()=>{
+    calls++; throw new ContactError('NETWORK','temporary');
+  }},db:{updateCreatorContacts:async()=>{writes++;return {saved:1};}}});
+  await job.done;
+  assert.equal(calls,1); assert.equal(writes,0); assert.equal(job.state.completed,0);
+  assert.equal(job.state.outcome,'stopped'); assert.equal(job.state.retryAt,null);
+  assert.ok(Date.now()-started<1000);
+});
+
+test('actual throttling, auth, challenges and invalid data pause immediately without auto retry', async () => {
+  for (const code of ['RATE_LIMIT','QUOTA','CHALLENGE','AUTH','COOKIE_MISSING','MARKET_AUTH','RESPONSE','API']) {
+    const job = new ContactJob({intervalMs:0,retryDelaysMs:[0]}); let calls = 0, writes = 0;
+    job.start({region:'MY',targets:['123','456'],client:{resolvePartner:async()=>{},fetchContacts:async()=>{
+      calls++; throw new ContactError(code,'已暂停');
+    }},db:{updateCreatorContacts:async()=>{writes++;return {saved:1};}}});
+    await job.done;
+    assert.equal(calls,1,code); assert.equal(writes,0,code);
+    assert.equal(job.state.errorCode,code); assert.equal(job.state.retryCount,0);
+    assert.equal(job.state.outcome,'paused'); assert.equal(job.state.completed,0);
+  }
+});
+
+test('full-profile mode keeps its existing no-retry policy', async () => {
+  const job = new ContactJob({retryDelaysMs:[0]}); let calls = 0;
+  job.start({region:'MY',targets:['123'],mode:'full',client:{resolvePartner:async()=>{
+    calls++; throw new ContactError('NETWORK','connection failed');
+  }},db:{}});
+  await job.done;
+  assert.equal(calls,1); assert.equal(job.state.retryCount,0); assert.equal(job.state.outcome,'paused');
+});
