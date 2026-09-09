@@ -868,6 +868,10 @@ function isNewer(latest, cur) {
 
 // ---- auto-update: electron-updater downloads & installs the new build in-app ----
 const { autoUpdater } = require('electron-updater');
+// Local preview suffixes (e.g. -contacts.2) must not strand users on a private
+// prerelease channel with no published releases. Always offer stable upgrades.
+autoUpdater.allowPrerelease = false;
+autoUpdater.allowDowngrade = false;
 autoUpdater.autoDownload = false; // ask the user first, then download
 autoUpdater.autoInstallOnAppQuit = true;
 

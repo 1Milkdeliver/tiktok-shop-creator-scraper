@@ -2,6 +2,10 @@
 
 验证日期：2026-09-09。补充此前仅覆盖更新资产元数据的检查。本次使用 GitHub 正式 Release 的真实安装包和 blockmap，实际执行差分下载与重建；**未执行安装包，也未修改生产达人库或更新缓存**。
 
+> **后续发现的独立问题（同日）：** 用户运行的 `1.3.2-contacts.2` 在版本发现阶段报告 `No published versions on GitHub`。下述两条稳定版的差分测试没有覆盖这个入口。使用真实 GitHub 元数据已复现：更新器默认根据预发布后缀启用 `contacts` 自定义通道，找不到同通道版本时忽略正式版；显式设置 `allowPrerelease = false` 后可发现 `v1.4.0`。源码同时保持 `allowDowngrade = false`。新增 5 项通道/版本回归后完整套件为 **50 项通过**。旧预览版仍需一次人工确认的正式版覆盖升级，不能靠尚未下载的源码修复自身。本次没有自动执行该安装，也未替换原 Release 资产。
+
+该通道修正另外通过独立 `win-unpacked` 构建、15 项打包模块核对和隐藏窗口的包内源码/preload/IPC 启动验证；测试使用临时数据目录。生成的是未发布检查产物，不是覆盖用户应用的安装包。
+
 ## 结论与原有设计
 
 原有应用内增量更新没有被改成强制手动下载安装。`main.js` 保留 `autoDownload = false`（用户确认后下载）、`autoInstallOnAppQuit = true`，以及空闲时 `quitAndInstall(true, true)` 静默安装。新版另外避免在联系方式补全期间立即重启。
@@ -87,6 +91,10 @@ node scripts/verify-incremental-update.js --live 1.3.1 1.4.0
 - 当前脚本依赖更新器内部 API。将来升级 `electron-updater` 时先跑这些回归，并重新做真实下载验证，不能只检查 `latest.yml`。
 
 ## English summary
+
+Follow-up: the user's `1.3.2-contacts.2` preview failed earlier, during version discovery, because its inferred custom prerelease channel had no published match. This entry point was not covered by the stable-to-stable differential tests below. Real GitHub metadata reproduced the error; explicitly disabling prerelease selection discovers stable `v1.4.0`. Source also prohibits downgrades. Five additional channel/version regressions bring the suite to 50 passing tests. The installed preview still needs a one-time, user-approved official-installer upgrade; no installation or asset replacement was performed here.
+
+The channel fix also passed an isolated unpacked build, 15 packaged-module checks and hidden packaged-source/preload/IPC startup verification with temporary user data. This unpublished check build was not installed over the user's application.
 
 The original in-app incremental + silent-install workflow remains intact. Two real GitHub differential downloads were reconstructed with electron-updater 6.8.9 and stock Electron 43.6.0, using isolated caches. Both matched the published SHA-512 and SHA-256 and made no full-installer request during the differential phase.
 

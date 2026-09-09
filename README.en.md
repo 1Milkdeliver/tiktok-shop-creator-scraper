@@ -181,6 +181,10 @@ Numbers are stored as text, with separate country codes when provided. **Full pr
 
 ## ❓ FAQ
 
+**Q: `1.3.2-contacts.2` reports `No published versions on GitHub` when checking for updates?**
+
+A: The old preview omitted an explicit stable-channel policy. The updater infers a custom `contacts` channel from its suffix and ignores stable releases when no matching preview is published. This is not an empty repository or a damaged library. Source now selects stable releases and prohibits downgrades, but the old preview cannot download this fix itself. Stop tasks, exit and back up local data, then perform one manual upgrade with the official installer without uninstalling/clearing data. Continue using in-app updates afterward. This source fix does not replace the published 1.4.0 installer.
+
 **Q: "Page did not load properly"?**  
 A: Check session validity, account permissions, networking and platform verification in the corresponding backend. Re-export the session if necessary; validity is not a fixed three days.
 
