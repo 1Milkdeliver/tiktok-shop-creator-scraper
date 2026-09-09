@@ -1,5 +1,29 @@
 # Changelog
 
+## [Unreleased] - Partner contacts preview
+
+### Added
+
+- Enrich existing library records with available Partner Center WhatsApp, LINE, email, Zalo, Viber, Facebook and other contact fields. Country codes, provenance and collection status are kept separately.
+- Shared “Has email” and “Has WhatsApp” filters for library results, exports and enrichment scope; a “Deselect all” field action keeps the Creator Page column visible.
+- Serial enrichment with incremental saves, redacted progress logs, resume support and immediate stopping on verification, authentication, quota or rate-limit errors.
+- Experimental full-profile enrichment with module-level checkpoints and field-availability status. This remains opt-in and explicitly marked **pending live validation**.
+- Offline storage and readback verification for reviewed visible-page observations, preserving reporting periods, original displayed units and separate all-content/product-content metrics.
+
+### Privacy and validation
+
+- Partner credentials stay in main-process memory for the current run and are not added to logs or exports. Local credentials, databases and live-test artifacts are excluded from Git.
+- Contact API reads have passed bounded live tests; full-profile API requests still require platform verification. Reading a normal detail page is not proof that automatic full-profile collection works.
+- This is a source-code preview, not a new stable installer release. Existing seller discovery remains unchanged.
+
+### 更新内容
+
+- 新增团长后台联系方式补全，分别保存 WhatsApp、LINE、邮箱和其他联系方式、国家码、来源与检查状态。
+- 达人库新增“有邮箱 / 有 WhatsApp”筛选和“取消全选”字段操作；列表、导出、补全使用相同筛选范围。
+- 逐位或逐模块保存，遇到验证、会话异常或额度限制立即停止；完整资料模式仍为待实测的可选功能。
+- 正常网页可见数据支持分口径存储与回读核验，不将页面观察误记为完整自动采集成功。
+- 本次仅更新开发分支代码，不替换正式安装包，不上传 Cookie、达人数据或数据库备份。
+
 ## [1.3.1] - 2026-08-25
 
 ### Changed
