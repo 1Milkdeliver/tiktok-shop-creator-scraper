@@ -48,6 +48,55 @@ test('missing contact_info is an error, not a successful empty result', async ()
   await assert.rejects(client.fetchContacts('MY','123'),{code:'RESPONSE'});
 });
 
+test('explicit successful empty contact envelopes mean not provided, including the observed omitted list', async () => {
+  for (const response of [
+    {code:0,message:'success'},
+    {code:0,message:'success',contact_info:null},
+    {code:'0',message:'Success',data:{}},
+    {code:0,message:'success',data:{contact_info:null}},
+    {code:0,contact_info:[]},
+  ]) {
+    const client=new PartnerContactClient(cookies,{request:async()=>response}); client.contexts.set('MY','222');
+    const patch=await client.fetchContacts('MY','123');
+    assert.equal(patch.contact_status,'未提供');
+    assert.ok(patch.contact_checked_at);
+    assert.equal(patch.contact_source,'TikTok Shop Partner Center');
+    assert.equal(patch.whatsapp,undefined);
+    assert.equal(patch['合作邮箱'],undefined);
+  }
+});
+
+test('successful-looking malformed or unknown payloads are not classified as empty contacts', async () => {
+  for (const response of [
+    {code:0,message:'success',contact_info:{}},
+    {code:0,message:'success',contact_info:''},
+    {code:0,message:'success',data:{contact_info:123}},
+    {code:0,message:'success',data:[]},
+    {code:0,message:'success',data:{changed_contract:true}},
+    {code:0,message:'success',challenge:true},
+    {code:0,message:'login required'},
+  ]) {
+    const client=new PartnerContactClient(cookies,{request:async()=>response}); client.contexts.set('MY','222');
+    await assert.rejects(client.fetchContacts('MY','123'),{code:'RESPONSE'});
+  }
+});
+
+test('a real-client empty envelope is saved once and the job continues to the next creator', async () => {
+  let calls=0; const saved=[];
+  const client=new PartnerContactClient(cookies,{request:async()=>++calls===1?
+    {code:0,message:'success'}:{code:0,contact_info:[{field:1,value:'001234'}]}});
+  client.contexts.set('MY','222');
+  const job=new ContactJob({intervalMs:0});
+  job.start({region:'MY',targets:['123','456'],client,db:{updateCreatorContacts:async(_region,id,patch)=>{
+    saved.push({id,patch});return {saved:1};
+  }}});
+  await job.done;
+  assert.equal(calls,2);assert.equal(job.state.completed,2);
+  assert.equal(job.state.empty,1);assert.equal(job.state.found,1);
+  assert.equal(job.state.outcome,'completed');assert.equal(job.state.retryCount,0);
+  assert.deepEqual(saved.map(row=>row.patch.contact_status),['未提供','已获取']);
+});
+
 test('job saves incrementally, stops on quota without retry, and keeps logs redacted', async () => {
   let calls = 0; const saved = [];
   const job = new ContactJob({intervalMs:0});
