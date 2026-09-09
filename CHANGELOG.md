@@ -5,10 +5,14 @@
 ### Changed / 更新内容
 
 - Contact-only enrichment explicitly processes the full starting filter/market scope without a software-imposed creator limit. Deduplicate and snapshot IDs so table pagination, changing results and caller mutations do not truncate or duplicate work.
-- Retry transient contact reads after 30 / 60 / 120 seconds, then every 5 minutes until recovery or user cancellation. Actual throttling, verification, authentication/access failures, invalid responses and failed database writes still pause safely; full-profile and seller collection policies are unchanged.
+- Retry transient contact reads after 30 / 60 / 120 seconds, then every 5 minutes until recovery or user cancellation. Actual throttling, verification, authentication/access failures, invalid responses and failed database writes still pause safely; full-profile retry policy and seller browser/authentication/pacing settings are unchanged.
 - Display completed, paused, stopped and recovering states, with remaining counts and a retry countdown. Saved creators, including confirmed empty contact responses, remain resumable checkpoints after restart.
-- 不设软件固定条数上限，按启动时筛选与地区的交集去重、逐位入库并持续处理。短暂网络异常自动退避重试，实际限流/验证/登录异常不重试；写库失败或返回结构异常也保留进度暂停。原卖家采集不变。
-- Verification: 57 offline tests pass, including 1,005 synthetic creators saved across a 503 / 502 Stop-and-reopen continuation with no duplicate or omitted writes. Packaged module, SQLite and hidden startup/IPC checks pass. No production library, credentials or live platform requests were used; no new installer release or in-place installation has been performed.
+- 不设软件固定条数上限，按启动时筛选与地区的交集去重、逐位入库并持续处理。短暂网络异常自动退避重试，实际限流/验证/登录异常不重试；写库失败或返回结构异常也保留进度暂停。卖家登录、浏览器与请求间隔设置保留。
+- Save each discovered page before profile requests, then optionally hand off this run's saved creators to contacts-only enrichment. New task UI enables this switch by default; old configurations remain disabled. Missing Partner authorization or a stopped/failed run leaves creators saved for manual continuation, never starts a hidden collection task.
+- Missing contacts do not gate library admission. Preserve creators with found, absent or failed contact reads; failed refreshes retain existing values and remain pending. Email/WhatsApp availability filters affect viewing/export, not contacts-only enrichment. Serialize concurrent seller writes and keep final new-creator counts accurate after early saves.
+- Remove the 500-input truncation and sparse-page termination heuristic. Unchanged pagination or failed persistence reports an incomplete run and retains checkpoints; no claim of entire-platform coverage. Keep the seller detail callback's runner context so progress/resume recording can complete.
+- 新增“采集后自动补全全部联系方式”及任务页进度/授权入口：先保存本轮达人，再按本轮与地区补全联系方式。有无联系方式都保留；真正未提供与读取失败分开标记。断点恢复、查重、逐位保存均保留，不删除用户数据库，不发送消息。
+- Verification: 66 offline tests pass, including 1,005 synthetic creators saved across a 503 / 502 Stop-and-reopen continuation, page-before-detail persistence, 501-ID input, sparse pagination, failed-save handling, concurrent writes and job/market-scoped handoff. These are fixture/SQLite tests, not live accuracy or speed measurements. No production library, credentials or live platform requests were used; no new installer release or in-place installation has been performed.
 
 ## [1.4.0] - 2026-09-09
 

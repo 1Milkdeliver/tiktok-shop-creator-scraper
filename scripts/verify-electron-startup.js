@@ -78,8 +78,11 @@ if (!process.versions.electron) {
             const filtered = await window.api.listCreators({hasEmail:true,hasWhatsapp:true});
             if (!filtered.ok || filtered.total !== 0) throw new Error('Contact filter IPC failed');
             const status = await window.api.partnerContactsStatus();
+            if (!document.getElementById('autoContacts')?.checked) throw new Error('Automatic contacts option missing');
+            if (!document.getElementById('taskContactOpen') || !document.getElementById('taskContactProgress')) throw new Error('Task contact controls missing');
+            if (status.connected || status.automatic?.outcome !== 'idle') throw new Error('Unexpected contact state in empty fixture');
             return {version:version.version,preloadIPC:true,databaseReady:true,creatorNavigation:true,
-              contactFilterIPC:true,contactStatusIPC:!!status,rendererTitle:document.title};
+              contactFilterIPC:true,contactStatusIPC:!!status,automaticContactControls:true,rendererTitle:document.title};
           })()`);
           assert.equal(result.version, JSON.parse(fs.readFileSync(path.join(archive, 'package.json'))).version);
           finish(null, { ...result, electron: process.versions.electron, productionDataAccessed: false,

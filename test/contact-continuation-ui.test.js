@@ -41,4 +41,16 @@ test('actual contact UI shows unbounded scope, durable pause counts and recovery
   assert.match(el('contactProgress').textContent,/Scope complete.*Remaining 0/);
   assert.doesNotMatch(el('contactProgress').textContent,/Recovering/);
   assert.ok(context.I18N['contacts.recovery'].zh && context.I18N['contacts.recovery'].en);
+  status = {...status,automatic:{outcome:'needs_auth'}};
+  await listeners.DOMContentLoaded();
+  assert.match(el('taskContactProgress').textContent,/Creators saved; Partner authorization is missing/);
+  status = {...status,running:true,outcome:'running',automatic:{outcome:'started'}};
+  await listeners.DOMContentLoaded();
+  assert.match(el('taskContactProgress').textContent,/Saved 1005.*Running/);
+  assert.equal(el('taskContactStop').disabled,false);
+  context.uiLang='zh';
+  status={...status,running:false,preparing:true,automatic:{outcome:'preparing'}};
+  await listeners.DOMContentLoaded();
+  assert.match(el('taskContactProgress').textContent,/正在准备本轮/);
+  assert.equal(el('taskContactStop').disabled,false);assert.equal(el('contactStart').disabled,true);
 });

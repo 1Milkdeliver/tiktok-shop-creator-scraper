@@ -22,6 +22,7 @@ const required = [
   'main.js', 'preload.js', 'index.html', 'lib/multirunner.js', 'lib/browser.js', 'lib/cookies.js',
   'lib/database/index.js', 'lib/database/migrations.js',
   'lib/contact-fields.js', 'lib/contact-ui.js', 'lib/partner-contacts.js',
+  'lib/collection-contacts.js', 'lib/scraper.js',
   'lib/partner-profile.js', 'lib/partner-profile-job.js',
   'lib/partner-profile-fields.js', 'lib/partner-page-observation.js',
 ];

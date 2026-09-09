@@ -928,7 +928,7 @@
 7494397026366031127
 @beauty.pro
 https://www.tiktok.com/@makeup.lover'></textarea>
-      <div class="hint" style="margin-top:6px" data-i18n="step3.listHint">ID 直接抓，handle/链接会自动解析。单次上限 500 条（防风控），超过请分批抓取。</div>
+      <div class="hint" style="margin-top:6px" data-i18n="step3.listHint">ID 直接抓，handle/链接会自动解析。不设固定条数上限；实际可获取范围以账号权限和平台返回为准。</div>
     </div>
     <div style="margin-top:18px;padding-top:18px;border-top:1px solid var(--border)">
       <div style="font-size:13px;font-weight:600;color:var(--text-2);margin-bottom:8px" data-i18n="step4.mode">抓取模式</div>
@@ -941,6 +941,8 @@ https://www.tiktok.com/@makeup.lover'></textarea>
         <div class="scrape-field-head"><strong data-i18n="scrapeFields.title">本次会抓取的字段</strong><span id="scrapeFieldCount"></span></div>
         <div class="scrape-field-chips" id="scrapeFieldPreview"></div>
       </div>
+      <label class="check-label" style="margin-top:14px"><input type="checkbox" id="autoContacts" checked> <span data-i18n="contacts.auto">采集后自动补全全部联系方式</span></label>
+      <div class="hint" data-i18n="contacts.autoHint">所有发现的达人先入库，再用团长授权补全本轮未检查的联系方式。有无联系方式都保存；读取失败保留待补全，不当作“未提供”。不自动发送消息。</div>
     </div>
     <div style="margin-top:14px">
       <div style="font-size:13px;font-weight:600;color:var(--text-2);margin-bottom:8px" data-i18n="step4.scope">抓取范围</div>
@@ -1047,6 +1049,12 @@ https://www.tiktok.com/@makeup.lover'></textarea>
     <div class="hint" id="testResult" role="status" aria-live="polite" style="display:none;margin-top:8px"></div>
     <div class="result-box" id="resultBox" role="status" aria-live="polite"></div>
     <div id="log" style="margin-top:14px"></div>
+    <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
+      <strong data-i18n="contacts.autoProgress">联系方式补全</strong>
+      <p id="taskContactProgress" role="status" aria-live="polite" class="hint"></p>
+      <button type="button" class="btn-link" id="taskContactOpen" data-i18n="contacts.autoOpen">设置团长授权 / 查看日志与续抓</button>
+      <button type="button" class="btn-link" id="taskContactStop" disabled data-i18n="contacts.stop">停止并保留进度</button>
+    </div>
   </div>
 
   </div>
@@ -1268,7 +1276,7 @@ const I18N = {
   'step3.expand': { zh: '全部展开', en: 'Expand all' },
   'step3.listTitle': { zh: '📋 达人名单（数值ID / handle / TikTok链接，每行一个）', en: '📋 Creator list (numeric ID / @handle / TikTok link, one per line)' },
   'step3.listPlaceholder': { zh: '例如：\n7494397026366031127\n@beauty.pro\nhttps://www.tiktok.com/@makeup.lover', en: 'e.g.\n7494397026366031127\n@beauty.pro\nhttps://www.tiktok.com/@makeup.lover' },
-  'step3.listHint': { zh: 'ID 直接抓，handle/链接会自动解析。单次上限 500 条（防风控），超过请分批抓取。', en: 'IDs are used directly; handles/links are auto-resolved. Max 500 per run (risk-control), split larger lists.' },
+  'step3.listHint': { zh: 'ID 直接抓，handle/链接会自动解析。不设固定条数上限；实际可获取范围以账号权限和平台返回为准。', en: 'IDs are used directly; handles/links are auto-resolved. No fixed creator limit; availability depends on account permissions and platform responses.' },
   'step3.all': { zh: '全选', en: 'Select All' },
   'step3.none': { zh: '清空', en: 'Clear' },
   'step4.title': { zh: '导出设置', en: 'Export Settings' },
@@ -2070,7 +2078,7 @@ document.getElementById('btnStart').onclick = async () => {
   const updateFields = [...new Set(selectedUpdateGroups.flatMap(group => UPDATE_FIELD_GROUPS[group] || []))];
   const detailKeys = new Set(FIELDS.filter(field => field.detail).map(field => field.k));
   const detail = scrapeMode === 'full' && updateFields.some(field => detailKeys.has(field));
-  const cfg = { pastedCookies: cookieList.map(c => c.data), mode, format, headerLang, outPath, detail, dedupe, creatorInput: source === 'list' && creatorInput.length ? creatorInput : null, keywords: kws, fields, updateFields, shopRegion, autoExport: false };
+  const cfg = { pastedCookies: cookieList.map(c => c.data), mode, format, headerLang, outPath, detail, dedupe, creatorInput: source === 'list' && creatorInput.length ? creatorInput : null, keywords: kws, fields, updateFields, shopRegion, autoExport: false, enrichContacts: document.getElementById('autoContacts').checked };
   syncMainButton('pause', { disabled: true });
   setStopButtonActive(true);
   document.getElementById('resultBox').style.display = 'none';
@@ -2086,7 +2094,7 @@ document.getElementById('btnStart').onclick = async () => {
 
 // Lock/unlock all configuration controls while a scrape is running
 function lockOptions(lock) {
-  const ids = ['cookieInput', 'browseBtn', 'creatorInput', 'outPath', 'btnChooseDir'];
+  const ids = ['cookieInput', 'browseBtn', 'creatorInput', 'outPath', 'btnChooseDir', 'autoContacts'];
   for (const id of ids) { const el = document.getElementById(id); if (el) el.disabled = lock; }
   document.querySelectorAll('input[name=scrapeMode], input[name=source], input[name=dedupeMode], input[name=mode], input[name=format], input[name=headerLang], .kw, .fld, .update-group, #detail, #selAll, #selNone, #catsCollapse, #keywordSearch, #fieldsAll, #fieldsNone, #langToggle, #shopRegion, #shopRegionCustom').forEach(el => { el.disabled = lock; });
   // category toggle + cookie add/remove
@@ -3196,6 +3204,7 @@ document.getElementById('creatorUpdateOpen').onclick = prepareLibraryUpdate;
 // Syncs the task page controls to the configuration being run so the UI shows
 // the same mode/scope/keywords/region the runner actually uses.
 function syncTaskPageFromConfig(cfg, { source = 'cat' } = {}) {
+  document.getElementById('autoContacts').checked = cfg.enrichContacts === true;
   // 抓取对象 source
   document.querySelectorAll('input[name=source]').forEach(r => r.checked = r.value === source);
   document.getElementById('sourceCat').style.display = source === 'cat' ? '' : 'none';
@@ -3247,7 +3256,7 @@ document.getElementById('creatorContinueOpen').onclick = async () => {
     mode, format: 'csv', headerLang: uiLang,
     outPath: document.getElementById('outPath').value.trim() || './output',
     detail, dedupe: true, existingIds, keywords, fields: FIELDS.map(f => f.k),
-    shopRegion: region, autoExport: false, libraryContinue: true,
+    shopRegion: region, autoExport: false, libraryContinue: true, enrichContacts: last?.enrichContacts === true,
   };
   const result = await window.api.start(cfg);
   if (result.error) { alert(result.error); return; }

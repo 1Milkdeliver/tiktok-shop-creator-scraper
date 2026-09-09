@@ -9,8 +9,11 @@ const fs = require('fs');
 const { MultiRunner } = require('./lib/multirunner');
 const { CreatorDatabase } = require('./lib/database');
 const { PartnerContactClient, ContactJob, ContactError, MARKETS } = require('./lib/partner-contacts');
+const {startCollectionContacts, serializeCreatorWrites} = require('./lib/collection-contacts');
 let partnerContactClient = null;
 let contactPreparing = false;
+let contactPreparationVersion = 0;
+let automaticContacts = {outcome:'idle'};
 const contactJob = new ContactJob();
 const contactsBusy = () => contactPreparing || contactJob.state.running;
 
@@ -18,14 +21,39 @@ let mainWindow = null;
 let creatorDb = null;
 const runner = new MultiRunner();
 runner.onFileLog = (line) => writeLog(line);
-runner.onDataReady = async (rows, config) => {
+runner.onDataReady = serializeCreatorWrites(async (rows, config) => {
   if (!creatorDb) return { saved: 0, disabled: true };
   return creatorDb.upsertCreators(rows, {
     region: config.shopRegion || 'US',
     jobId: config.databaseJobId || null,
     updateFields: config.updateFields || null,
   });
-};
+});
+
+async function finishCollectionContacts(config, result) {
+  if (config?.enrichContacts !== true) return;
+  // Lock synchronously, before the first await: a new task/installer must not
+  // race the handoff between a finished seller run and its contacts stage.
+  contactPreparing = true;
+  const version = ++contactPreparationVersion;
+  automaticContacts = {outcome:'preparing'};
+  try {
+    automaticContacts = await startCollectionContacts({config, result, db:creatorDb,
+      client:partnerContactClient, job:contactJob,
+      isCanceled:() => runner.stopped || runner.storageError || runner.collectionIncomplete || version !== contactPreparationVersion});
+    const messages = {
+      needs_auth:'达人已保存；未导入团长授权，联系方式保持待补全。请在“补全资料与联系方式”导入授权后继续。',
+      started:'达人已先行入库，正在自动补全本轮达人联系方式；无联系方式的达人也保留。',
+      complete:'本轮没有尚待检查的联系方式，达人数据保留。',
+      unsupported:'达人已保存；此地区暂不支持团长联系方式补全。',
+      skipped:'本轮未自动启动联系方式补全；已入库的达人及断点保留。',
+    };
+    if (messages[automaticContacts.outcome]) runner.log(messages[automaticContacts.outcome]);
+  } catch (_) {
+    automaticContacts = {outcome:'error'};
+    runner.log('自动补全未能启动，达人数据保留；请在达人库中继续补全。');
+  } finally { contactPreparing = false; }
+}
 // record history immediately when a run finishes (reliable, no polling)
 runner.onDone = (result) => {
   try {
@@ -59,6 +87,7 @@ runner.onDone = (result) => {
     }
     runner._currentJobId = null;
   } catch (e) { }
+  void finishCollectionContacts(runner._lastConfig, result);
 };
 
 // ---- app folders: logs/ and output/ next to the executable ----
@@ -812,6 +841,7 @@ function createWindow() {
       e.preventDefault();
       dialog.showMessageBox(mainWindow, {type:'question',title:'联系方式补全进行中',message:'停止补全并退出？',detail:'已获取的联系方式已逐位保存到达人库。下次可跳过已检查达人，继续未完成部分。',buttons:['停止并退出','取消'],defaultId:1,cancelId:1}).then(async ({response}) => {
         if (response !== 0) return;
+        contactPreparationVersion++;
         while (contactPreparing) await new Promise(resolve => setTimeout(resolve,50));
         contactJob.stop(); await contactJob.done;
         allowClose = true; mainWindow?.close();
@@ -1126,7 +1156,7 @@ ipcMain.handle('partner-contacts-clear', () => {
   if (contactsBusy()) return {ok:false,error:'请先停止联系方式补全。'};
   partnerContactClient = null; return {ok:true};
 });
-ipcMain.handle('partner-contacts-status', () => ({...contactJob.snapshot(), connected:!!partnerContactClient}));
+ipcMain.handle('partner-contacts-status', () => ({...contactJob.snapshot(), connected:!!partnerContactClient, preparing:contactPreparing, automatic:automaticContacts}));
 ipcMain.handle('partner-contacts-preview', async (event, payload = {}) => {
   try {
     const region = String(payload.region || '').toUpperCase();
@@ -1140,20 +1170,23 @@ ipcMain.handle('partner-contacts-start', async (event, payload = {}) => {
   if (contactsBusy() || runner.running) return {ok:false,error:'已有抓取或联系方式补全任务在运行，请先停止。'};
   if (!creatorDb || !partnerContactClient) return {ok:false,error:'请先导入团长 Partner Center Cookie。'};
   contactPreparing = true;
+  const preparationVersion = ++contactPreparationVersion;
   try {
     const region = String(payload.region || '').toUpperCase();
     if (!Object.hasOwn(MARKETS,region)) return {ok:false,error:'请选择已适配的地区。'};
     const mode = payload.mode === 'full' ? 'full' : 'contacts';
     const query = mode === 'full' ? 'partnerProfileTargets' : 'contactTargets';
     const targets = await creatorDb[query](payload.filters, region, payload.onlyUnchecked !== false);
+    if (preparationVersion !== contactPreparationVersion) return {ok:false,error:'已取消补全，达人数据保留。'};
     if (!targets.length) return {ok:false,error:'当前地区和筛选条件下没有待补全的达人。'};
     if (targets.length !== payload.expectedTotal) return {ok:false,error:'筛选范围已变化，请刷新范围后重新开始。'};
     contactJob.start({client:partnerContactClient, db:creatorDb, region, targets, mode, resume:payload.onlyUnchecked !== false});
+    automaticContacts = {outcome:'manual'};
     return {ok:true};
   } catch (_) { return {ok:false,error:'无法启动联系方式补全，请刷新范围后重试。'}; }
   finally { contactPreparing = false; }
 });
-ipcMain.handle('partner-contacts-stop', () => { contactJob.stop(); return {ok:true}; });
+ipcMain.handle('partner-contacts-stop', () => { contactPreparationVersion++; contactJob.stop(); return {ok:true}; });
 
 ipcMain.handle('choose-file', async (event, exts) => {
   const filters = Array.isArray(exts) && exts.length
@@ -1243,6 +1276,7 @@ ipcMain.handle('start-scrape', async (event, config) => {
       format: config.format || 'csv',
       outPath: path.isAbsolute(config.outPath || '') ? config.outPath : path.join(APP_DIR, config.outPath || 'output'),
       detail: !!config.detail,
+      enrichContacts: config.enrichContacts === true,
       headerLang: config.headerLang === 'en' ? 'en' : 'zh',
       shopRegion: config.shopRegion || 'US',
       dedupe: !!config.dedupe,
@@ -1268,6 +1302,7 @@ ipcMain.handle('start-scrape', async (event, config) => {
       keywords: cfg.keywords || [],
       shopRegion: cfg.shopRegion || 'US',
       detail: !!cfg.detail,
+      enrichContacts: cfg.enrichContacts,
       mode: cfg.mode || 'auto',
       format: cfg.format || 'csv',
     };
@@ -1278,6 +1313,7 @@ ipcMain.handle('start-scrape', async (event, config) => {
     const prevResult = runner.result;
     // attach the run config to the result so history can offer continue/refresh
     runner._lastConfig = cfg;
+    automaticContacts = {outcome:cfg.enrichContacts ? 'collecting' : 'disabled'};
     runner.start(cfg).catch(e => runner.log('内部错误: ' + e.message));
     // history is recorded via runner.onDone (reliable); this polling loop only
     // acts as a fallback trigger if onDone somehow didn't fire

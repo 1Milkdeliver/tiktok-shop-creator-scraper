@@ -171,7 +171,15 @@ The app needs your TikTok Shop Affiliate **login cookie** to access creator data
 
 ### Step 4 — Enrich WhatsApp, LINE and other contacts (optional)
 
-1. Filter existing records in **Creator Library** and open **Enrich profiles & contacts**. Clear “Has email / Has WhatsApp” before a first enrichment pass so records lacking contacts are not excluded.
+The automatic handoff and persistence changes below are **unreleased development changes**; they do not modify an installed 1.4.0 app.
+
+**New tasks: save creators first, then enrich contacts.** The task page enables “Automatically enrich all contact types after collection” by default; it can be disabled. Each discovered page is saved to the local library before details. Once collection finishes, enrich only this run’s pending creators in its market, never unrelated tasks or markets. Creators remain with or without contacts: a confirmed empty response is “Not provided”; failed reads remain pending and preserve old values. Missing Partner authorization, Stop or failed storage prevents automatic handoff. The task page links to authorization, logs and resume controls. Old task configurations without this explicit option remain disabled.
+
+Input lists are no longer truncated to 500 creators; sparse pages no longer terminate search early. Only the account-visible, platform-returned scope is processed, not guaranteed coverage of all TikTok creators. Unchanged pagination retains a checkpoint and reports incomplete collection. Writes merge into the existing library; missing contacts never cause a creator or database to be deleted.
+
+**Manual enrichment and resume:**
+
+1. Filter existing records in **Creator Library** and open **Enrich profiles & contacts**. “Has email / Has WhatsApp” apply to viewing/export, not admission to contacts-only enrichment. Region, category, search and activity filters still bound the scope. Experimental full-profile mode retains its existing filters.
 2. Choose **Import Partner Cookie JSON**, select a JSON array exported from your own Partner Center session (`.json` / `.txt`), and choose its **Partner region**. Seller and Partner permissions are not interchangeable.
 3. Keep the default **Contacts only**, refresh the scope count, then start. Scope is the intersection of the current filters and selected region; only existing records are updated, without deleting the library or creating unrelated records.
 4. **No software-imposed creator count limit**: snapshot all matching IDs at start, deduplicate and process the whole scope, regardless of table pagination. Filter changes and newly imported records do not join the running job. Read and save one creator at a time, with a default 10-second serial interval; no chat pages, messages or invitations.
