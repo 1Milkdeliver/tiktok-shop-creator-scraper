@@ -1,6 +1,15 @@
 # Changelog
 
-## [Unreleased] - Partner contacts preview
+## [1.4.0] - 2026-09-09
+
+Dependency upgrade and compatibility details: [release verification](docs/release-readiness-1.4.0.md).
+
+### Security and compatibility
+
+- Upgrade Electron 33.4.11 → 43.6.0, electron-builder 25.1.8 → 26.15.3, puppeteer-core 24.43.1 → 25.10.0 and sqlite3 5.1.7 → 6.0.1; update vulnerable transitive dependencies. The release audit reports no known vulnerabilities at verification time, not a guarantee of vulnerability-free software.
+- Adopt BrowserContext cookie import and boolean headless options; require Node.js 22.12+ for source development. End users receive the bundled runtime.
+- Keep Windows executable version/icon metadata while explicitly disabling unsigned-release code signing; use one canonical ASCII installer filename for updates.
+- Pass 34 offline regression tests, loopback-only Chrome/CDP checks, synthetic cross-driver SQLite read/write/readback, CSV/XLSX round trips and isolated packaged-source startup/IPC checks. Platform collection and installation over a running production app are not part of these checks.
 
 ### Added
 
@@ -14,7 +23,7 @@
 
 - Partner credentials stay in main-process memory for the current run and are not added to logs or exports. Local credentials, databases and live-test artifacts are excluded from Git.
 - Contact API reads have passed bounded live tests; full-profile API requests still require platform verification. Reading a normal detail page is not proof that automatic full-profile collection works.
-- This is a source-code preview, not a new stable installer release. Existing seller discovery remains unchanged.
+- The installer includes contact enrichment and the opt-in experimental profile mode. Existing seller discovery remains unchanged; automatic full-profile collection is not claimed to be live-validated.
 
 ### 更新内容
 
@@ -22,7 +31,8 @@
 - 达人库新增“有邮箱 / 有 WhatsApp”筛选和“取消全选”字段操作；列表、导出、补全使用相同筛选范围。
 - 逐位或逐模块保存，遇到验证、会话异常或额度限制立即停止；完整资料模式仍为待实测的可选功能。
 - 正常网页可见数据支持分口径存储与回读核验，不将页面观察误记为完整自动采集成功。
-- 本次仅更新开发分支代码，不替换正式安装包，不上传 Cookie、达人数据或数据库备份。
+- 升级桌面运行时、打包工具、浏览器控制与数据库驱动，发布前安全扫描为 0 项已知漏洞；详见依赖升级与兼容说明。
+- 主分支与 Windows 安装包使用同一版本代码；完整资料自动采集仍保留“待实测”提示且默认不启用。不上传 Cookie、达人数据或数据库备份。
 
 ## [1.3.1] - 2026-08-25
 

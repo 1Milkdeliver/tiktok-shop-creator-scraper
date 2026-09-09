@@ -197,41 +197,46 @@ A：多数达人没有绑定 MCN，TikTok 返回"无授权"属正常现象，不
 ## 💻 开发
 
 ```bash
-npm install
+npm ci
 npm start          # 运行（开发模式，直接跑源码）
-npm run build      # 打包安装程序 → dist/TikTokShop达人抓取安装程序-<版本>.exe
+npm run build -- --publish never  # 打包 → dist/tiktok-shop-creator-scraper-setup-<版本>.exe
 ```
 
 > - 需要本机已安装 Google Chrome（工具通过 puppeteer-core 连接）。
-> - 打包时设置 `CSC_IDENTITY_AUTO_DISCOVERY=false` 跳过代码签名（Windows 符号链接权限的已知问题）。
+> - 源码开发需要 Node.js 22.12+；安装版自带运行时。Electron 二进制缺失时运行 `node node_modules/electron/install.js`。
+> - 当前未签名发布使用 `win.signExecutable: false`，同时保留程序图标和版本信息。
 > - 安装包图标通过 `afterPack.js` 钩子 + rcedit 注入，`rebuild-icons.js` 可重新生成图标资源。
 
 > 🌐 **双语约定（必须遵守）**：所有新增的界面文案、按钮、弹窗、提示、字段名都必须同时提供中英两个版本（沿用 `I18N` 字典 + `uiLang` 判断的现有机制）。新增功能遗漏英文版视为未完成。发布时 Release notes 同样必须中英双语（英文在前 `What's new in vX.Y.Z`，中文在后 `更新内容`）。
 
 ## 📤 发布新版
 
-应用内置自动检查更新（差分下载）。发布新版步骤：
+应用内置自动检查更新（差分下载）。[1.4.0 依赖升级、兼容测试与已知限制](docs/release-readiness-1.4.0.md)。发布新版步骤（以下 1.2.0 仅作版本号示例，发布时替换为目标版本）：
 
 ```bash
 # 1. bump 版本号（如 1.1.1 → 1.2.0）
 npm version patch --no-git-tag-version
 
 # 2. 打包
-$env:CSC_IDENTITY_AUTO_DISCOVERY='false'
-npm run build
+npm test
+npm audit --audit-level=low
+npm run build -- --publish never
 
-# 3. 生成差分更新元数据（latest.yml + ASCII 名资产）
-node prepare-release.js 1.2.0
+# 3. 检查打包代码与运行时；builder 已生成 latest.yml、ASCII 安装包和 blockmap
+node scripts/verify-release-package.js dist/win-unpacked
+node scripts/verify-electron-startup.js dist/win-unpacked
+# 1.4.0 起不要再运行旧的 prepare-release.js（只适用于旧中文名构建产物）。
 
 # 4. 提交并打 tag
-git add -A && git commit -m "release 1.2.0"
+# 先审查并仅暂存源码/文档变更，不暂存 Cookie、数据库或真实测试产物
+git commit -m "release 1.2.0"
 git push origin main
 git tag v1.2.0 && git push origin v1.2.0
 
-# 5. 创建 Release 并上传 4 个资产（先传小文件，避免超时）
+# 5. 创建草稿 Release 并上传 3 个资产（先传小文件，避免超时）
 #    ⚠️ Release notes 固定格式：英文在前（"What's new in vX.Y.Z"），中文在后（"更新内容"）。
 #    更新弹窗会展示所有跳过的版本，每个版本都要双语。
-gh release create v1.2.0 --title "v1.2.0" --notes "What's new in v1.2.0
+gh release create v1.2.0 --draft --title "v1.2.0" --notes "What's new in v1.2.0
 - change 1
 - change 2
 
@@ -240,13 +245,14 @@ gh release create v1.2.0 --title "v1.2.0" --notes "What's new in v1.2.0
 - 改动 2"
 gh release upload v1.2.0 dist/latest.yml dist/tiktok-shop-creator-scraper-setup-1.2.0.exe.blockmap
 gh release upload v1.2.0 dist/tiktok-shop-creator-scraper-setup-1.2.0.exe
-gh release upload v1.2.0 "dist/TikTokShop达人抓取安装程序-1.2.0.exe"
+# 核对资产大小、SHA-512 与 latest.yml 后发布草稿
+gh release edit v1.2.0 --draft=false --latest
 
 # 6. 旧版用户启动时自动提示更新 → 覆盖安装（数据保留）
 ```
 
-> 必须上传全部 4 个资产（中文名安装包、ASCII 名 exe、.blockmap、latest.yml），缺一个更新就会失败。
-> 版本比较规则：三位版本号，任一更高即提示更新。Release 只留最新版，下载链接自动指向最新。
+> 1.4.0 起上传 3 个更新资产：ASCII 名 exe、对应 .blockmap、latest.yml；不需要重复上传中文名安装包。
+> 保留历史 Release 以便回退；下载链接自动指向标为 latest 的正式版本。安装前停止任务、关闭应用并备份本地数据；安装脚本会结束旧进程。
 
 ## 📄 许可证
 

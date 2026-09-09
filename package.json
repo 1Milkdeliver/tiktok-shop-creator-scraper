@@ -1,6 +1,6 @@
 {
   "name": "tiktok-shop-creator-scraper",
-  "version": "1.3.2-contacts.2",
+  "version": "1.4.0",
   "description": "TikTok Shop 达人抓取工具 - 专为 TikTok Shop 卖家打造的联盟达人数据采集桌面应用，一键抓取达人广场数据，支持多账号并发、CSV/Excel 导出、达人筛选、选品分析。TikTok Shop affiliate creator scraper desktop app for sellers.",
   "main": "main.js",
   "author": "1Milkdeliver <https://github.com/1Milkdeliver>",
@@ -14,12 +14,20 @@
     "exceljs": "^4.4.0",
     "png2icons": "^2.0.1",
     "pngjs": "^7.0.0",
-    "puppeteer-core": "^24.0.0",
-    "sqlite3": "^5.1.7"
+    "puppeteer-core": "25.10.0",
+    "sqlite3": "6.0.1"
   },
   "devDependencies": {
-    "electron": "^33.0.0",
-    "electron-builder": "^25.0.0"
+    "electron": "43.6.0",
+    "electron-builder": "26.15.3"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "overrides": {
+    "exceljs": {
+      "uuid": "11.1.1"
+    }
   },
   "build": {
     "appId": "com.tiktok.creator.scraper",
@@ -67,7 +75,8 @@
         "nsis"
       ],
       "icon": "build/icon.ico",
-      "signAndEditExecutable": false
+      "signAndEditExecutable": true,
+      "signExecutable": false
     },
     "nsis": {
       "oneClick": false,
@@ -81,7 +90,7 @@
       "uninstallerIcon": "build/icon.ico",
       "runAfterFinish": true,
       "include": "build/nsis-auto-close.nsh",
-      "artifactName": "TikTokShop达人抓取安装程序-${version}.exe"
+      "artifactName": "tiktok-shop-creator-scraper-setup-${version}.exe"
     }
   },
   "scripts": {
