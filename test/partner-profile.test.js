@@ -32,6 +32,12 @@ test('maps permitted fields, retains zero/false, and preserves every extended va
   assert.throws(()=>parseSection({},SECTIONS[3],'123','MY'),{code:'PROFILE_FORMAT'});
   assert.equal(parseSection({creator_profile_trend_data:[]},SECTIONS[3],'123','MY').patch.partner_trend_json,'[]');
 });
+test('maps the observed creator agency field to the standard mcn key',()=>{
+  const result=parseSection({creator_profile:{creator_oecuid:{value:'123',is_authorized:true},creator_bind_mcn_name:{value:'fixture-agency',is_authorized:true}}},SECTIONS[0],'123','MY');
+  assert.equal(result.patch.mcn,'fixture-agency');
+  assert.equal(result.patch['MCN机构'],undefined);
+  assert.equal(result.status.creator_bind_mcn_name,'已获取');
+});
 test('money/ranges are not silently promoted to exact amounts',()=>{
   assert.equal(exactNumeric({value:'12345',format:'RM12.3K'}),12345);
   for(const v of ['RM10K+','1.3M','1-10',{minimal:1,maximum:10},{format:'RM10K+'},NaN]) assert.equal(exactNumeric(v),null);

@@ -19,6 +19,8 @@ test('contacts start while discovery is open; concurrent rows are saved, deduped
   const ids=['100001','100002','100003'];
   await db.upsertCreators([{creator_oecuid:'100004'}],{region:'MY'});
   await db.upsertCreators([{creator_oecuid:'100001'}],{region:'TH'});
+  await db.upsertCreators([{creator_oecuid:'100002'}],{region:'MY'});
+  await db.updateCreatorContacts('MY','100002',{contact_status:'未提供',contact_checked_at:'2026-09-01T00:00:00.000Z'});
   const calls=[];
   let release;
   const blocked=new Promise(resolve=>{release=resolve;});
@@ -100,6 +102,7 @@ test('parallel seller writes are serialized, keep all creators, and recover afte
 test('production UI/IPC wires streaming at start and committed saves, common write gate and combined stop/close',()=>{
   const root=path.resolve(__dirname,'..'), main=fs.readFileSync(path.join(root,'main.js'),'utf8'), html=fs.readFileSync(path.join(root,'index.html'),'utf8');
   assert.match(main,/enrichContacts: config\.enrichContacts === true/);
+  assert.equal((main.match(/partnerBrowserSession: config\.partnerBrowserSession !== false/g)||[]).length,2);
   assert.match(main,/runner\.onDataReady = \(rows, config\) => writeDatabase/);
   assert.match(main,/runner\.onStart = config =>/);
   assert.match(main,/collectionContacts\?\.saved\(rows, config\)/);

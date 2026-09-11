@@ -81,7 +81,27 @@ if (!process.versions.electron) {
             if (!document.getElementById('autoContacts')?.checked) throw new Error('Automatic contacts option missing');
             if (!document.getElementById('taskContactOpen') || !document.getElementById('taskContactProgress')) throw new Error('Task contact controls missing');
             if (status.connected || status.automatic?.outcome !== 'idle') throw new Error('Unexpected contact state in empty fixture');
+            if (!document.getElementById('accounts').contains(document.getElementById('contactImport'))) throw new Error('Partner import must be in account management');
+            if (document.getElementById('contactPanel').contains(document.getElementById('contactImport'))) throw new Error('Duplicate Partner import');
+            const country = document.getElementById('creatorContinueRegion');
+            if (!country || ![...country.options].some(o=>o.value==='MY')) throw new Error('Continue country control missing');
+            for (const id of ['shopRegion','contactRegion','partnerAccountCountry','creatorContinueRegion'])
+              for (const region of ['MY','US','JP','DE','IE','HU'])
+                if (![...document.getElementById(id).options].some(o=>o.value===region)) throw new Error('Missing market in '+id);
+            if (document.getElementById('discoverySource')?.value !== 'auto') throw new Error('Discovery source control missing');
+            openAccountSettings();
+            document.getElementById('cookieCountry').value='MY';
+            document.getElementById('cookieName').value='Synthetic MY account';
+            await addCookie('paste', JSON.stringify([{name:'sessionid',value:'synthetic-only',domain:'.example.test'}]));
+            const saved = await window.api.getAppData();
+            if (saved.accountEntries?.[0]?.region !== 'MY' || saved.accountEntries[0].name !== 'Synthetic MY account') throw new Error('Account metadata was not persisted');
+            if (!document.querySelector('.account-name') || document.querySelector('.account-country').value !== 'MY') throw new Error('Account editing controls missing');
+            if (document.getElementById('cookieList').textContent.includes('synthetic-only')) throw new Error('Session token exposed in account list');
+            await saveCookieEntries([]);
+            await refreshAppData();
+            if (cookieList.length) throw new Error('Deleted fixture account reappeared');
             return {version:version.version,preloadIPC:true,databaseReady:true,creatorNavigation:true,
+              accountMetadataIPC:true,accountCountryControls:true,partnerImportMoved:true,
               contactFilterIPC:true,contactStatusIPC:!!status,automaticContactControls:true,rendererTitle:document.title};
           })()`);
           assert.equal(result.version, JSON.parse(fs.readFileSync(path.join(archive, 'package.json'))).version);

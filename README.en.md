@@ -60,26 +60,16 @@
 |---|---|
 | 🎨 Workspaces | Sidebar: **Overview / Task Center / Creator Library / Export Center**, bilingual |
 | 💾 Creator library | SQLite storage: auto-dedupe, browse / sort / filter / refresh |
-| 📊 Activity status | Auto-tags creators active / inactive / unknown with explainable signals |
-| ⏱️ Refresh progress | Live progress bar + estimated remaining time while updating the library |
 | 🔍 Creator scraping | Batch keyword search, or import ID / @handle / TikTok links directly |
 | 🌍 Multi-region | Choose US / UK / Southeast Asia / LATAM shop regions |
 | 📧 Contact info | Bio, email, MCN; optional Partner Center authorization for available WhatsApp, LINE, Zalo, Viber, Facebook and other contacts |
 | 📁 Export | CSV / Excel with customizable fields; headers follow UI language |
-| 🚀 Dual speed modes | Fast mode (list only) vs Full mode (list + details), Full by default |
 | 🔁 Resume history | One-click **Continue** (new creators only) or **Refresh** (re-scrape all, overwrite) |
-| 🧹 Deduplication | New-only collection skips saved creator IDs within the selected region; explicit refresh updates existing records |
-| 👥 Multi-account | Seller collection supports keyword sharding / same-keyword splits; throughput depends on permissions, workload and platform responses |
-| 🛡️ Error handling | Seller collection has cooldown/backup-session handling; Partner enrichment stops and preserves progress on verification, throttling or permission errors, which may require manual action |
-| 🔄 Cookie auto-replace | Same-account cookies auto-replace old entries; confirmed-invalid cookies are cleaned up after a run |
-| 🗂️ Two-level category filter | TikTok-backend-style category picker: top-level category + vertical (2nd-level) category |
-| ✅ Quick filters | **Has email / Has WhatsApp / Active only**; email and WhatsApp filters intersect when both selected. Deselect all display fields retains the creator-page column |
-| ⏯️ Tri-state control | Pause / Resume / one-click **Finish & Export** (seconds-fast wind-down) |
-| 🛡️ Quit protection | Exiting during a scrape asks: Save & Export / Discard / Cancel |
+| 🧹 Deduplication & resume | Deduplicates by region and creator ID; supports pause, resume and breakpoint recovery |
+| ✅ Filters & fields | Filter by category, region, email or WhatsApp; choose fields to display and export |
+| 🛡️ Safe pause | Pauses and preserves progress on verification, throttling, login or permission errors |
 | 🌐 Bilingual UI | Chinese / English interface, field list and headers with one-click switch |
 | 🔄 Auto-update | Checks for new versions on startup, one-click update (differential download) |
-| 💾 Data memory | Remembers cookies, output history, resumes from breakpoints |
-| 🖥️ Desktop integration | Desktop shortcut, custom icon, auto output/log folders |
 
 ## 📊 Data You Can Collect
 
@@ -92,31 +82,18 @@
 | Details (optional) | bio, collaboration email (auto-extracted), MCN agency, **vertical (2nd-level) category** |
 | Partner contact enrichment | email, WhatsApp, LINE, Zalo, Viber, Facebook, other contacts, separate dialing codes, source and checked status/time |
 
-Availability depends on the platform response and account permissions. Missing contacts stay empty; numbers and country codes are not guessed. Avatars are not stored in the current local library. Partner **Full profile + contacts** is off by default and pending live validation, not a guarantee that all profile fields can be collected.
+Availability depends on the platform response and account permissions. Missing contacts stay empty; numbers and country codes are not guessed. Avatars are not stored in the current local library. Partner **Full profile + contacts** passed a real cross-page Malaysia sample; this does not imply that every creator supplies every field or that other markets have identical coverage.
 
 ## 📦 Install
 
-### Existing users: use in-app incremental updates first
+⬇️ [**Download the latest Windows installer**](https://github.com/1Milkdeliver/tiktok-shop-creator-scraper/releases/latest)
 
-1. Wait for the startup update prompt or click **Check for Updates**, review the notes and confirm the download.
-2. The updater reuses the cached old installer where possible and downloads changed blocks, with in-app progress.
-3. When idle, choose **Restart & install** for a silent update without repeating the license/directory wizard. Alternatively, keep using the app and install on normal exit. Finish scraping/contact-enrichment tasks first.
-4. The data location stays unchanged. Before important upgrades, stop tasks, close the app and back up `%APPDATA%\tiktok-shop-creator-scraper` locally, then reopen the app to update. Do not uninstall or clear the creator library.
+- Run the installer wizard and accept the license
+- A desktop shortcut is created automatically
+- Output defaults to `output/`; logs are written to `logs/`
+- Existing installations are detected and offered overwrite instead of duplicate installation
 
-**Incremental does not always mean small.** Real download checks: 1.3.0 → 1.3.1 downloads about **1.96 MB**; 1.3.1 → 1.4.0 reuses only **1.53%** after major Electron/dependency changes and downloads about **120.86 MB**. Both paths passed range download, reconstruction and dual-hash verification; installation was not executed. See the [incremental-update verification record](docs/incremental-update-verification-2026-09-09.md). MB is decimal, excluding blockmaps, HTTP overhead and the old base installer downloaded to prepare the test.
-
-Missing old-installer cache, unavailable blockmaps or differential checksum failure cause automatic full-download fallback; installation still stays in-app. Manual installation below is a fallback when in-app updating is unavailable.
-
-### First installation / fallback if automatic updating fails
-
-⬇️ [**Download the latest Windows x64 installer**](https://github.com/1Milkdeliver/tiktok-shop-creator-scraper/releases/latest)
-
-- Run the installer wizard, accept the license agreement
-- Desktop shortcut created automatically
-- Choose an output directory; the default attempts `output/` beside the app, falling back to user data if unwritable
-- Before manual replacement, stop tasks, exit and back up local data. The installer terminates old app processes. Uninstalling the old version is unnecessary
-
-> The installer is unsigned and may trigger SmartScreen. Confirm the project Release source and checksums; do not disable system protection. The installer bundles its runtime, so Node.js is not needed; browser collection requires local Google Chrome.
+> The unsigned installer may trigger Windows SmartScreen. Click “More info → Run anyway” only after confirming the Release source and checksums. The installer bundles its runtime; browser collection requires local Google Chrome.
 
 ## 🚀 Quick Start
 
@@ -171,31 +148,20 @@ The app needs your TikTok Shop Affiliate **login cookie** to access creator data
 
 ### Step 4 — Enrich WhatsApp, LINE and other contacts (optional)
 
-The parallel collection and persistence changes below are available from **v1.5.0**. Installed 1.4.0 apps need an in-app upgrade. See [v1.5.0 release notes](docs/release-notes-1.5.0.md) for scope and validation limits.
-
-**New tasks: collect profiles and contacts concurrently.** “Enrich contacts alongside collection (parallel)” is enabled by default and can be disabled. Import Partner credentials through the task-page link before starting. Each committed discovery page immediately feeds this run's pending contact queue in the same market. Direct contact API reads overlap seller discovery/detail reads; **they do not wait for the whole run to finish or open individual chat pages**. Creator IDs are deduplicated; successful checks, including confirmed empty responses, are skipped by default. Old configurations without the option remain disabled.
+Import a Seller or Partner session from account management and select the target market. New tasks can read platform-provided contacts while creator profiles are collected. Base profiles are committed first, and creators without contacts are still retained.
 
 ```text
 Discover page -> Commit base rows -> Continue discovery / profiles -> Incremental profile updates
                                  -> Contact queue -> API reads -> Merge email, WhatsApp, LINE, etc.
 ```
 
-Parallel means two overlapping collection stages, not unbounded requests. The contact consumer remains serial, with at least 10 seconds after a successful save before the next creator request. No fixed speedup is promised. Base transactions and contact patches share a write gate; later seller refreshes preserve verified contacts. An empty queue waits for new creators rather than announcing completion. Once discovery ends, remaining contacts drain, with both stages visible in task progress.
+- Supports email, WhatsApp, LINE, Zalo, Viber, Facebook, other contacts and separate country codes; unavailable fields remain empty.
+- Deduplicates by creator ID and saves each result incrementally. Stop with progress preserved, then resume from the same market and filters.
+- There is no fixed app row cap, but only the account-visible, platform-returned scope is processed. Throttling, verification, expired sessions or denied access pause with checkpoints preserved.
+- Contact reads do not send messages or invitations. The imported country is an account-management label; actual target-market access is checked when a task starts.
+- The real Partner Center browser session runs minimized in the background by default and appears only for login or manual verification. Contact data is read through the authorized endpoint without opening each chat page.
 
-Creators remain with or without contacts. Confirmed empty responses are “Not provided”; failed reads remain pending without clearing old values. Missing authorization or an unsupported market does not block base saves; import during collection does not silently restart the queue. Actual contact throttling, verification, login/access or data errors stop the contact consumer; later discovered creators remain saved and pending, without automatic restart. Task Stop and closing an active task stop both stages. The contact panel's Stop affects only contacts, allowing profiles to continue. Pausing profiles prevents new contact reads; completed responses still commit. After restart, reimport Partner credentials and resume from the library using the same filters with Skip checked creators.
-
-Input lists are no longer truncated to 500 creators; sparse pages no longer terminate search early. Only the account-visible, platform-returned scope is processed, not guaranteed coverage of all TikTok creators. Unchanged pagination retains a checkpoint and reports incomplete collection. Writes merge into the existing library; missing contacts never cause a creator or database to be deleted.
-
-**Manual enrichment and resume:**
-
-1. Filter existing records in **Creator Library** and open **Enrich profiles & contacts**. “Has email / Has WhatsApp” apply to viewing/export, not admission to contacts-only enrichment. Region, category, search and activity filters still bound the scope. Experimental full-profile mode retains its existing filters.
-2. Choose **Import Partner Cookie JSON**, select a JSON array exported from your own Partner Center session (`.json` / `.txt`), and choose its **Partner region**. Seller and Partner permissions are not interchangeable.
-3. Keep the default **Contacts only**, refresh the scope count, then start. Scope is the intersection of the current filters and selected region; only existing records are updated, without deleting the library or creating unrelated records.
-4. **No software-imposed creator count limit**: snapshot all matching IDs at start, deduplicate and process the whole scope, regardless of table pagination. Filter changes and newly imported records do not join the running job. Read and save one creator at a time, with a default 10-second serial interval; no chat pages, messages or invitations.
-5. Stop while preserving progress. After restart, reimport authorization, keep the same region/filters and **skip already checked creators** to resume. Each saved response is a durable checkpoint, including successful “not provided” results; failed/unsaved reads never count as complete. Deselect the option to recheck saved creators.
-6. Contacts-only mode retries network failures, timeouts and HTTP 500/502/503/504 after 30 / 60 / 120 seconds, then every 5 minutes until recovery or Stop, without skipping the pending creator. Actual throttling, verification, expired sessions or denied access pause immediately, without retries or an assumed daily quota. Failed writes and invalid response formats also pause with saved progress preserved to protect data. No software count limit is not a promise of unlimited platform quota or throttle-free access.
-
-Numbers are stored as text, with separate country codes when provided. **Full profile + contacts (pending live validation)** is a separate optional mode with a warning, not equivalent to the verified contact-only path.
+See the [v1.5.0 release notes](docs/release-notes-1.5.0.md) for detailed boundaries, recovery behavior and version changes.
 
 ## ❓ FAQ
 
@@ -244,18 +210,7 @@ A: Most creators aren't bound to an MCN — TikTok returns "not authorized", whi
 
 ## 💻 Development
 
-```bash
-npm ci
-npm start          # run in dev mode (runs source directly)
-npm run build -- --publish never  # build → dist/tiktok-shop-creator-scraper-setup-<version>.exe
-```
-
-> - Requires Google Chrome installed locally (the app connects via puppeteer-core).
-> - Source development requires Node.js 22.12+; installers bundle the runtime. If the Electron binary is missing, run `node node_modules/electron/install.js`.
-> - Unsigned builds use `win.signExecutable: false` while preserving executable icon and version metadata.
-> - The installer icon is injected via the `afterPack.js` hook + rcedit; `rebuild-icons.js` regenerates the icon assets.
-
-> 🌐 **Bilingual convention (mandatory)**: every new UI label, button, dialog, tooltip, field name and prompt must ship in BOTH Chinese and English (use the existing `I18N` dictionary + `uiLang` mechanism). A feature that lacks an English version is not done. Release notes must also be bilingual (English first — `What's new in vX.Y.Z` — then Chinese — `更新内容`).
+See the [development guide](docs/development.en.md) for source setup, test commands, packaging requirements and bilingual UI rules. Maintainer, contribution, security and testing rules are documented in [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md) and [docs/testing.md](docs/testing.md).
 
 ## 📤 Release / Update
 

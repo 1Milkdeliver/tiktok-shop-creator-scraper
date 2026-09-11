@@ -30,7 +30,7 @@ function browserFixture() {
     setTimeout: () => 0, setInterval: () => 0, clearInterval() {},
   };
   vm.runInNewContext(fs.readFileSync(filename, 'utf8'), sandbox, { filename });
-  return { api: sandbox.module.exports, calls, cookies, browser, context };
+  return { api: sandbox.module.exports, calls, cookies, browser, context, page };
 }
 
 test('Puppeteer ESM package and scraper constructors load in the supported Node runtime', () => {
@@ -68,4 +68,13 @@ test('cookie import errors stop before navigation instead of silently continuing
   await assert.rejects(api.openLandingPage(browser,
     [{ name: 'fixture', value: 'synthetic-only', domain: '.example.test' }]), /Cookie 导入失败/);
   assert.equal(calls.length, 0);
+});
+
+test('actual login or challenge ends landing preflight without extra waiting or shop-ID probes',async()=>{
+  for (const state of [{bodyLen:92,hasLogin:true},{bodyLen:500,challenge:true}]) {
+    const fixture=browserFixture();let evaluations=0;
+    fixture.page.evaluate=async()=>{evaluations++;return state;};
+    const result=await fixture.api.openLandingPage(fixture.browser,[]);
+    assert.equal(evaluations,1);assert.equal(result.sellerId,'');
+  }
 });

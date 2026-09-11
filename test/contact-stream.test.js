@@ -76,14 +76,21 @@ test('Stop during in-flight write preserves the completed response and leaves ne
   assert.equal(f.job.state.total,2);assert.equal(f.job.state.outcome,'stopped');
 });
 
-test('actual auth, rate and verification failures pause the stream; later pages never auto-retry',async t=>{
-  for(const code of ['AUTH','RATE_LIMIT','CHALLENGE','QUOTA','RESPONSE']) {
+test('actual auth and verification failures pause the stream; later pages never auto-retry',async t=>{
+  for(const code of ['AUTH','CHALLENGE','QUOTA','RESPONSE']) {
     const f=fixture(t);let attempts=0;
     f.client.fetchContacts=async()=>{attempts++;throw new ContactError(code,'Fixture failure');};
     f.job.startStream({...f,region:'MY'});f.job.append(['101','102']);await f.job.done;
     assert.equal(f.job.state.errorCode,code);assert.equal(f.job.state.outcome,'paused');
     assert.equal(f.job.append(['103']),0);assert.equal(attempts,1);assert.equal(f.job.state.completed,0);
   }
+});
+
+test('stream rate limit cools down and retries the same creator',async t=>{
+  const f=fixture(t);f.job.rateLimitDelaysMs=[0];let attempts=0;
+  f.client.fetchContacts=async()=>{if(++attempts===1){const error=new ContactError('RATE_LIMIT','limited');error.retryAfterMs=0;throw error;}return {contact_status:'未提供'};};
+  f.job.startStream({...f,region:'MY'});f.job.append(['101']);f.job.closeInput();await f.job.done;
+  assert.equal(attempts,2);assert.deepEqual(f.saves,['101']);assert.equal(f.job.state.outcome,'completed');
 });
 
 test('shared write gate protects contact PATCH from concurrent seller transactions and stale detail flushes',async t=>{

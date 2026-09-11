@@ -1,14 +1,8 @@
-; Auto-close every running instance of the app before install/update,
-; so users never see "TikTokShop达人抓取 cannot be closed" during upgrades.
-; Uses taskkill /f /t (force + process tree) and waits until the process is gone.
+; Never terminate a collection/database write to perform an upgrade.
+; quitAndInstall normally exits the app first. Allow that exit to finish,
+; otherwise refuse installation so the user can save/stop and retry.
 !macro customInit
-  ; kill all app processes (main + renderer + gpu children) forcefully
-  nsExec::ExecToStack 'taskkill /f /t /im "TikTokShop达人抓取.exe"'
-  Pop $0 ; exit code
-  Pop $1 ; output (ignore)
-
-  ; wait until the process is fully gone (max ~10s), then let electron-builder
-  ; proceed without hitting its "cannot be closed" dialog
+  ; Bounded wait for normal application shutdown (max ~10s).
   StrCpy $R1 0
   ${Do}
     nsProcess::_FindProcess "TikTokShop达人抓取.exe" $R0
@@ -21,4 +15,11 @@
     ${EndIf}
     Sleep 1000
   ${Loop}
+  ${If} $R0 == 0
+    IfSilent creatorRequireExit
+    MessageBox MB_OK|MB_ICONEXCLAMATION "请先在软件中停止任务、保存进度并退出，再重新运行安装包。为保护已有数据，本次安装不会强制关闭软件。"
+    creatorRequireExit:
+    SetErrorLevel 2
+    Abort
+  ${EndIf}
 !macroend

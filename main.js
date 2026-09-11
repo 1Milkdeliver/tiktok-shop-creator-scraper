@@ -11,6 +11,8 @@ const { CreatorDatabase } = require('./lib/database');
 const { PartnerContactClient, ContactJob, ContactError, MARKETS } = require('./lib/partner-contacts');
 const {CollectionContacts, serializeCreatorWrites, contactDatabase} = require('./lib/collection-contacts');
 let partnerContactClient = null;
+let partnerAccount = null; // display-only metadata; credential remains in memory
+const AccountCookies = require('./lib/account-cookies');
 let contactPreparing = false;
 let contactPreparationVersion = 0;
 let automaticContacts = {outcome:'idle'};
@@ -23,6 +25,8 @@ let mainWindow = null;
 let creatorDb = null;
 const runner = new MultiRunner();
 runner.onFileLog = (line) => writeLog(line);
+runner.onPartnerRaw = (region,id) => creatorDb?.partnerProfileRaw(region,id);
+runner.onPartnerProfile = (region,id,patch) => writeDatabase(() => creatorDb.updatePartnerProfile(region,id,patch));
 runner.onDataReady = (rows, config) => writeDatabase(async () => {
   if (!creatorDb) return { saved: 0, disabled: true };
   const result = await creatorDb.upsertCreators(rows, {
@@ -40,8 +44,8 @@ runner.onDataReady = (rows, config) => writeDatabase(async () => {
 runner.onStart = config => {
   collectionContacts = new CollectionContacts({config,
     db:creatorDb ? contactDatabase(creatorDb, writeDatabase) : null,
-    client:partnerContactClient, job:contactJob,
-    isPaused:() => runner.running && runner.paused,
+    client:runner.activePartnerClient || partnerContactClient, job:contactJob,
+    isPaused:() => runner.running && (runner.paused || !!runner.verificationGate?.snapshot().waiting),
     isCanceled:() => runner.stopped || runner.storageError || runner.collectionIncomplete});
   automaticContacts = collectionContacts.snapshot();
   const messages = {
@@ -59,23 +63,7 @@ runner.onDone = (result) => {
     if (creatorDb && jobId) {
       creatorDb.finishScrapeJob(jobId, result).catch(e => writeLog('任务状态写入数据库失败: ' + e.message));
     }
-    // Auto-remove cookies that were CONFIRMED invalid during this run (landed
-    // on the login/blank page). Cookies merely "expired by date" but still
-    // working are NOT removed — the UI keeps them.
-    if (result && result.ok) {
-      const invalid = Array.isArray(result.invalidCookieIndexes) ? result.invalidCookieIndexes : [];
-      if (invalid.length && Array.isArray(appData.cookies) && appData.cookies.length) {
-        // remove from the highest index first so earlier indexes stay valid
-        const removed = [];
-        [...invalid].sort((a, b) => b - a).forEach(i => {
-          if (i >= 0 && i < appData.cookies.length) { removed.push(appData.cookies.splice(i, 1)[0]); }
-        });
-        if (removed.length) {
-          saveAppData();
-          writeLog(`已自动移除 ${removed.length} 个确认失效的账号 Cookie`);
-        }
-      }
-    }
+    // Authentication failures are task state, never permission to delete accounts.
     if (result && result.ok && !result.testMode) {
       runner._historyRecorded = true;
       // attach the run config so history entries can continue/refresh
@@ -225,9 +213,43 @@ function recordHistory(entry) {
 }
 
 // IPC: remembered cookies + history + default out dir
-ipcMain.handle('get-app-data', () => ({ cookies: appData.cookies || [], history: appData.history || [], defaultOutDir: appData.outDir || OUT_DIR }));
+ipcMain.handle('get-app-data', () => ({ cookies: appData.cookies || [], accountEntries:(appData.cookies || []).map((data,i) => ({data,...(appData.cookieMetadata?.[i] || {})})), history: appData.history || [], defaultOutDir: appData.outDir || OUT_DIR }));
+function storeAccounts(entries) {
+  const normalized = AccountCookies.normalize(entries);
+  const next = {...appData, cookies:normalized.map(c => c.data), cookieMetadata:normalized.map(({name,region}) => ({name,region}))};
+  // Report failed saves; never claim an account was saved only in the renderer.
+  fs.writeFileSync(dataFile(), JSON.stringify(next));
+  appData = next;
+}
+
+// Local development/live-test override. It is inactive in normal launches and
+// never persists, logs, or sends the credential anywhere except the selected
+// TikTok Partner Center task. This keeps release behavior unchanged while an
+// actual Electron run can use a freshly exported local Cookie file.
+function loadDevelopmentCookieOverride() {
+  const file = process.env.TIKTOK_CREATOR_TEST_INPUT_FILE;
+  if (!file) return;
+  try {
+    if (fs.statSync(file).size > 1024 * 1024) throw new Error('too-large');
+    const raw = fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, '');
+    const cookies = AccountCookies.parse(raw);
+    const client = new PartnerContactClient(cookies);
+    appData.cookies = [raw];
+    appData.cookieMetadata = [{name:'实际软件测试账号', region:''}];
+    partnerContactClient = client;
+    runner.partnerCredential = client;
+    partnerAccount = {region:'', name:'实际软件测试账号'};
+  } catch (_) {
+    throw new Error('实际软件测试 Cookie 文件无效或不可读取。');
+  }
+}
+ipcMain.handle('save-accounts', (_event, entries) => {
+  if (runner.running) return {ok:false,error:'采集正在运行，请停止后再修改账号。'};
+  try { storeAccounts(entries); return {ok:true}; }
+  catch (_) { return {ok:false,error:'账号保存失败，请检查 Cookie 格式、国家代码及本地目录权限。'}; }
+});
 ipcMain.handle('get-last-scrape-config', () => appData.lastScrapeConfig || null);
-ipcMain.handle('clear-cookies', () => { appData.cookies = []; saveAppData(); return { ok: true }; });
+ipcMain.handle('clear-cookies', () => { appData.cookies = []; appData.cookieMetadata = []; saveAppData(); return { ok: true }; });
 ipcMain.handle('creator-db-stats', async () => {
   if (!creatorDb) return { error: '本地达人库未初始化' };
   try { return { ok: true, ...(await creatorDb.getStats()) }; }
@@ -279,7 +301,7 @@ ipcMain.handle('creator-db-export', async (event, payload) => {
       top_follower_ages: { zh: '粉丝年龄段', en: 'Audience Ages' }, top_follower_gender: { zh: '粉丝性别分布', en: 'Audience Gender' },
       pps_score: { zh: 'PPS评分', en: 'PPS Score' }, is_fast_growing: { zh: '快速增长', en: 'Fast Growing' }, has_collaborated: { zh: '已合作', en: 'Collaborated' },
       creator_permission_tag: { zh: '达人类目权限', en: 'Category Permission' }, is_live_auction: { zh: '直播拍卖', en: 'Live Auction' },
-      '简介': { zh: '简介', en: 'Bio' }, '合作邮箱': { zh: '合作邮箱', en: 'Contact Email' }, 'MCN机构': { zh: 'MCN机构', en: 'MCN Agency' }, '垂直类目': { zh: '垂直类目', en: 'Vertical Category' },
+      '简介': { zh: '简介', en: 'Bio' }, '合作邮箱': { zh: '合作邮箱', en: 'Contact Email' }, 'mcn': { zh: 'MCN机构', en: 'MCN Agency' }, 'MCN机构': { zh: 'MCN机构', en: 'MCN Agency' }, '垂直类目': { zh: '垂直类目', en: 'Vertical Category' },
       last_publish_time: { zh: '最后发布时间', en: 'Last Published' }, activity_status: { zh: '活跃状态', en: 'Activity Status' }, activity_reason: { zh: '判断原因', en: 'Activity Reason' },
       last_refreshed_at: { zh: '最近更新', en: 'Last Updated' },
       ...require('./lib/contact-fields').LABELS,
@@ -383,7 +405,7 @@ ipcMain.handle('update-export-file', async (event, filePath) => {
       top_follower_ages: { zh: '粉丝年龄段', en: 'Audience Ages' }, top_follower_gender: { zh: '粉丝性别分布', en: 'Audience Gender' },
       pps_score: { zh: 'PPS评分', en: 'PPS Score' }, is_fast_growing: { zh: '快速增长', en: 'Fast Growing' }, has_collaborated: { zh: '已合作', en: 'Collaborated' },
       creator_permission_tag: { zh: '达人类目权限', en: 'Category Permission' }, is_live_auction: { zh: '直播拍卖', en: 'Live Auction' },
-      '简介': { zh: '简介', en: 'Bio' }, '合作邮箱': { zh: '合作邮箱', en: 'Contact Email' }, 'MCN机构': { zh: 'MCN机构', en: 'MCN Agency' }, '垂直类目': { zh: '垂直类目', en: 'Vertical Category' },
+      '简介': { zh: '简介', en: 'Bio' }, '合作邮箱': { zh: '合作邮箱', en: 'Contact Email' }, 'mcn': { zh: 'MCN机构', en: 'MCN Agency' }, 'MCN机构': { zh: 'MCN机构', en: 'MCN Agency' }, '垂直类目': { zh: '垂直类目', en: 'Vertical Category' },
       last_publish_time: { zh: '最后发布时间', en: 'Last Published' }, activity_status: { zh: '活跃状态', en: 'Activity Status' }, activity_reason: { zh: '判断原因', en: 'Activity Reason' },
       last_refreshed_at: { zh: '最近更新', en: 'Last Updated' },
     };
@@ -517,7 +539,7 @@ const IMPORT_FIELD_ALIASES = {
   top_follower_gender: ['粉丝性别', 'gender', 'top_follower_gender', '粉丝性别分布'],
   '简介': ['简介', 'bio', 'description'],
   '合作邮箱': ['合作邮箱', 'contact email', 'email', '邮箱', '合作邮箱email'],
-  'MCN机构': ['MCN机构', 'mcn', 'mcn agency', 'mcn机构', '达人机构'],
+  'mcn': ['MCN机构', 'mcn', 'mcn agency', 'mcn机构', '达人机构'],
   '垂直类目': ['垂直类目', 'vertical category', 'vertical', '二级类目'],
   last_publish_time: ['最后发布时间', 'last published', 'last_publish_time', '最近发布'],
   activity_status: ['活跃状态', 'activity status', 'activity', '活跃度'],
@@ -709,7 +731,8 @@ ipcMain.handle('continue-history', async (event, filePath) => {
     };
     // use remembered cookies if available
     if (appData.cookies && appData.cookies.length) {
-      const { cookieFiles, error } = saveCookiesToFiles(appData.cookies);
+      const entries = appData.cookies.map((data,i) => ({data,...(appData.cookieMetadata?.[i] || {})}));
+      const { cookieFiles, error } = saveCookiesToFiles(AccountCookies.select(entries,cfg.shopRegion).map(c=>c.data));
       if (error) return { ok: false, error };
       cfg.cookieFiles = cookieFiles;
     }
@@ -742,7 +765,8 @@ ipcMain.handle('refresh-history', async (event, filePath) => {
       fields: entry.config.fields || null,
     };
     if (appData.cookies && appData.cookies.length) {
-      const { cookieFiles, error } = saveCookiesToFiles(appData.cookies);
+      const entries = appData.cookies.map((data,i) => ({data,...(appData.cookieMetadata?.[i] || {})}));
+      const { cookieFiles, error } = saveCookiesToFiles(AccountCookies.select(entries,cfg.shopRegion).map(c=>c.data));
       if (error) return { ok: false, error };
       cfg.cookieFiles = cookieFiles;
     }
@@ -1144,25 +1168,36 @@ ipcMain.handle('choose-dir', async () => {
 });
 
 // IPC: pick an import file (CSV/XLSX)
-ipcMain.handle('partner-contacts-import', async () => {
-  if (contactsBusy()) return {ok:false, error:'请先停止联系方式补全，再更换团长账号。'};
+ipcMain.handle('partner-contacts-import', async (_event, metadata = {}) => {
+  if (contactsBusy() || runner.running) return {ok:false, error:'请先停止采集与联系方式任务，再更换团长账号。'};
+  const region = AccountCookies.region(metadata.region);
+  if (!Object.hasOwn(MARKETS,region)) return {ok:false,error:'请先选择团长账号的国家。'};
   const selected = await dialog.showOpenDialog(mainWindow, {title:'导入团长 Partner Center Cookie JSON', properties:['openFile'], filters:[{name:'Cookie JSON / TXT', extensions:['json','txt']}]});
   if (selected.canceled || !selected.filePaths.length) return {ok:false, canceled:true};
-  if (contactsBusy()) return {ok:false, error:'联系方式补全正在运行，请稍后再导入。'};
+  if (contactsBusy() || runner.running) return {ok:false, error:'任务正在运行，请稍后再导入。'};
   try {
     const file = selected.filePaths[0];
     if (fs.statSync(file).size > 1024 * 1024) return {ok:false,error:'Cookie 文件过大，请选择 JSON 导出文件。'};
     const cookies = JSON.parse(fs.readFileSync(file,'utf8').replace(/^\uFEFF/,''));
     partnerContactClient = new PartnerContactClient(cookies);
+    runner.partnerCredential = partnerContactClient;
+    partnerAccount = {region, name:String(metadata.name || path.basename(file)).slice(0,80)};
     // Credentials stay in main-process memory, not renderer/logs/exports/history.
     return {ok:true};
   } catch (error) { return {ok:false,error:error instanceof ContactError ? error.message : '无法读取有效 Cookie JSON，请重新导出文件。'}; }
 });
-ipcMain.handle('partner-contacts-clear', () => {
-  if (contactsBusy()) return {ok:false,error:'请先停止联系方式补全。'};
-  partnerContactClient = null; return {ok:true};
+ipcMain.handle('partner-contacts-metadata', (_event, metadata = {}) => {
+  if (contactsBusy() || runner.running) return {ok:false,error:'请先停止正在运行的任务。'};
+  const region = AccountCookies.region(metadata.region);
+  if (!partnerContactClient || !Object.hasOwn(MARKETS,region)) return {ok:false,error:'请导入团长账号并选择国家。'};
+  partnerAccount = {region, name:String(metadata.name || '团长账号').slice(0,80)};
+  return {ok:true};
 });
-ipcMain.handle('partner-contacts-status', () => ({...contactJob.snapshot(), connected:!!partnerContactClient, preparing:contactPreparing, automatic:automaticContacts, collecting:runner.running, collectionPaused:runner.paused}));
+ipcMain.handle('partner-contacts-clear', () => {
+  if (contactsBusy() || runner.running) return {ok:false,error:'请先停止采集与联系方式任务。'};
+  partnerContactClient = null; runner.partnerCredential = null; partnerAccount = null; return {ok:true};
+});
+ipcMain.handle('partner-contacts-status', () => ({...contactJob.snapshot(), connected:!!partnerContactClient, account:partnerAccount, preparing:contactPreparing, automatic:automaticContacts, collecting:runner.running, collectionPaused:runner.paused}));
 ipcMain.handle('partner-contacts-preview', async (event, payload = {}) => {
   try {
     const region = String(payload.region || '').toUpperCase();
@@ -1232,22 +1267,33 @@ function saveCookiesToFiles(pasted) {
 }
 
 // IPC: test scrape with isolated environment (1 keyword, 1 page) to verify everything works
+function taskCookieData(config) {
+  if (config.accountEntries) {
+    if (!config.accountEntries.length && partnerContactClient) return [];
+    return AccountCookies.select(config.accountEntries,config.shopRegion).map(c=>c.data);
+  }
+  return config.pastedCookies || [];
+}
 ipcMain.handle('test-scrape', async (event, config) => {
   if (contactsBusy()) return {error:'联系方式补全进行中，请稍后再试。'};
   if (runner.running) return { error: '抓取进行中，请稍后再试' };
   try {
-    const pasted = config.pastedCookies || [];
+    const pasted = taskCookieData(config);
     const { cookieFiles, error } = saveCookiesToFiles(pasted);
     if (error) return { error };
-    if (!cookieFiles.length) return { error: '未收到 Cookie' };
+    if (!cookieFiles.length && !partnerContactClient) return { error: '未收到 Cookie' };
     // isolated test: 1 cookie session, 1 keyword, page 0 only
     const cfg = {
       cookieFiles: cookieFiles.slice(0, 1),
+      discoverySource: config.discoverySource || 'auto',
       mode: config.mode || 'auto',
       format: config.format || 'csv',
       outPath: config.outPath || OUT_DIR,
       detail: false,
-      shopRegion: config.shopRegion || 'US',
+      // Partner discovery must use the verified page session so an API
+      // challenge can surface the official control and resume in place.
+      partnerBrowserSession: config.partnerBrowserSession !== false,
+      shopRegion: AccountCookies.region(config.shopRegion || 'US'),
       keywords: ['phone case'],
       fields: ['handle', 'nickname'],
       testMode: true, // multirunner will stop after 1 page
@@ -1273,19 +1319,28 @@ ipcMain.handle('start-scrape', async (event, config) => {
   if (contactsBusy()) return {error:'联系方式补全进行中，请稍后再试。'};
   if (runner.running) return { error: '已在运行中' };
   try {
-    const pasted = config.pastedCookies || [];
+    const pasted = taskCookieData(config);
+    if (config.accountEntries) storeAccounts(config.accountEntries);
     const { cookieFiles, error } = saveCookiesToFiles(pasted);
     if (error) return { error };
-    if (!cookieFiles.length) return { error: '未收到 Cookie' };
+    if (!cookieFiles.length && !partnerContactClient) return { error: '未收到 Cookie' };
     const cfg = {
       cookieFiles,
+      discoverySource: config.discoverySource || 'auto',
       mode: config.mode || 'auto',
       format: config.format || 'csv',
       outPath: path.isAbsolute(config.outPath || '') ? config.outPath : path.join(APP_DIR, config.outPath || 'output'),
       detail: !!config.detail,
       enrichContacts: config.enrichContacts === true,
+      // Preserve the renderer's page-session choice. Dropping this flag made
+      // Partner discovery fall back to raw requests and terminate on captcha.
+      partnerBrowserSession: config.partnerBrowserSession !== false,
       headerLang: config.headerLang === 'en' ? 'en' : 'zh',
-      shopRegion: config.shopRegion || 'US',
+      shopRegion: AccountCookies.region(config.shopRegion || 'US'),
+      // Development live-test hook only. Packaged users have no fixed limit.
+      testStopAfter: /^\d+$/.test(process.env.TIKTOK_CREATOR_TEST_STOP_AFTER || '')
+        ? Math.max(1, Math.trunc(Number(process.env.TIKTOK_CREATOR_TEST_STOP_AFTER)))
+        : Number.isInteger(config.testStopAfter) && config.testStopAfter > 0 ? config.testStopAfter : null,
       dedupe: !!config.dedupe,
       creatorInput: Array.isArray(config.creatorInput) ? config.creatorInput : null,
       keywords: config.keywords && config.keywords.length ? config.keywords : require('./lib/exporter').DEFAULT_KEYWORDS,
@@ -1307,6 +1362,7 @@ ipcMain.handle('start-scrape', async (event, config) => {
     // "Continue scraping" with the same keywords/region later
     appData.lastScrapeConfig = {
       keywords: cfg.keywords || [],
+      discoverySource: cfg.discoverySource,
       shopRegion: cfg.shopRegion || 'US',
       detail: !!cfg.detail,
       enrichContacts: cfg.enrichContacts,
@@ -1315,8 +1371,12 @@ ipcMain.handle('start-scrape', async (event, config) => {
     };
     saveAppData();
     // remember cookies for next launch
-    appData.cookies = pasted.slice();
-    saveAppData();
+    // Keep the entire account pool, including other countries, and its notes.
+    if (!config.accountEntries) {
+      const known = appData.cookies || [];
+      for (const data of pasted) if (!known.includes(data)) known.push(data);
+      appData.cookies = known; saveAppData();
+    }
     const prevResult = runner.result;
     // attach the run config to the result so history can offer continue/refresh
     runner._lastConfig = cfg;
@@ -1345,6 +1405,7 @@ ipcMain.handle('scrape-status', () => {
   return {
     running: runner.running,
     paused: runner.paused,
+    verification: runner.verificationGate?.snapshot() || null,
     stopping: !!(runner.running && runner.stopped),
     status: runner.status,
     currentInfo: ci,
@@ -1362,6 +1423,7 @@ ipcMain.handle('scrape-status', () => {
 
 // IPC: pause
 ipcMain.handle('pause-scrape', () => { runner.pause(); return { ok: true }; });
+ipcMain.handle('confirm-verification', () => runner.verificationGate?.confirm() || {ok:false,error:'当前没有等待人工验证的任务。'});
 
 // IPC: resume (refresh session pages first so any captcha/error page is cleared)
 ipcMain.handle('resume-scrape', async () => {
@@ -1394,6 +1456,7 @@ if (!gotLock) {
   });
   app.whenReady().then(async () => {
     loadAppData();
+    loadDevelopmentCookieOverride();
     // always ensure dirs + shortcut on every launch (idempotent)
     ensureDirs();
     openLogStream();

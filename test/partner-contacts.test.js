@@ -38,7 +38,8 @@ test('selects TAP by market_region (not market_id), and requests contacts withou
   await client.fetchContacts('MY','456');
   assert.equal(calls.filter(u => u.pathname.endsWith('/info')).length,1);
   assert.ok(calls.every(u => u.origin === 'https://partner.tiktokshop.com' && !u.pathname.includes('/im')));
-  await assert.rejects(client.fetchContacts('DE','123'), {code:'MARKET'});
+  await assert.rejects(client.fetchContacts('ZZ','123'), {code:'MARKET'});
+  await assert.rejects(client.fetchContacts('DE','123'), {code:'MARKET_AUTH'});
   await assert.rejects(client.fetchContacts('MY','123&bad'), {code:'CREATOR_ID'});
   await assert.rejects(client.fetchContacts('MY','123',AbortSignal.abort()), {code:'STOPPED'});
 });
@@ -46,6 +47,35 @@ test('selects TAP by market_region (not market_id), and requests contacts withou
 test('missing contact_info is an error, not a successful empty result', async () => {
   const client = new PartnerContactClient(cookies,{request:async () => ({code:0})}); client.contexts.set('MY','222');
   await assert.rejects(client.fetchContacts('MY','123'),{code:'RESPONSE'});
+});
+
+test('US routing uses market_region 100 and US host-only cookies without leaking to global',async()=>{
+  const calls=[];
+  const client=new PartnerContactClient([{domain:'partner.us.tiktokshop.com',hostOnly:true,path:'/',name:'sessionid',value:'synthetic-us'}],{
+    request:async(url,headers)=>{
+      calls.push(url);assert.equal(url.origin,'https://partner.us.tiktokshop.com');
+      assert.match(headers.Referer,/partner\.us\.tiktokshop\.com/);
+      if(url.pathname.endsWith('/info'))return {code:0,data:{partner_biz_role_info:{market_list:[
+        {market_region:6,type_list:[{type:4,partner_id:'111'}]},
+        {market_region:100,type_list:[{type:4,partner_id:'222'}]}
+      ]}}};
+      assert.equal(url.searchParams.get('partner_id'),'222');return {code:0,contact_info:[]};
+    }
+  });
+  assert.equal((await client.fetchContacts('US','123')).contact_status,'未提供');
+  assert.equal(calls.length,2);
+  await assert.rejects(client.fetchContacts('MY','123'),{code:'COOKIE_MISSING'});
+  await assert.rejects(client.request('https://partner.us.tiktokshop.com/arbitrary',{}),{code:'ORIGIN'});
+  assert.equal(calls.length,2);
+});
+
+test('one parent-domain session can check multiple actual market authorizations independently',async()=>{
+  const client=new PartnerContactClient(cookies,{request:async()=>({code:0,data:{partner_biz_role_info:{market_list:[
+    {market_region:6,type_list:[{type:4,partner_id:'111'}]},
+    {market_region:100,type_list:[{type:4,partner_id:'222'}]}
+  ]}}})});
+  assert.equal(await client.resolvePartner('MY'),'111');assert.equal(await client.resolvePartner('US'),'222');
+  await assert.rejects(client.resolvePartner('TH'),{code:'MARKET_AUTH'});
 });
 
 test('explicit successful empty contact envelopes mean not provided, including the observed omitted list', async () => {
@@ -177,8 +207,8 @@ test('Stop cancels a long recovery wait immediately, without marking the creator
   assert.ok(Date.now()-started<1000);
 });
 
-test('actual throttling, auth, challenges and invalid data pause immediately without auto retry', async () => {
-  for (const code of ['RATE_LIMIT','QUOTA','CHALLENGE','AUTH','COOKIE_MISSING','MARKET_AUTH','RESPONSE','API']) {
+test('auth, quota, challenges and invalid data pause immediately without auto retry', async () => {
+  for (const code of ['QUOTA','CHALLENGE','AUTH','COOKIE_MISSING','MARKET_AUTH','RESPONSE','API']) {
     const job = new ContactJob({intervalMs:0,retryDelaysMs:[0]}); let calls = 0, writes = 0;
     job.start({region:'MY',targets:['123','456'],client:{resolvePartner:async()=>{},fetchContacts:async()=>{
       calls++; throw new ContactError(code,'已暂停');
@@ -188,6 +218,17 @@ test('actual throttling, auth, challenges and invalid data pause immediately wit
     assert.equal(job.state.errorCode,code); assert.equal(job.state.retryCount,0);
     assert.equal(job.state.outcome,'paused'); assert.equal(job.state.completed,0);
   }
+});
+
+test('explicit rate limits cool down and retry the same contact without skipping it', async () => {
+  const job=new ContactJob({intervalMs:0,retryDelaysMs:[0],rateLimitDelaysMs:[0]});let calls=0,writes=0;
+  job.start({region:'MY',targets:['123'],client:{resolvePartner:async()=>{},fetchContacts:async()=>{
+    if(++calls===1){const error=new ContactError('RATE_LIMIT','limited');error.retryAfterMs=0;throw error;}
+    return {contact_status:'未提供'};
+  }},db:{updateCreatorContacts:async()=>{writes++;return {saved:1};}}});
+  await job.done;
+  assert.equal(calls,2);assert.equal(writes,1);assert.equal(job.state.retryCount,1);
+  assert.equal(job.state.outcome,'completed');assert.equal(job.state.completed,1);
 });
 
 test('full-profile mode keeps its existing no-retry policy', async () => {

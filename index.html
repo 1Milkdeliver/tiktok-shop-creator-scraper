@@ -699,6 +699,19 @@
   .workflow-item strong { display:block;font-size:13px;line-height:20px;font-weight:600; }
   .workflow-item span { display:block;color:var(--sub);font-size:12px;line-height:18px; }
   @media (max-width:900px) { .overview-actions { grid-template-columns:1fr; } }
+.account-settings { display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin:12px 0; }
+.account-settings label, .continue-country { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.account-settings input, .account-settings select, .continue-country select { max-width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:8px; background:var(--card,#fff); color:var(--text); font:inherit; }
+.account-settings input { width:220px; }
+.account-settings select { width:240px; }
+.partner-account { margin-top:24px; padding-top:20px; border-top:1px solid var(--border); }
+.cookie-item { flex-wrap:wrap; }
+.cookie-item .sum { flex:1; min-width:180px; overflow-wrap:anywhere; white-space:normal; }
+.cookie-item .del { background:none; border:0; font:inherit; }
+.continue-actions { flex-wrap:wrap; }
+.continue-country select { max-width:240px; }
+.account-settings :focus-visible, .continue-country :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+@media(max-width:768px) { .account-settings label { width:100%; } .account-settings input,.account-settings select { width:100%; } }
 </style>
 </head>
 <body>
@@ -769,8 +782,8 @@
     <div class="library-update-panel" id="contactPanel">
       <div class="page-heading"><div><h2 data-i18n="contacts.title">补全联系方式</h2><p data-i18n="contacts.subtitle">对达人库中已发现的达人，读取团长后台允许查看的全部联系方式。</p></div><button type="button" class="btn-link" id="contactClose" data-i18n="contacts.close">收起</button></div>
       <div class="hint" data-i18n="contacts.hint">WhatsApp、LINE、邮箱、Zalo、Viber、Facebook 及其他联系方式均独立保存。使用 Partner Center 团长 Cookie，不代发消息，不需要逐个打开聊天页面。空白不代表抓取成功，请结合“联系方式状态”查看。</div>
-      <div class="contact-actions"><button type="button" class="btn btn-secondary" id="contactImport" data-i18n="contacts.import">导入团长 Cookie JSON</button><button type="button" class="btn-link" id="contactClear" data-i18n="contacts.clear">移除授权</button><span id="contactAuth" role="status"></span></div>
-      <p class="hint" data-i18n="contacts.private">授权仅在本次软件运行期间保留；退出后需重新导入，不会写入导出文件或日志。</p>
+      <div class="contact-actions"><button type="button" class="btn btn-secondary" id="contactAccountsOpen">管理采集账号 / 团长授权</button><button type="button" class="btn btn-primary" id="contactNewTask">新建任务：边采集边抓联系方式</button></div>
+      <p class="hint">这里继续处理达人库里已有的达人；新发现达人请使用“新建任务”或上方“继续抓取”。卖家采集账号与团长联系方式授权分工使用，不互相替代。</p>
       <div class="contact-settings">
         <label><span data-i18n="contacts.market">团长地区</span><select id="contactRegion"><option value="MY">MY · 马来西亚 / Malaysia</option><option value="TH">TH · 泰国 / Thailand</option><option value="VN">VN · 越南 / Vietnam</option><option value="PH">PH · 菲律宾 / Philippines</option><option value="SG">SG · 新加坡 / Singapore</option><option value="ID">ID · 印度尼西亚 / Indonesia</option><option value="GB">GB · 英国 / United Kingdom</option><option value="US">US · 美国 / United States</option></select></label>
         <label><span data-i18n="contacts.mode">补全内容</span><select id="contactMode"><option value="contacts" data-i18n="contacts.only">仅联系方式</option><option value="full" data-i18n="contacts.full">完整资料 + 联系方式（待实测）</option></select></label>
@@ -864,6 +877,8 @@
 
   <div class="card page-hidden" id="accounts">
     <h2><span class="step-num">1</span> <span data-i18n="step1.title">导入 Cookie</span> <span class="sel-all" id="addCookieBtn" data-i18n="step1.add">＋ 添加账号</span> <span class="sel-all" id="cookieGuideBtn" data-i18n="step1.guide" style="margin-left:8px">❓ 多账号指南</span></h2>
+    <p class="hint">卖家与团长 Cookie 分别走各自的达人采集入口；团长账号还能同步读取联系方式。导入国家仅作备注，不限制可抓市场；任务中单独选择目标国家，启动时检查实际权限。Cookie 通常不含可靠账号名，请填写备注区分。</p>
+    <div class="account-settings"><label>导入国家（备注） <select id="cookieCountry" aria-label="卖家账号导入国家备注"></select></label><label>账号名 / 备注 <input id="cookieName" maxlength="80" placeholder="例如：MY 店铺 A"></label></div>
     <div class="cookie-zone" id="cookieZone">
       <div class="zone-label" data-i18n="step1.zone">将 <b>Cookie JSON 文件</b> 拖到此处，或直接 <b>粘贴</b> 到下方输入框</div>
       <textarea id="cookieInput" data-i18n-placeholder="step1.cookiePlaceholder" placeholder='粘贴 Cookie JSON，例如 [{"domain":".tiktokshopglobalselling.com","name":"sessionid","value":"..."}, ...]'></textarea>
@@ -872,9 +887,18 @@
         <span class="fname" id="fname"></span>
         <button class="btn btn-secondary" id="browseBtn" style="padding:7px 18px" data-i18n="step1.browse">📂 导入文件</button>
       </div>
-      <input type="file" id="fileInput" accept=".json" style="display:none">
+      <input type="file" id="fileInput" accept=".json,.txt" style="display:none">
     </div>
     <div class="cookie-list" id="cookieList"></div>
+    <p id="accountMessage" class="hint" role="status"></p>
+    <label class="account-settings">采集入口 / Source <select id="discoverySource" aria-label="采集入口"><option value="auto">自动识别 Cookie 后台 / Auto</option><option value="partner">团长 Partner Center</option><option value="seller">卖家 Seller Affiliate</option></select></label>
+    <p class="hint">导入国家只是备注。团长 Cookie 可按任务目标市场检查权限，不能拿团长 Cookie 登录卖家后台。团长入口按接口读取，无需打开聊天页；遇到平台验证停止，不代表 Cookie 未导入。</p>
+    <section class="partner-account" aria-label="团长联系方式账号">
+      <h3>团长账号 · 发现达人及同步抓联系方式</h3>
+      <div class="account-settings"><label>导入国家（备注） <select id="partnerAccountCountry" aria-label="团长账号导入国家备注"></select></label><label>账号名 / 备注 <input id="partnerAccountName" maxlength="80" placeholder="例如：MY 团长 A"></label><button type="button" class="btn-link" id="partnerAccountSave">保存备注与国家</button></div>
+      <div class="contact-actions"><button type="button" class="btn btn-secondary" id="contactImport" data-i18n="contacts.import">导入团长 Cookie JSON</button><button type="button" class="btn-link" id="contactClear" data-i18n="contacts.clear">移除授权</button><span id="contactAuth" role="status"></span></div>
+      <p class="hint" data-i18n="contacts.private">授权仅在本次软件运行期间保留；退出后需重新导入，不会写入导出文件或日志。</p>
+    </section>
     <div class="hint" data-i18n="step1.hint">可添加多个账号 Cookie 实现多账号并发抓取 · 用 <a href="https://chromewebstore.google.com/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm" target="_blank" style="color:var(--accent)">Cookie-Editor</a> 扩展导出 JSON 后粘贴或拖入</div>
   </div>
 
@@ -1046,6 +1070,10 @@ https://www.tiktok.com/@makeup.lover'></textarea>
       <button class="btn btn-secondary" id="btnExit" data-i18n="action.exit">退出</button>
     </div>
     <div class="hint" id="statusDetail" role="status" aria-live="polite" style="margin-top:10px;font-size:13px;color:var(--accent)"></div>
+    <div id="verificationPanel" hidden style="margin-top:12px;padding:14px;border:1px solid var(--border);border-radius:8px">
+      <p id="verificationMessage" role="status" aria-live="polite"></p>
+      <button type="button" class="btn btn-primary" id="btnConfirmVerification">我已完成验证，继续抓取</button>
+    </div>
     <div class="hint" id="testResult" role="status" aria-live="polite" style="display:none;margin-top:8px"></div>
     <div class="result-box" id="resultBox" role="status" aria-live="polite"></div>
     <div id="log" style="margin-top:14px"></div>
@@ -1104,6 +1132,7 @@ https://www.tiktok.com/@makeup.lover'></textarea>
   </div>
 </div>
 
+<script src="lib/account-cookies.js"></script>
 <script src="lib/contact-fields.js"></script>
 <script src="lib/partner-profile-fields.js"></script>
 <script>
@@ -1599,7 +1628,7 @@ const FIELDS = [
   { k: 'top_follower_ages', n: '粉丝年龄段', e: 'Audience Ages' }, { k: 'top_follower_gender', n: '粉丝性别分布', e: 'Audience Gender' },
   { k: 'pps_score', n: 'PPS评分', e: 'PPS Score' }, { k: 'is_fast_growing', n: '快速增长', e: 'Fast Growing' }, { k: 'has_collaborated', n: '已合作', e: 'Collaborated' },
   { k: 'creator_permission_tag', n: '达人类目权限', e: 'Category Permission' }, { k: 'is_live_auction', n: '直播拍卖', e: 'Live Auction' },
-  { k: '简介', n: '简介', e: 'Bio', detail: true }, { k: '合作邮箱', n: '合作邮箱', e: 'Contact Email', detail: true }, { k: 'MCN机构', n: 'MCN机构', e: 'MCN Agency', detail: true }, { k: '垂直类目', n: '垂直类目', e: 'Vertical Category', detail: true },
+  { k: '简介', n: '简介', e: 'Bio', detail: true }, { k: '合作邮箱', n: '合作邮箱', e: 'Contact Email', detail: true }, { k: 'mcn', n: 'MCN机构', e: 'MCN Agency', detail: true }, { k: '垂直类目', n: '垂直类目', e: 'Vertical Category', detail: true },
   ...window.CreatorContactFields.FIELDS,
   ...window.PartnerProfileFields.FIELDS,
   { k: 'last_publish_time', n: '最后发布时间', e: 'Last Published' }, { k: 'activity_status', n: '活跃状态', e: 'Activity Status' }, { k: 'activity_reason', n: '判断原因', e: 'Activity Reason' },
@@ -1608,7 +1637,7 @@ const UPDATE_FIELD_GROUPS = {
   identity: ['handle', 'nickname', 'avatar', 'selection_region', 'category'],
   performance: ['follower_cnt', 'med_gmv_revenue', 'med_gmv_revenue_range', 'video_gmv', 'live_gmv', 'units_sold', 'units_sold_range', 'video_avg_view_cnt', 'video_play_cnt_med', 'video_engagement', 'ec_video_engagement', 'ec_video_gpm', 'ec_live_gpm', 'ec_live_avg_uv', 'pps_score', 'is_fast_growing', 'last_publish_time'],
   audience: ['top_follower_ages', 'top_follower_gender'],
-  contact: ['简介', '合作邮箱', 'MCN机构'],
+  contact: ['简介', '合作邮箱', 'mcn'],
   permissions: ['has_collaborated', 'creator_permission_tag', 'is_live_auction'],
 };
 function renderScrapeFieldPreview() {
@@ -1661,28 +1690,10 @@ const fileInput = document.getElementById('fileInput');
 
 function cookieSummary(raw) {
   try {
-    const arr = JSON.parse(raw.replace(/^\uFEFF/, ''));
-    if (!Array.isArray(arr)) return I18N['cookie.invalidJson'][uiLang];
-    // find the earliest expiry among cookies that have one (expires/expirationDate, seconds)
-    let minExp = Infinity;
-    let hasExpiry = false;
-    for (const c of arr) {
-      const e = c.expirationDate || c.expires;
-      if (e && Number(e) > 0) { hasExpiry = true; minExp = Math.min(minExp, Number(e)); }
-    }
-    let expiryText = '';
-    if (hasExpiry && isFinite(minExp)) {
-      const ms = minExp * 1000;
-      const days = Math.ceil((ms - Date.now()) / 86400000);
-      const d = new Date(ms);
-      const pad = n => String(n).padStart(2, '0');
-      const dateStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-      const zh = uiLang === 'zh';
-      if (days > 0) expiryText = zh ? ` · 失效 ${dateStr}（剩 ${days} 天）` : ` · expires ${dateStr} (${days}d left)`;
-      else if (days === 0) expiryText = zh ? ` · 今天失效 ${dateStr}` : ` · expires today ${dateStr}`;
-      else expiryText = zh ? ` · ⚠️ 已过期 ${dateStr}` : ` · ⚠️ expired ${dateStr}`;
-    }
-    return (uiLang === 'zh' ? `已解析 ${arr.length} 条 Cookie` : `${arr.length} cookies parsed`) + expiryText;
+    const info = AccountCookies.summary(raw);
+    const expiry = info.expiresAt ? new Date(info.expiresAt).toLocaleString() : '';
+    return (uiLang === 'zh' ? `已解析 ${info.count} 条 Cookie · 登录状态启动时检查` : `${info.count} cookies · Login checked at startup`)
+      + (expiry ? (uiLang === 'zh' ? ` · 会话到期参考 ${expiry}${info.expired ? '（需核验）' : ''}` : ` · Session expiry hint ${expiry}`) : '');
   } catch (e) { return I18N['cookie.invalid'][uiLang]; }
 }
 
@@ -1697,11 +1708,11 @@ function cookieAccountKey(raw) {
       const c = arr.find(x => x && x.name === name && x.value);
       return c ? String(c.value) : '';
     };
-    return pick('sessionid') || pick('sid_guard') || pick('sid_tt') || pick('uid_tt');
+    return pick('uid_tt') || pick('uid_tt_ss') || pick('sessionid') || pick('sid_guard') || pick('sid_tt');
   } catch (e) { return ''; }
 }
 
-function addCookie(source, data, name) {
+async function addCookie(source, data, name) {
   const sum = cookieSummary(data);
   if (sum === I18N['cookie.invalidJson'][uiLang] || sum === I18N['cookie.invalid'][uiLang]) {
     alert('Cookie: ' + sum);
@@ -1710,23 +1721,52 @@ function addCookie(source, data, name) {
   // same-account replacement: if the pasted cookies belong to an account we
   // already have, update that entry instead of adding a duplicate
   const key = cookieAccountKey(data);
-  const existingIdx = key ? cookieList.findIndex(c => cookieAccountKey(c.data) === key) : -1;
+  const country = document.getElementById('cookieCountry').value;
+  const existingIdx = key ? cookieList.findIndex(c => cookieAccountKey(c.data) === key && c.region === country) : -1;
+  if (!country) { alert(uiLang === 'zh' ? '请先选择导入国家作为备注，任务的目标国家可另选。' : 'Choose an import country label; the task target is selected separately.'); return; }
+  const label = document.getElementById('cookieName').value.trim();
+  const next = cookieList.map(c => ({...c}));
   if (existingIdx >= 0) {
-    cookieList[existingIdx] = { source, data, name: cookieList[existingIdx].name || name || (uiLang === 'zh' ? `账号 ${existingIdx + 1}` : `Account ${existingIdx + 1}`) };
-    renderCookieList();
+    next[existingIdx] = {source,data,region:country,name:label || cookieList[existingIdx].name || name};
+    if (!await saveCookieEntries(next)) return;
     // clear paste box after successful replace
     document.getElementById('cookieInput').value = '';
     document.getElementById('fname').textContent = '';
     alert(uiLang === 'zh' ? `✅ 已替换同账号的旧 Cookie（账号 ${existingIdx + 1}）` : `✅ Replaced the old cookie for this account (Account ${existingIdx + 1})`);
     return;
   }
-  cookieList.push({ source, data, name: name || (uiLang === 'zh' ? `账号 ${cookieList.length + 1}` : `Account ${cookieList.length + 1}`) });
-  renderCookieList();
+  next.push({source,data,region:country,name:label || name || (uiLang === 'zh' ? `账号 ${cookieList.length + 1}` : `Account ${cookieList.length + 1}`)});
+  if (!await saveCookieEntries(next)) return;
   // clear paste box after successful add
   document.getElementById('cookieInput').value = '';
   document.getElementById('fname').textContent = '';
 }
 
+async function saveCookieEntries(next) {
+  try {
+    const result = await window.api.saveAccounts(next);
+    if (!result.ok) throw new Error(result.error);
+    cookieList.splice(0,cookieList.length,...next); renderCookieList();
+    document.getElementById('accountMessage').textContent = uiLang === 'zh' ? '账号、国家与备注已保存到本机。' : 'Accounts, markets and notes saved locally.';
+    return true;
+  } catch (e) { document.getElementById('accountMessage').textContent = e.message; return false; }
+}
+function accountEscape(value) { return String(value || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function countryOptions(value) {
+  const countries = AccountCookies.countries.slice();
+  if (value && /^[A-Z]{2}$/.test(value) && !countries.some(([code]) => code === value)) countries.push([value,value]);
+  return '<option value="">请选择国家 / Choose country</option>' + countries.map(([code,name]) => `<option value="${code}" ${code===value?'selected':''}>${code} · ${name}</option>`).join('');
+}
+function taskAccounts(region) {
+  if (!cookieList.length && window.partnerConnected && /^[A-Z]{2}$/.test(region)) return [{source:'partner-memory'}];
+  try { return AccountCookies.select(cookieList,region); }
+  catch(e) { alert(e.message); openAccountSettings(); return null; }
+}
+function openAccountSettings() {
+  accountPanelOpen = true; showPage('overview');
+  document.getElementById('accounts').scrollIntoView({block:'start'});
+  document.getElementById('cookieCountry').focus({preventScroll:true});
+}
 function renderCookieList() {
   const box = document.getElementById('cookieList');
   const metric = document.getElementById('accountMetric');
@@ -1736,11 +1776,14 @@ function renderCookieList() {
   box.innerHTML = cookieList.map((c, i) => `
     <div class="cookie-item">
       <span class="tag">${accLabel} ${i + 1}</span>
-      <span class="sum">${c.name} · ${cookieSummary(c.data)}</span>
-      <span class="del" data-i="${i}">✕</span>
+      <div class="sum"><div class="account-settings"><label>账号名 / 备注 <input class="account-name" data-i="${i}" maxlength="80" value="${accountEscape(c.name)}"></label><label>国家备注 <select class="account-country" data-i="${i}">${countryOptions(c.region)}</select></label></div><small>${accountEscape(cookieSummary(c.data))}</small></div>
+      <button type="button" class="del" data-i="${i}" aria-label="删除账号 ${i+1}">✕</button>
     </div>`).join('');
   box.querySelectorAll('.del').forEach(el => {
-    el.onclick = () => { cookieList.splice(+el.dataset.i, 1); renderCookieList(); };
+    el.onclick = () => saveCookieEntries(cookieList.filter((_,i) => i !== +el.dataset.i));
+  });
+  box.querySelectorAll('.account-name,.account-country').forEach(el => {
+    el.onchange = () => { const next = cookieList.map(c=>({...c})); next[+el.dataset.i][el.classList.contains('account-name') ? 'name' : 'region'] = el.value; saveCookieEntries(next); };
   });
   renderRateLimit();
 }
@@ -1923,6 +1966,12 @@ async function poll() {
     if (renderRateLimit && typeof renderRateLimit === 'function') renderRateLimit();
     const st = document.getElementById('status');
     const detail = document.getElementById('statusDetail');
+    const verification=j.verification;
+    document.getElementById('verificationPanel').hidden=!verification?.waiting;
+    document.getElementById('verificationMessage').textContent=verification?.message || '';
+    const verifyButton=document.getElementById('btnConfirmVerification');
+    verifyButton.disabled=!!verification?.checking;
+    verifyButton.textContent=uiLang==='zh'?'我已完成验证，继续抓取':'Verification completed — continue';
 
     if (j.running) {
       setStopButtonActive(true);
@@ -1933,6 +1982,10 @@ async function poll() {
         setStopButtonActive(true);
         startSpin(uiLang === 'zh' ? '⏹ 正在结束并导出' : '⏹ Finishing & exporting');
         detail.textContent = uiLang === 'zh' ? '正在完成当前请求并保存导出…' : 'Finishing current request and saving…';
+      } else if (verification?.waiting) {
+        stopSpin();syncMainButton('start',{disabled:true});
+        setStatus(uiLang==='zh'?'等待人工验证':'Awaiting verification','');
+        detail.textContent=uiLang==='zh'?'采集页面与断点已保留；完成验证后点击下方继续按钮。':'Page and progress retained. Complete verification, then click Continue below.';
       } else if (j.paused) {
         stopSpin();
         syncMainButton('resume', { disabled: false });
@@ -1978,26 +2031,10 @@ async function poll() {
     } else if (j.result && j.result.ok) {
       const contactsPending = j.contacts && j.contacts.outcome !== 'completed';
       stopSpin(); setStatus(contactsPending ? (uiLang === 'zh' ? '资料已保存 · 联系方式待继续' : 'Profiles saved · contacts pending') : (uiLang === 'zh' ? '✅ 完成' : '✅ Done'), contactsPending ? '' : 'done');
-      // Auto-remove cookies that were CONFIRMED invalid during this run
-      // (landed on login/blank page). Cookies merely "expired by date" but
-      // still working are kept. doneAt guards against re-processing on polls.
-      const invIdx = Array.isArray(j.result.invalidCookieIndexes) ? j.result.invalidCookieIndexes : [];
-      if (invIdx.length && window._lastInvalidHandledAt !== j.result.doneAt) {
-        window._lastInvalidHandledAt = j.result.doneAt;
-        const removedNames = [];
-        [...invIdx].sort((a, b) => b - a).forEach(i => {
-          if (i >= 0 && i < cookieList.length) removedNames.push(cookieList.splice(i, 1)[0]);
-        });
-        if (removedNames.length) {
-          renderCookieList();
-          alert(uiLang === 'zh'
-            ? `⚠️ 已自动移除 ${removedNames.length} 个确认失效的账号 Cookie（跳转到登录页/空白页）。仅按日期显示过期但还能用的 Cookie 已保留。`
-            : `⚠️ Auto-removed ${removedNames.length} confirmed-invalid account cookie(s) (redirected to login/blank page). Cookies merely expired-by-date but still working were kept.`);
-        }
-      }
+      // Failed accounts remain editable in account management; never auto-delete.
       showResult(j.result); detail.textContent = contactsPending ? (uiLang === 'zh' ? '联系方式尚未全部检查，原因和续抓入口见下方联系方式进度。' : 'Contacts are not fully checked. See contact progress below for the reason and resume controls.') : ''; syncMainButton('start', { disabled: false }); setStopButtonActive(false); lockOptions(false); refreshAppData();
     }
-    else if (j.result && !j.result.ok) { stopSpin(); setStatus(uiLang === 'zh' ? '❌ 出错' : '❌ Error', 'error'); detail.textContent = ''; syncMainButton('start', { disabled: false }); setStopButtonActive(false); lockOptions(false); }
+    else if (j.result && !j.result.ok) { stopSpin(); setStatus(uiLang === 'zh' ? '❌ 任务未完成' : '❌ Task incomplete', 'error'); detail.textContent = j.result.error || ''; syncMainButton('start', { disabled: false }); setStopButtonActive(false); lockOptions(false); }
     renderLibraryUpdateProgress(j);
   } catch (e) { }
 }
@@ -2055,6 +2092,14 @@ function setStopButtonActive(active) {
   btnStop.disabled = !active;
 }
 
+document.getElementById('btnConfirmVerification').onclick = async () => {
+  const button=document.getElementById('btnConfirmVerification');button.disabled=true;
+  try {
+    const result=await window.api.confirmVerification();
+    if(!result.ok)document.getElementById('verificationMessage').textContent=result.error;
+  }catch(_){document.getElementById('verificationMessage').textContent=uiLang==='zh'?'检查失败，请稍后重试；断点保留。':'Check failed. Progress retained.';}
+  finally {await poll();}
+};
 document.getElementById('btnStart').onclick = async () => {
   // dispatch by current state: if a run is active, the button acts as pause/resume
   const st = await window.api.status().catch(() => null);
@@ -2066,7 +2111,7 @@ document.getElementById('btnStart').onclick = async () => {
   if (st?.contacts?.running) return; // the parallel contact queue is still draining
 
   // ---- start a new scrape ----
-  if (!cookieList.length) { alert(I18N['alert.noCookie'][uiLang]); return; }
+  if (!cookieList.length && !window.partnerConnected) { alert(I18N['alert.noCookie'][uiLang]); return; }
   const source = (document.querySelector('input[name=source]:checked') || {}).value || 'cat';
   const creatorInput = document.getElementById('creatorInput').value.trim().split(/\r?\n/).map(x => x.trim()).filter(Boolean);
   const kws = [...document.querySelectorAll('.kw:checked')].map(c => c.value);
@@ -2086,7 +2131,9 @@ document.getElementById('btnStart').onclick = async () => {
   const updateFields = [...new Set(selectedUpdateGroups.flatMap(group => UPDATE_FIELD_GROUPS[group] || []))];
   const detailKeys = new Set(FIELDS.filter(field => field.detail).map(field => field.k));
   const detail = scrapeMode === 'full' && updateFields.some(field => detailKeys.has(field));
-  const cfg = { pastedCookies: cookieList.map(c => c.data), mode, format, headerLang, outPath, detail, dedupe, creatorInput: source === 'list' && creatorInput.length ? creatorInput : null, keywords: kws, fields, updateFields, shopRegion, autoExport: false, enrichContacts: document.getElementById('autoContacts').checked };
+  if (!taskAccounts(shopRegion)) return;
+  const cfg = { accountEntries:cookieList, mode, format, headerLang, outPath, detail, dedupe, creatorInput: source === 'list' && creatorInput.length ? creatorInput : null, keywords: kws, fields, updateFields, shopRegion, autoExport: false, enrichContacts: document.getElementById('autoContacts').checked, partnerBrowserSession: true };
+  cfg.discoverySource = document.getElementById('discoverySource').value;
   syncMainButton('pause', { disabled: true });
   setStopButtonActive(true);
   document.getElementById('resultBox').style.display = 'none';
@@ -2102,12 +2149,14 @@ document.getElementById('btnStart').onclick = async () => {
 
 // Lock/unlock all configuration controls while a scrape is running
 function lockOptions(lock) {
-  const ids = ['cookieInput', 'browseBtn', 'creatorInput', 'outPath', 'btnChooseDir', 'autoContacts'];
+  document.getElementById('discoverySource').disabled = lock;
+  const ids = ['cookieInput', 'browseBtn', 'creatorInput', 'outPath', 'btnChooseDir', 'autoContacts', 'cookieCountry', 'cookieName', 'creatorContinueRegion', 'creatorContinueOpen'];
   for (const id of ids) { const el = document.getElementById(id); if (el) el.disabled = lock; }
   document.querySelectorAll('input[name=scrapeMode], input[name=source], input[name=dedupeMode], input[name=mode], input[name=format], input[name=headerLang], .kw, .fld, .update-group, #detail, #selAll, #selNone, #catsCollapse, #keywordSearch, #fieldsAll, #fieldsNone, #langToggle, #shopRegion, #shopRegionCustom').forEach(el => { el.disabled = lock; });
   // category toggle + cookie add/remove
   document.querySelectorAll('.cat-toggle').forEach(el => { el.style.pointerEvents = lock ? 'none' : ''; });
   document.querySelectorAll('.cookie-item .del').forEach(el => { el.style.pointerEvents = lock ? 'none' : ''; });
+  document.querySelectorAll('.account-name,.account-country,.cookie-item .del').forEach(el => { el.disabled = lock; });
   const addBtn = document.getElementById('addCookieBtn'); if (addBtn) addBtn.style.pointerEvents = lock ? 'none' : '';
 }
 
@@ -2125,7 +2174,7 @@ document.getElementById('btnExit').onclick = async () => {
 
 // ═══════════ 测试连接 ═══════════
 document.getElementById('btnTest').onclick = async () => {
-  if (!cookieList.length) { alert(I18N['alert.noCookie'][uiLang]); return; }
+  if (!cookieList.length && !window.partnerConnected) { alert(I18N['alert.noCookie'][uiLang]); return; }
   const btn = document.getElementById('btnTest');
   const box = document.getElementById('testResult');
   btn.disabled = true;
@@ -2133,7 +2182,7 @@ document.getElementById('btnTest').onclick = async () => {
   box.innerHTML = uiLang === 'zh' ? '⏳ 正在测试（隔离环境抓取 1 页验证）...' : '⏳ Testing (isolated 1-page run)...';
   box.className = 'hint';
   try {
-    const j = await window.api.test({ pastedCookies: cookieList.map(c => c.data), mode: document.querySelector('input[name=mode]:checked').value, shopRegion: (document.getElementById('shopRegionCustom').value.trim() || document.getElementById('shopRegion').value || 'US').toUpperCase() });
+    const j = await window.api.test({ accountEntries:cookieList, discoverySource:document.getElementById('discoverySource').value, mode: document.querySelector('input[name=mode]:checked').value, shopRegion: (document.getElementById('shopRegionCustom').value.trim() || document.getElementById('shopRegion').value || 'US').toUpperCase() });
     if (j.error) {
       box.innerHTML = (uiLang === 'zh' ? '❌ 测试失败：' : '❌ Test failed: ') + j.error + '<br><small>' + (j.log ? j.log.join('<br>') : '') + '</small>';
       box.style.color = 'var(--danger)';
@@ -2233,10 +2282,12 @@ async function refreshAppData() {
   try {
     const d = await window.api.getAppData();
     // load remembered cookies (only if user hasn't added any yet)
-    if (!cookieList.length && d.cookies && d.cookies.length) {
-      for (const c of d.cookies) addCookie('paste', c);
+    if (!cookieList.length && !window._accountsLoaded && d.cookies && d.cookies.length) {
+      cookieList.push(...AccountCookies.normalize(d.accountEntries || d.cookies));
+      renderCookieList();
       document.getElementById('fname').textContent = uiLang === 'zh' ? '已自动加载上次的 Cookie' : 'Last cookies auto-loaded';
     }
+    window._accountsLoaded = true;
     // default output dir
     if (d.defaultOutDir) document.getElementById('outPath').value = d.defaultOutDir;
     renderHistory(d.history);
@@ -2266,7 +2317,7 @@ const FILTER_DEFS = [
   { key: 'category', n: '商品类目', e: 'Product Category', type: 'hierarchy', level1: 'category', level2: '垂直类目', tab: 'creators', helpZh: '按达人主要带货类目和垂直类目筛选', helpEn: 'Filter by top-level and vertical product categories' },
   { key: 'selection_region', n: '达人地区', e: 'Creator Region', type: 'enum', fixed: ['US', 'UK', 'SG', 'MY', 'TH', 'VN', 'PH', 'ID', 'MX', 'BR'], tab: 'creators' },
   { key: 'activity_status', n: '活跃状态', e: 'Activity Status', type: 'enum', fixed: ['active', 'inactive', 'unknown'], tab: 'creators', helpZh: '根据最近发布、增长和GMV趋势判断', helpEn: 'Based on recent posts, growth and GMV trend' },
-  { key: 'MCN机构', n: '达人机构', e: 'Creator Agency', type: 'enum', tab: 'creators' },
+  { key: 'mcn', n: '达人机构', e: 'Creator Agency', type: 'enum', tab: 'creators' },
   { key: 'creator_permission_tag', n: '类目权限', e: 'Category Access', type: 'enum', tab: 'creators', helpZh: '达人可参与合作的商品类目权限', helpEn: 'Product-category collaboration permissions' },
   { key: 'is_live_auction', n: '直播拍卖', e: 'Live Auction', type: 'enum', tab: 'creators' },
   { key: 'follower_cnt', n: '粉丝数', e: 'Followers', type: 'numeric', buckets: [[1000000, null, '1M+'], [100000, 1000000, '100K - 1M'], [10000, 100000, '10K - 100K'], [1000, 10000, '1K - 10K'], [null, 1000, '< 1K']], tab: 'followers' },
@@ -2465,7 +2516,7 @@ const COLUMN_GROUPS = [
   { key: 'sales', zh: '带货数据', en: 'Sales Data', fields: ['category', 'med_gmv_revenue', 'med_gmv_revenue_range', 'video_gmv', 'live_gmv', 'units_sold', 'units_sold_range', 'pps_score'] },
   { key: 'content', zh: '内容表现', en: 'Content', fields: ['video_avg_view_cnt', 'video_play_cnt_med', 'video_engagement', 'ec_video_engagement', 'ec_video_gpm', 'ec_live_gpm', 'ec_live_avg_uv', 'is_fast_growing'] },
   { key: 'audience', zh: '粉丝画像', en: 'Audience', fields: ['top_follower_ages', 'top_follower_gender'] },
-  { key: 'contact', zh: '联系方式', en: 'Contact', fields: ['简介', '合作邮箱', ...window.CreatorContactFields.FIELDS.map(f => f.k), 'MCN机构'] },
+  { key: 'contact', zh: '联系方式', en: 'Contact', fields: ['简介', '合作邮箱', ...window.CreatorContactFields.FIELDS.map(f => f.k), 'mcn'] },
   { key: 'extra', zh: '其他', en: 'Other', fields: ['has_collaborated', 'creator_permission_tag', 'is_live_auction', '垂直类目', 'last_refreshed_at'] },
   { key: 'partnerProfile', zh: '团长详情与采集状态', en: 'Partner Profile & Collection Status', fields: window.PartnerProfileFields.FIELDS.map(f => f.k) },
 ];
@@ -3059,7 +3110,7 @@ async function loadCreators() {
         if (field.k === 'med_gmv_revenue' && (value === null || value === undefined)) value = creator.total_gmv;
         if (field.k === '合作邮箱') value = value || creator.contact_email;
         if (field.k === '简介') value = value || creator.bio;
-        if (field.k === 'MCN机构') value = value || creator.mcn;
+        if (field.k === 'mcn') value = value || creator['MCN机构'];
         if (field.k === 'last_publish_time') value = value || creator.last_publish_at;
         appendCreatorCell(row, value, '', field, creator);
       });
@@ -3244,27 +3295,30 @@ function syncTaskPageFromConfig(cfg, { source = 'cat' } = {}) {
   }
 }
 document.getElementById('creatorContinueOpen').onclick = async () => {
-  if (!cookieList.length) { alert(uiLang === 'zh' ? '请先在“可用账号”中导入 Cookie。' : 'Import a cookie from Available accounts first.'); return; }
+  if (!cookieList.length && !window.partnerConnected) { alert(uiLang === 'zh' ? '请先在“可用账号”中导入 Cookie。' : 'Import a cookie from Available accounts first.'); return; }
   const last = await window.api.getLastScrapeConfig().catch(() => null);
   const keywords = last && last.keywords && last.keywords.length ? last.keywords : null;
   if (!keywords) { alert(uiLang === 'zh' ? '还没有抓取记录，请先在“新建抓取任务”中抓一次。' : 'No previous scrape found — run a new task first.'); return; }
-  const region = (last && last.shopRegion) || (document.getElementById('shopRegionCustom').value.trim() || document.getElementById('shopRegion').value || 'US').toUpperCase();
+  const region = document.getElementById('creatorContinueRegion').value;
+  if (!region) { alert(uiLang === 'zh' ? '请先在“继续抓取”左侧选择国家。' : 'Choose a country next to Continue scraping first.'); return; }
+  const selectedAccounts = taskAccounts(region);
+  if (!selectedAccounts) return;
   const detail = !!(last && last.detail !== undefined ? last.detail : true);
   const mode = (last && last.mode) || 'auto';
-  const accounts = Math.max(1, cookieList.length);
+  const accounts = selectedAccounts.length;
   const msg = uiLang === 'zh'
-    ? `继续抓取将按上次的关键词（${keywords.length} 个）搜索新增达人，跳过达人库已有的，结果自动并入达人库。\n\n地区：${region} · 关键词：${keywords.length} 个 · 账号：${cookieList.length} 个\n模式：${detail ? '完整（含邮箱/MCN）' : '快速'}\n\n确定继续吗？`
-    : `Continue will search ${keywords.length} keywords for NEW creators, skip ones already in the library, and merge results in.\n\nRegion: ${region} · Keywords: ${keywords.length} · Accounts: ${cookieList.length}\nMode: ${detail ? 'Full (incl. email/MCN)' : 'Fast'}\n\nContinue?`;
+    ? `继续抓取将使用上次的 ${keywords.length} 个关键词，在 ${region} 搜索新增达人，跳过该地区达人库已有记录。\n\n检查 ${accounts} 个去重后的卖家会话在目标国家的权限；导入国家只是备注。有无联系方式都保存。\n账号：${selectedAccounts.map(c=>c.name).join('、')}\n\n确定继续吗？`
+    : `Search ${keywords.length} previous keywords for NEW creators in ${region}, skipping existing library records. Check ${accounts} unique seller sessions against the target market; import countries are labels only. Creators with or without contacts are saved.\n\nContinue?`;
   if (!confirm(msg)) return;
   // dedupe against the whole library for this region
-  const existing = await window.api.listCreatorIds({ region, limit: 20000 }).catch(() => ({ ids: [] }));
+  const existing = await window.api.listCreatorIds({ region }).catch(() => ({ ids: [] }));
   const existingIds = (existing && existing.ids) || [];
   const cfg = {
-    pastedCookies: cookieList.map(c => c.data),
+    accountEntries: cookieList,
     mode, format: 'csv', headerLang: uiLang,
     outPath: document.getElementById('outPath').value.trim() || './output',
     detail, dedupe: true, existingIds, keywords, fields: FIELDS.map(f => f.k),
-    shopRegion: region, autoExport: false, libraryContinue: true, enrichContacts: last?.enrichContacts === true,
+    shopRegion: region, discoverySource:document.getElementById('discoverySource').value, autoExport: false, libraryContinue: true, enrichContacts: last?.enrichContacts === true,
   };
   const result = await window.api.start(cfg);
   if (result.error) { alert(result.error); return; }
@@ -3281,7 +3335,8 @@ document.getElementById('libraryUpdateStart').onclick = async () => {
   if (!libraryUpdateIds.length || !cookieList.length) return;
   const regionText = (document.getElementById('shopRegionCustom').value.trim() || document.getElementById('shopRegion').value || 'US').toUpperCase();
   const updateFields = [...new Set(Object.values(UPDATE_FIELD_GROUPS).flat())];
-  const cfg = { pastedCookies:cookieList.map(cookie => cookie.data), mode:(document.querySelector('input[name=mode]:checked') || {}).value || 'auto', format:'csv', headerLang:uiLang, outPath:document.getElementById('outPath').value.trim() || './output', detail:true, dedupe:false, creatorInput:libraryUpdateIds, keywords:[], fields:FIELDS.map(field => field.k), updateFields, shopRegion:regionText, libraryUpdate:true };
+  if (!taskAccounts(regionText)) return;
+  const cfg = { accountEntries:cookieList, mode:(document.querySelector('input[name=mode]:checked') || {}).value || 'auto', format:'csv', headerLang:uiLang, outPath:document.getElementById('outPath').value.trim() || './output', detail:true, dedupe:false, creatorInput:libraryUpdateIds, keywords:[], fields:FIELDS.map(field => field.k), updateFields, shopRegion:regionText, libraryUpdate:true, partnerBrowserSession:true };
   const result = await window.api.start(cfg);
   if (result.error) { document.getElementById('libraryUpdateMessage').textContent = result.error; return; }
   // reflect real behavior: update = refresh existing creators (re-scrape all)
@@ -3349,6 +3404,7 @@ window.api.getVersion().then(v => {
   if (fv) fv.textContent = ver;
 }).catch(() => { });
 </script>
+<script src="lib/account-ui.js"></script>
 <script src="lib/contact-ui.js"></script>
 </body>
 </html>

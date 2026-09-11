@@ -26,6 +26,7 @@ test('creator database migrates, deduplicates and filters creators', async (t) =
     follower_cnt: '12.5K',
     med_gmv_revenue: { value: '42000' },
     '合作邮箱': 'hello@example.com',
+    mcn: 'fixture-agency',
   }], { region: 'US', jobId });
 
   await db.upsertCreators([{
@@ -50,6 +51,7 @@ test('creator database migrates, deduplicates and filters creators', async (t) =
   assert.equal(result.rows[0].handle, 'updated_handle');
   assert.equal(result.rows[0].nickname, 'Creator One');
   assert.equal(result.rows[0].contact_email, 'hello@example.com');
+  assert.equal(result.rows[0].mcn, 'fixture-agency');
   assert.equal(result.rows[0].follower_count, 14000);
   assert.equal(result.rows[0].total_gmv, 45000);
   assert.equal(result.rows[0].handle, 'updated_handle');

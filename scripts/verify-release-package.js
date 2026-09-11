@@ -20,6 +20,8 @@ for (const name of ['puppeteer-core', 'sqlite3']) {
 const entries = asar.listPackage(archive).map(file => file.replace(/\\/g, '/'));
 const required = [
   'main.js', 'preload.js', 'index.html', 'lib/multirunner.js', 'lib/browser.js', 'lib/cookies.js',
+  'lib/session-startup.js', 'lib/account-cookies.js', 'lib/account-ui.js',
+  'lib/partner-discovery.js', 'lib/partner-markets.js',
   'lib/database/index.js', 'lib/database/migrations.js',
   'lib/contact-fields.js', 'lib/contact-ui.js', 'lib/partner-contacts.js',
   'lib/collection-contacts.js', 'lib/scraper.js',
