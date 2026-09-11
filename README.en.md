@@ -38,6 +38,8 @@
 
 Enter `wireless earbuds`, choose `US`, select **Creator Search**, and start the task. The app stores creator ID, handle, region, followers, Shop performance and available contact fields locally, then exports selected columns to CSV or Excel.
 
+![Creator library](docs/screenshots/creator-library.png)
+
 ## 🚀 Introduction
 
 **TikTokShop Creator Scraper** is an open-source desktop application built for **TikTok Shop sellers** to:
