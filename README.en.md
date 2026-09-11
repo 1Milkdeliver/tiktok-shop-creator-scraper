@@ -214,6 +214,10 @@ See the [development guide](docs/development.en.md) for source setup, test comma
 
 ## 📤 Release / Update
 
+Release flow, differential updates, compatibility checks and asset requirements are documented in the [release checklist](docs/release-checklist.md).
+
+<details><summary>Show full release commands</summary>
+
 The existing path is **version check → user consent → differential download/reconstruction → verification → silent installation when idle or on exit**. Existing users do not need to repeat a manual installer wizard. Publishers still provide a complete installer: the updater downloads ranges from it, and it also serves first installs and full-download fallback.
 
 See [1.4.0 dependencies and compatibility](docs/release-readiness-1.4.0.md) and [real differential/fallback verification](docs/incremental-update-verification-2026-09-09.md). **1.5.1 below is only a next-release example**, not a published version. Replace it consistently and author the corresponding bilingual release-notes file first:
@@ -258,6 +262,8 @@ node scripts/verify-incremental-update.js --live 1.5.0 1.5.1
 > From 1.4.0, upload 3 update assets: ASCII installer, matching .blockmap and latest.yml. A duplicate Chinese-named installer is unnecessary.
 > Keep historical **ASCII exe and .blockmap** assets for rollback and old-version blockmap lookup. Do not rename historical assets, overwrite published exe/blockmap/latest.yml files, or move published tags. Runtime changes require a new version. README/test-only changes do not require republishing an installer under the same version.
 > `npm test` includes local differential/fallback regressions. `--live` explicitly downloads required public release assets and reconstructs in an isolated cache; reports remain in git-ignored `test-results/incremental-update-*`. This does not test installation.
+
+</details>
 
 ## 📄 License
 
