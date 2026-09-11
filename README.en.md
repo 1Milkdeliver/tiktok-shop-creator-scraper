@@ -214,13 +214,13 @@ See the [development guide](docs/development.en.md) for source setup, test comma
 
 ## 📤 Release / Update
 
-Release flow, differential updates, compatibility checks and asset requirements are documented in the [release checklist](docs/release-checklist.md).
+Release flow, differential updates, compatibility checks and asset requirements are documented in the [release checklist](docs/release-checklist.en.md).
 
 <details><summary>Show full release commands</summary>
 
 The existing path is **version check → user consent → differential download/reconstruction → verification → silent installation when idle or on exit**. Existing users do not need to repeat a manual installer wizard. Publishers still provide a complete installer: the updater downloads ranges from it, and it also serves first installs and full-download fallback.
 
-See [1.4.0 dependencies and compatibility](docs/release-readiness-1.4.0.md) and [real differential/fallback verification](docs/incremental-update-verification-2026-09-09.md). **1.5.1 below is only a next-release example**, not a published version. Replace it consistently and author the corresponding bilingual release-notes file first:
+See [1.4.0 dependencies and compatibility](docs/release-readiness-1.4.0.en.md) and [real differential/fallback verification](docs/incremental-update-verification-2026-09-09.en.md). **1.5.1 below is only a next-release example**, not a published version. Replace it consistently and author the corresponding bilingual release-notes file first:
 
 ```bash
 # 1. Bump version (example: 1.5.0 → 1.5.1)
