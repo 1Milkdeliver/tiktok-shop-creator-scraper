@@ -2,9 +2,11 @@
 <img src='./icon-256.png' width="150" height="150" alt="TikTokShop达人抓取 图标" />
 </p>
 
-<h1 align="center">TikTokShop达人抓取</h1>
+<h1 align="center">TikTok Shop Creator Scraper · TikTokShop达人抓取</h1>
 
-<p align="center">专为 TikTok Shop 卖家打造的开源桌面工具：一键抓取联盟达人广场数据、分析带货表现、获取达人邮箱与 MCN 信息，导出 CSV / Excel。</p>
+<p align="center">TikTok Shop Creator Scraper for affiliate creator discovery, creator data and contact export. 面向 TikTok Shop 卖家的开源桌面工具：抓取联盟达人数据、分析带货表现并导出邮箱与 MCN 信息。</p>
+
+<p align="center"><strong>TikTok Shop Affiliate Creator Data · TikTok Influencer Discovery · TikTok Creator Contact Export</strong></p>
 
 <p align="center">
   <a href="https://github.com/1Milkdeliver/tiktok-shop-creator-scraper/stargazers"><img src="https://img.shields.io/github/stars/1Milkdeliver/tiktok-shop-creator-scraper" alt="Stars"/></a>
