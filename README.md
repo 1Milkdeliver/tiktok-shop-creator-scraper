@@ -1,5 +1,5 @@
 <p align='center'>
-<img src='./icon-256.png' width="150" height="150" alt="TikTokShop Creator Scraper Icon" />
+![TikTokShop Creator Scraper Icon](./icon-256.png?raw=true)
 </p>
 
 <h1 align="center">TikTokShop Creator Scraper</h1>

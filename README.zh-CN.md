@@ -1,5 +1,5 @@
 <p align='center'>
-<img src='./icon-256.png' width="150" height="150" alt="TikTokShop达人抓取 图标" />
+![TikTokShop达人抓取图标](./icon-256.png?raw=true)
 </p>
 
 <h1 align="center">TikTok Shop Creator Scraper · TikTokShop达人抓取</h1>
@@ -16,10 +16,10 @@
 </p>
 
 <div align="center">
-  <a href="./README.md">中文</a> / <a href="./README.en.md">English</a>
+  <a href="./README.zh-CN.md">中文</a> / <a href="./README.md">English</a>
 </div>
 
-> English-first keywords: **TikTok Shop Creator Scraper · TikTok Shop Affiliate Creator Data · TikTok Influencer Discovery · TikTok Creator Contact Export**. See the full [English README](README.en.md).
+> English-first keywords: **TikTok Shop Creator Scraper · TikTok Shop Affiliate Creator Data · TikTok Influencer Discovery · TikTok Creator Contact Export**. See the full [English README](README.md).
 
 ---
 
