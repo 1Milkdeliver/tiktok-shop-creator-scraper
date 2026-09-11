@@ -1,273 +1,280 @@
 <p align='center'>
-<img src="https://raw.githubusercontent.com/1Milkdeliver/tiktok-shop-creator-scraper/main/icon-256.png" width="150" height="150" alt="TikTok Shop Creator Scraper icon" />
+<img src='./icon-256.png' width="150" height="150" alt="TikTokShop Creator Scraper Icon" />
 </p>
 
-<h1 align="center">TikTok Shop Creator Scraper · TikTokShop达人抓取</h1>
+<h1 align="center">TikTokShop Creator Scraper</h1>
 
-<p align="center">TikTok Shop Creator Scraper for affiliate creator discovery, creator data and contact export. 面向 TikTok Shop 卖家的开源桌面工具：抓取联盟达人数据、分析带货表现并导出邮箱与 MCN 信息。</p>
-
-<p align="center"><strong>TikTok Shop Affiliate Creator Data · TikTok Influencer Discovery · TikTok Creator Contact Export</strong></p>
+<p align="center">Open-source desktop app for TikTok Shop sellers to discover, analyze and export affiliate creator data — GMV, followers, engagement, bio, email, MCN info — to CSV/Excel.</p>
 
 <p align="center">
-  <a href="https://github.com/1Milkdeliver/tiktok-shop-creator-scraper/stargazers"><img src="https://img.shields.io/github/stars/1Milkdeliver/tiktok-shop-creator-scraper" alt="Stars"/></a>
-  <a href="https://github.com/1Milkdeliver/tiktok-shop-creator-scraper/network/members"><img src="https://img.shields.io/github/forks/1Milkdeliver/tiktok-shop-creator-scraper" alt="Forks"/></a>
-  <a href="https://github.com/1Milkdeliver/tiktok-shop-creator-scraper/blob/main/LICENSE"><img src="https://img.shields.io/github/license/1Milkdeliver/tiktok-shop-creator-scraper" alt="License"/></a>
-  <a href="https://github.com/1Milkdeliver/tiktok-shop-creator-scraper/releases/latest"><img src="https://img.shields.io/github/v/release/1Milkdeliver/tiktok-shop-creator-scraper" alt="最新版本"/></a>
+  <a href="https://github.com/1Milkdeliver/tiktok-shop-creator-scraper/stargazers"><img src="https://img.shields.io/github/stars/1Milkdeliver/tiktok-shop-creator-scraper" alt="Stars Badge"/></a>
+  <a href="https://github.com/1Milkdeliver/tiktok-shop-creator-scraper/network/members"><img src="https://img.shields.io/github/forks/1Milkdeliver/tiktok-shop-creator-scraper" alt="Forks Badge"/></a>
+  <a href="https://github.com/1Milkdeliver/tiktok-shop-creator-scraper/blob/main/LICENSE"><img src="https://img.shields.io/github/license/1Milkdeliver/tiktok-shop-creator-scraper" alt="License Badge"/></a>
+  <a href="https://github.com/1Milkdeliver/tiktok-shop-creator-scraper/releases/latest"><img src="https://img.shields.io/github/v/release/1Milkdeliver/tiktok-shop-creator-scraper" alt="Latest Release"/></a>
 </p>
 
 <div align="center">
   <a href="./README.md">中文</a> / <a href="./README.en.md">English</a>
 </div>
 
-> English-first keywords: **TikTok Shop Creator Scraper · TikTok Shop Affiliate Creator Data · TikTok Influencer Discovery · TikTok Creator Contact Export**. See the full [English README](README.en.md).
+---
+
+## 📑 Table of Contents
+
+- [🚀 Introduction](#-introduction)
+- [🎯 Who It's For](#-who-its-for)
+- [✨ Features](#-features)
+- [📊 Data You Can Collect](#-data-you-can-collect)
+- [📦 Install](#-install)
+- [🚀 Quick Start](#-quick-start)
+- [❓ FAQ](#-faq)
+- [💻 Development](#-development)
+- [📤 Release / Update](#-release--update)
+- [📄 License](#-license)
 
 ---
 
-## 📑 目录
+## English usage example
 
-- [🚀 项目介绍](#-项目介绍)
-- [🎯 适合谁用](#-适合谁用)
-- [✨ 功能特性](#-功能特性)
-- [📊 可抓取的数据](#-可抓取的数据)
-- [📦 安装](#-安装)
-- [🚀 快速开始](#-快速开始)
-- [❓ 常见问题](#-常见问题)
-- [💻 开发](#-开发)
-- [📤 发布新版](#-发布新版)
-- [📄 许可证](#-许可证)
+Enter `wireless earbuds`, choose `US`, select **Creator Search**, and start the task. The app stores creator ID, handle, region, followers, Shop performance and available contact fields locally, then exports selected columns to CSV or Excel.
 
----
+![Creator library](docs/screenshots/creator-library.png)
 
-## 🚀 项目介绍
+## 🚀 Introduction
 
-**TikTokShop达人抓取** 是专为 **TikTok Shop 卖家（Owner）** 打造的开源桌面应用：
+**TikTokShop Creator Scraper** is an open-source desktop application built for **TikTok Shop sellers** to:
 
-- 抓取 TikTok Shop 联盟达人广场数据（按关键词搜索，或直接导入达人 ID / @账号 / 链接）
-- **本地达人库（SQLite）**：抓取的达人自动入库、去重、浏览、排序、筛选，随抓随积累
-- **活跃度判断**：自动标记达人 活跃 / 不活跃 / 未知，给出可解释信号（最近发布、增长、GMV 趋势）
-- 分析达人带货表现（GMV、销量、互动、粉丝画像、PPS 评分）
-- 提取简介、合作邮箱、MCN 机构；使用你授权的团长后台会话，为库内达人补全 WhatsApp、LINE 等平台已提供的联系方式
-- 导出 **CSV / Excel**，字段可自定义，表头语言跟随界面一键切换中英文
-- 历史输出支持**继续抓取 / 刷新重抓 / 打开 / 删除**，断点续抓，自动去重
+- Scrape creator data from the TikTok Shop Affiliate (联盟) marketplace — search by keywords, or import creator IDs / @handles / TikTok links directly
+- **Local creator library (SQLite)**: scraped creators are stored, deduplicated, browsable, sortable and filterable — builds up as you scrape
+- **Activity classification**: creators are automatically tagged active / inactive / unknown with explainable signals (last publish, growth, GMV trend)
+- Analyze creator performance (GMV, sales, engagement, follower demographics, PPS score)
+- Extract bio, collaboration email and MCN agency; optionally authorize your Partner Center session to enrich existing records with WhatsApp, LINE and other contacts provided by the platform
+- Export everything to **CSV / Excel** with selectable fields — headers follow the UI language (CN/EN one-click switch)
+- Output history with one-click **Continue / Refresh / Open / Delete**, resume from breakpoints, automatic deduplication
 
-> 开源 · GPL-3.0 · Windows 桌面应用 · 支持多账号并发 · 自动更新
+> Open-source · GPL-3.0 · Windows desktop app · Multi-account concurrent scraping · Auto-update
 
-## 🎯 适合谁用
+## 🎯 Who It's For
 
-- **TikTok Shop 卖家**：找达人带货、筛选合作对象
-- **联盟运营 / 商务**：批量整理达人信息、联系洽谈
-- **选品团队**：按类目分析达人带货数据
+- **TikTok Shop Sellers** — find creators to collaborate with, screen potential partners
+- **Affiliate Ops / Business Dev** — batch-organize creator info, reach out for collaboration
+- **Product Selection Teams** — analyze creator data by category
 
-## ✨ 功能特性
+## ✨ Features
 
-| 功能 | 说明 |
+| Feature | Description |
 |---|---|
-| 🎨 工作区 UI | 侧边导航：**概览 / 任务中心 / 达人库 / 导出中心**，中英双语 |
-| 💾 本地达人库 | SQLite 存储：自动去重入库，浏览 / 排序 / 筛选 / 刷新 |
-| 🔍 达人抓取 | 关键词批量搜索，或导入 ID / @账号 / TikTok 链接直接抓取 |
-| 🌍 多站点支持 | 可选美国/英国/东南亚/拉美等 Shop 地区 |
-| 📧 联系方式 | 简介、合作邮箱、MCN；可另行授权团长后台，补全 WhatsApp、LINE、Zalo、Viber、Facebook 等已提供字段 |
-| 📁 数据导出 | CSV / Excel，字段可自定义，表头语言跟随界面中英切换 |
-| 🔁 历史续抓 | 历史输出可一键**继续抓取**（仅新增）或**刷新重抓**（全部覆盖） |
-| 🧹 去重与断点 | 按地区和达人 ID 去重，支持暂停、继续和断点恢复 |
-| ✅ 筛选与字段 | 支持类目、地区、邮箱、WhatsApp 等条件；字段可选择显示和导出 |
-| 🛡️ 安全暂停 | 遇到验证、限流、登录或权限异常时暂停并保留进度 |
-| 🌐 中英双语 | 界面、字段列表、表头一键切换中英文 |
-| 🔄 自动更新 | 启动时检查新版本，一键更新（差分下载） |
+| 🎨 Workspaces | Sidebar: **Overview / Task Center / Creator Library / Export Center**, bilingual |
+| 💾 Creator library | SQLite storage: auto-dedupe, browse / sort / filter / refresh |
+| 🔍 Creator scraping | Batch keyword search, or import ID / @handle / TikTok links directly |
+| 🌍 Multi-region | Choose US / UK / Southeast Asia / LATAM shop regions |
+| 📧 Contact info | Bio, email, MCN; optional Partner Center authorization for available WhatsApp, LINE, Zalo, Viber, Facebook and other contacts |
+| 📁 Export | CSV / Excel with customizable fields; headers follow UI language |
+| 🔁 Resume history | One-click **Continue** (new creators only) or **Refresh** (re-scrape all, overwrite) |
+| 🧹 Deduplication & resume | Deduplicates by region and creator ID; supports pause, resume and breakpoint recovery |
+| ✅ Filters & fields | Filter by category, region, email or WhatsApp; choose fields to display and export |
+| 🛡️ Safe pause | Pauses and preserves progress on verification, throttling, login or permission errors |
+| 🌐 Bilingual UI | Chinese / English interface, field list and headers with one-click switch |
+| 🔄 Auto-update | Checks for new versions on startup, one-click update (differential download) |
 
-## 📊 可抓取的数据
+## 📊 Data You Can Collect
 
-| 类别 | 字段 |
+| Category | Fields |
 |---|---|
-| 基础信息 | 达人主页、昵称、达人ID、地区、粉丝数 |
-| 带货数据 | 总GMV、GMV区间、视频GMV、直播GMV、销量、销量区间、一级类目 |
-| 内容表现 | 平均/中位视频观看、视频互动、电商视频互动、电商GPM、直播GPM、电商平均UV |
-| 粉丝画像 | 年龄段、性别分布（百分比）、PPS评分、快速增长、已合作、达人类目权限、直播拍卖 |
-| 详情（可选） | 简介、合作邮箱（自动提取）、MCN机构、**垂直类目（二级类目）** |
-| 团长联系方式补全 | 合作邮箱、WhatsApp、LINE、Zalo、Viber、Facebook、其他联系方式、号码国家码、来源与检查状态/时间 |
+| Basic Info | creator page, nickname, creator ID, region, follower count |
+| Sales Data | total GMV, GMV range, video GMV, live GMV, units sold, units sold range, category |
+| Content Performance | avg/median video views, engagement, e-comm engagement, e-comm GPM, live GPM, e-comm avg UV |
+| Follower Profile | age distribution, gender split (%), PPS score, fast growing, collaborated, category permission, live auction |
+| Details (optional) | bio, collaboration email (auto-extracted), MCN agency, **vertical (2nd-level) category** |
+| Partner contact enrichment | email, WhatsApp, LINE, Zalo, Viber, Facebook, other contacts, separate dialing codes, source and checked status/time |
 
-字段是否有值取决于平台返回及当前账号权限；未提供的联系方式保持为空，不猜测号码或国家码。当前本地库不保存头像。团长“完整资料 + 联系方式”已完成马来西亚真实跨页小样本验证；这不代表每位达人都会提供每个字段，也不代表其他市场具有相同覆盖率。
+Availability depends on the platform response and account permissions. Missing contacts stay empty; numbers and country codes are not guessed. Avatars are not stored in the current local library. Partner **Full profile + contacts** passed a real cross-page Malaysia sample; this does not imply that every creator supplies every field or that other markets have identical coverage.
 
-## 📦 安装
+## 📦 Install
 
-⬇️ [**下载最新安装包（Windows）**](https://github.com/1Milkdeliver/tiktok-shop-creator-scraper/releases/latest)
+⬇️ [**Download the latest Windows installer**](https://github.com/1Milkdeliver/tiktok-shop-creator-scraper/releases/latest)
 
-- 双击运行安装向导，同意许可协议后安装
-- 自动创建桌面快捷方式
-- 输出文件默认在安装目录 `output/` 文件夹，日志在 `logs/` 文件夹
-- 已安装时自动检测，提示覆盖而非重复安装
+- Run the installer wizard and accept the license
+- A desktop shortcut is created automatically
+- Output defaults to `output/`; logs are written to `logs/`
+- Existing installations are detected and offered overwrite instead of duplicate installation
 
-> Windows SmartScreen 提示时点"更多信息 → 仍要运行"（开源未签名程序正常提示）。
+> The unsigned installer may trigger Windows SmartScreen. Click “More info → Run anyway” only after confirming the Release source and checksums. The installer bundles its runtime; browser collection requires local Google Chrome.
 
-## 🚀 快速开始
+## 🚀 Quick Start
 
-### 第一步：导出 Cookie（必做，约 2 分钟）
+### Step 1 — Export your Cookie (required)
 
-工具需要你的 TikTok Shop 联盟**登录 Cookie** 才能查看达人数据。导出步骤：
+The app needs your TikTok Shop Affiliate **login cookie** to access creator data. Exporting it takes ~2 minutes:
 
-1. **打开 Chrome 浏览器**（Edge 也可以），访问 TikTok Shop 联盟后台：
+1. **Open Chrome** (or Edge) and go to the TikTok Shop Affiliate backend:
    **`https://affiliate.tiktokshopglobalselling.com`**
-2. **登录你的卖家账号**，进入**达人广场**页面
-3. **安装 Cookie-Editor 扩展**：
-   点这里 → [**Cookie-Editor**](https://chromewebstore.google.com/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm)
-   → 点"添加至 Chrome"→ 弹窗确认
-   > 已安装的跳过这步。（其他同类扩展：EditThisCookie 等也可用）
-4. **打开扩展**：点 Chrome 右上角的拼图 🧩 图标（扩展程序）→ 点 **Cookie-Editor**
-5. 点扩展面板里的 **Export（导出）** 按钮 —— Cookie 会以 JSON 文本复制到剪贴板
-6. **粘贴或保存**：
-   - **方式 A（粘贴）**：打开工具，点 Cookie 输入框，按 Ctrl+V 粘贴 —— 完成
-   - **方式 B（文件）**：把内容粘贴到记事本，保存为 `cookies.json`，再拖进工具或点"📂 导入文件"
+2. **Log in** to your seller account and open the **Creator Marketplace** (达人广场) page
+3. **Install the Cookie-Editor extension**:
+   [**Cookie-Editor**](https://chromewebstore.google.com/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm)
+   → click "Add to Chrome" → confirm in the popup
+   > If you already have it, skip this step. (Other compatible extensions: EditThisCookie, Cookie-Editor, etc.)
+4. **Open the extension** — click the puzzle 🧩 icon (Extensions) in Chrome's top-right, then click **Cookie-Editor**
+5. Click the **Export** button (bottom of the Cookie-Editor panel) — your cookies are now copied to the clipboard as a JSON text
+6. **Paste or save it**:
+   - **Option A (paste)**: open the app, click in the cookie box, paste (Ctrl+V) — done
+   - **Option B (file)**: paste into a text file, save as `cookies.json`, then drag it into the app or click "Browse…"
 
-> 💡 **Cookie 是什么？** 它是浏览器的登录凭证。采集时会发送给对应 TikTok 平台进行授权请求，不会作为遥测上传给项目作者。卖家会话会保存在本机设置中；团长补全的导入会话仅保存在本次应用进程内，退出后需重新导入。不要把会话文件或本机数据备份提交到 GitHub。
+> 💡 **What is a cookie?** A login credential sent to the corresponding TikTok platform for authorized requests, not telemetry sent to the project author. Seller sessions are saved in local settings; imported Partner enrichment sessions stay in app-process memory and must be reimported after exit. Never upload session files or local data backups to GitHub.
 
-### 第二步：配置并开始
+### Step 2 — Configure & Start
 
-1. **达人地区**：选择要抓取的 TikTok Shop 站点（如美国 US / 英国 UK / 东南亚等）
-2. **抓取对象**：
-   - **关键词搜索**：勾选要抓取的达人类目 / 输入关键词，抓达人广场搜索结果
-   - **名单导入**：粘贴达人 ID、@账号 或 TikTok 链接（每行一条），只抓名单里的人
-3. **抓取模式**：默认**完整模式**（卖家列表 + 详情：简介/邮箱/MCN）；不需要详情可切**快速模式**（仅列表，通常更快，实际速度依平台响应而定）
-4. **抓取范围**：
-   - **仅新增（默认）**：自动跳过已抓过的达人，只抓新面孔
-   - **全部重抓**：重新抓取全部并覆盖，刷新数据
-5. **导出设置**：选 CSV 或 Excel、选输出文件夹、勾选要导出的字段（表头语言跟随界面语言）
-6. 点 **▶ 开始抓取** —— 下方日志区实时显示进度（可随时暂停 / 继续 / 一键结束，秒级收尾导出；运行中"暂停/结束"按钮为醒目橙红样式）
-7. 完成后提示 **🆕 新增 N 位 · 🔄 更新 M 位**（抓取页不再自动导出文件，数据在达人库；需要文件时到达人库/历史输出手动导出）
+1. **Creator region**: choose the TikTok Shop site to scrape (e.g. US / UK / Southeast Asia)
+2. **Scrape target**:
+   - **Keyword search**: check creator categories / enter keywords to scrape marketplace results
+   - **Import list**: paste creator IDs, @handles or TikTok links (one per line) to scrape only those
+3. **Scrape mode**: **Full mode** is default (seller list + details: bio/email/MCN); **Fast mode** skips details and is usually faster, depending on platform responses
+4. **Scrape scope**:
+   - **New only (default)**: automatically skips already-scraped creators
+   - **Re-scrape all**: re-scrapes everything and overwrites to refresh data
+5. **Export settings**: choose CSV or Excel, pick an output folder, check the fields to export (headers follow UI language)
+6. Click **▶ Start Scraping** — progress shows in the log below (Pause / Resume / one-click **Finish & Export** with seconds-fast wind-down; running-state Pause/Stop buttons are highlighted amber/red)
+7. When done, the app shows **🆕 N new · 🔄 M updated**. The scrape page no longer writes a file automatically — data lives in the Creator Library; export a file from the Library / History when you need one
 
-> 🆕 **第一次用？** 先点 **🔍 测试连接** 验证环境（隔离环境抓 1 页试跑，不占正式流程）。
+> 🆕 **First time?** Click **🔍 Test** first to verify everything works with a 1-page trial scrape (isolated environment, no full run).
 
-> 🔁 **想继续上次的抓取？** 在"历史输出"里找到之前的文件，点 **🔼 继续** 只抓新增的达人并写回原文件，或点 **🔄 重抓** 全部重新抓取覆盖。
+> 🔁 **Want to continue a previous scrape?** In "History", find the file and click **🔼 Continue** to scrape only new creators and write back to the same file, or **🔄 Refresh** to re-scrape all and overwrite.
 
-### 第三步：达人库
+### Step 3 — Creator Library
 
-- 侧边栏切到 **📚 达人库**：所有抓取过的达人自动存入本地 SQLite 数据库（自动去重）
-- 支持按 昵称/粉丝数/GMV/销量/活跃度 等排序；**TikTok 后台式筛选栏**：地区、类目（一级 + 垂直类目两级菜单）、粉丝年龄段/性别、PPS 评分、销量、平均观看、粉丝数、总GMV、活跃状态，多选 + 可移除 chips
-- 快捷勾选 **有邮箱 / 有 WhatsApp / 活跃达人**，一键过滤合作对象；显示字段抽屉提供 **全部显示 / 取消全选**（达人主页保留）
-- **活跃度**：工具根据最近发布时间、增长趋势、GMV 变化自动判断达人当前是否活跃，帮你在谈合作前快速筛掉"僵尸达人"
-- **➕ 继续抓取**：按上次的关键词继续抓新增达人，跳过达人库已有的，结果自动并入
-- **更新达人数据**：对当前筛选范围重新抓取并刷新（带进度条 + 预计剩余时间 + 新增/更新统计）
-- 达人库数据只存在你本机，不依赖任何外部服务
+- Switch to **📚 Creator Library** in the sidebar: every scraped creator is automatically stored in a local SQLite database (deduplicated)
+- Sort / filter by nickname, followers, GMV, sales, activity status; **TikTok-backend-style filter bar**: region, category (two-level: top + vertical), audience ages/gender, PPS score, units sold, avg views, followers, GMV, activity — multi-select with removable chips
+- Use **Has email / Has WhatsApp / Active only** to shortlist partners; the display-field drawer supports **Show all / Deselect all**, retaining the creator-page column
+- **➕ Continue scraping**: reuses the last keywords to collect NEW creators, skipping ones already in the library, merging results in
+- **Update creators**: re-scrapes the current filtered scope and refreshes the library (progress bar + remaining time + new/updated counts)
+- **Activity**: the app uses last-publish time, growth trend and GMV changes to flag creators that may have stopped or slowed down — quickly screen out "zombie creators" before outreach
+- Library data lives only on your machine — no external service involved
 
-> 💡 **垂直类目说明**：二级类目（垂直类目）来自达人主页的 vertical_pro_category 标签，只有部分达人返回。想补充它，对达人跑一次"更新达人数据"（完整模式）即可。
+> 💡 **Vertical category**: the 2nd-level category comes from each creator's `vertical_pro_category` tag and is only returned for some creators. Run "Update creators" (Full mode) to backfill it.
 
-### 第四步：补全 WhatsApp、LINE 等联系方式（可选）
+### Step 4 — Enrich WhatsApp, LINE and other contacts (optional)
 
-从账号区导入卖家或团长会话并选择目标市场。新任务可在采集达人资料的同时读取平台向当前账号提供的联系方式，基本资料先入库；没有联系方式的达人也会保留。
+Import a Seller or Partner session from account management and select the target market. New tasks can read platform-provided contacts while creator profiles are collected. Base profiles are committed first, and creators without contacts are still retained.
 
 ```text
-列表发现 → 基本资料入库 → 继续发现 / 读取详情 → 增量更新资料
-                    └→ 联系方式队列 → 接口读取 → 合并保存邮箱、WhatsApp、LINE 等
+Discover page -> Commit base rows -> Continue discovery / profiles -> Incremental profile updates
+                                 -> Contact queue -> API reads -> Merge email, WhatsApp, LINE, etc.
 ```
 
-- 支持合作邮箱、WhatsApp、LINE、Zalo、Viber、Facebook、其他联系方式及号码国家码；平台未提供的字段保持为空。
-- 按达人 ID 查重并逐条入库；可停止并保留进度，重启后在达人库按相同市场与筛选继续。
-- 不设软件固定条数上限，但只处理当前账号可见、平台实际返回的范围；限流、验证、登录失效或权限不足时会暂停并保留断点。
-- 联系方式读取不发送消息或邀请。账号国家是便于管理的备注，启动任务时仍以目标市场和实际权限检查为准。
-- Partner Center 真实浏览器会话默认最小化在后台运行；只有需要重新登录或人工验证时才显示窗口。联系方式通过授权接口读取，不逐个打开聊天页。
+- Supports email, WhatsApp, LINE, Zalo, Viber, Facebook, other contacts and separate country codes; unavailable fields remain empty.
+- Deduplicates by creator ID and saves each result incrementally. Stop with progress preserved, then resume from the same market and filters.
+- There is no fixed app row cap, but only the account-visible, platform-returned scope is processed. Throttling, verification, expired sessions or denied access pause with checkpoints preserved.
+- Contact reads do not send messages or invitations. The imported country is an account-management label; actual target-market access is checked when a task starts.
+- The real Partner Center browser session runs minimized in the background by default and appears only for login or manual verification. Contact data is read through the authorized endpoint without opening each chat page.
 
-详细边界、故障恢复和版本变更见 [v1.5.0 更新说明](docs/release-notes-1.5.0.md)。
+See the [v1.5.0 release notes](docs/release-notes-1.5.0.md) for detailed boundaries, recovery behavior and version changes.
 
-## ❓ 常见问题
+## ❓ FAQ
 
-**Q：提示"页面未正常加载"？**  
-A：可能是会话失效、账号权限、网络或平台验证。先在对应后台确认可正常访问，需要时重新导出会话；有效期并非固定 3 天。
+**Q: `1.3.2-contacts.2` reports `No published versions on GitHub` when checking for updates?**
 
-**Q：抓取速度慢？**  
-A：请求间隔、详情请求数、账号权限和平台响应都会影响速度。完整模式逐个读取详情，通常比仅列表慢；团长联系方式补全默认串行并保留安全间隔，不承诺固定倍数或每小时产量。
+A: The old preview omitted an explicit stable-channel policy. The updater infers a custom `contacts` channel from its suffix and ignores stable releases when no matching preview is published. This is not an empty repository or a damaged library. Version 1.5.0 explicitly selects stable releases and prohibits downgrades, but a preview unable to discover updates cannot download this fix itself. Stop tasks, exit and back up local data, then perform one manual upgrade with the official installer without uninstalling/clearing data. Continue using in-app updates afterward. Normal stable installations still use in-app differential updates first.
 
-**Q：多账号怎么用？**  
-A：在 Cookie 区点"＋ 添加账号"，粘贴多个账号 Cookie，工具自动并发抓取（错峰启动）。
+**Q: "Page did not load properly"?**  
+A: Check session validity, account permissions, networking and platform verification in the corresponding backend. Re-export the session if necessary; validity is not a fixed three days.
 
-**Q：同账号的新 Cookie 会重复添加吗？**  
-A：不会。导入与已有账号相同（sessionid / sid_guard 等）的 Cookie 会自动替换旧条目。抓取中确认失效（跳登录页/空白页）的 Cookie，结束后会自动从列表移除；仅按日期显示过期但实际还能用的会保留。
+**Q: Scraping is slow?**  
+A: Intervals, detail-request count, permissions and platform responses affect speed. Full mode queries individual profiles and is usually slower than list-only collection. Partner contact enrichment is serial with a safety interval; no fixed multiplier or hourly yield is promised.
 
-**Q：日志里出现"单条详情超时，跳过"？**  
-A：v1.2.10 及之前版本存在误报：详情抓取成功后 90 秒仍会打一条"超时"日志（实际没超时、数据没丢）。v1.2.11 已修复，仅在真正超时时提示（且带达人 ID）。
+**Q: How do I use multiple accounts?**  
+A: Click "＋ Add Account" in the cookie area and paste multiple account cookies. The app scrapes concurrently with staggered starts.
 
-**Q：中途断了怎么办？**  
-A：使用历史继续或达人库的“继续抓取”，默认按地区和达人 ID 跳过已入库记录；刷新旧资料需主动选择更新。团长补全可跳过已检查达人继续未完成部分。会话失效或平台验证可能需要你手动处理，不保证所有中断都能无人值守恢复。
+**Q: Will a new cookie for the same account be duplicated?**  
+A: No. Pasting a cookie that matches an existing account (same sessionid / sid_guard etc.) automatically replaces the old entry. Cookies confirmed invalid during a run (redirected to login/blank page) are auto-removed afterwards; cookies merely expired-by-date but still working are kept.
 
-**Q：抓过的达人会重复抓吗？**  
-A：默认不会。"仅新增"模式会自动跳过已抓过的达人（按达人 ID 去重）；想刷新数据可切"全部重抓"。
+**Q: "Detail timeout, skipped" in the log?**  
+A: v1.2.10 and earlier had a false-alarm bug: a "timeout" line was printed 90s after every successful detail fetch (nothing was actually lost). Fixed in v1.2.11 — the log only fires on a real timeout (and includes the creator ID).
 
-**Q：达人库（v1.2.0）是什么？**  
-A：抓取的达人会自动存入本地 SQLite 数据库，自动去重、可排序筛选、标注活跃度。数据只在本机，不用重复抓同一批达人。
+**Q: Interrupted mid-scrape?**  
+A: Use Continue in history or the library to skip saved records by region and creator ID; explicitly refresh when updating old profiles. Partner enrichment can skip checked creators and continue the remainder. Expired sessions and verification may require your intervention; recovery is not always unattended.
 
-**Q：达人"活跃度"怎么判断的？**  
-A：工具结合最近发布时间、增长趋势、GMV 变化等信号，把达人分为活跃 / 不活跃 / 未知。主要用于合作前快速筛掉可能已经停更或带货下滑的达人。
+**Q: Will already-scraped creators be scraped again?**  
+A: No, by default. "New only" mode skips creators already saved (dedup by creator ID); choose "Re-scrape all" to refresh data.
 
-**Q：退出时数据会丢吗？**  
-A：抓取中点退出会弹窗提示，可选"保存并导出"（结束抓取并导出已抓数据后退出）/"直接退出"/"取消"，不会无声丢数据。
+**Q: What is the Creator Library (v1.2.0)?**  
+A: Scraped creators are automatically stored in a local SQLite database with deduplication — browse, sort, filter, and refresh. Data stays on your machine only.
 
-**Q：没有抓到邮箱？**  
-A：完整模式会从达人主页简介中自动提取邮箱。如果达人简介里没写邮箱，该格为空属正常。
+**Q: How is "activity" judged?**  
+A: The app combines last-publish time, growth trend and GMV changes to classify creators as active / inactive / unknown — useful for screening out creators who may have stopped posting or are declining before you reach out.
 
-**Q：粉丝性别分布显示的是人数吗？**  
-A：不是，显示的是百分比（如 `Female: 79.47%`）。TikTok 接口返回的是"占比 × 100"的数值，工具已自动还原为百分比。
+**Q: Will I lose data when quitting?**  
+A: Quitting during a scrape shows a dialog: "Save & Export" (finish and export first, then quit) / "Discard" / "Cancel" — data is never silently lost.
 
-**Q：MCN 机构为空？**  
-A：多数达人没有绑定 MCN，TikTok 返回"无授权"属正常现象，不是抓取失败。
+**Q: No email found?**  
+A: In Full mode the app auto-extracts emails from creator bios. If the creator didn't write an email in their bio, the cell is empty — that's normal.
 
-## 💻 开发
+**Q: What do the numbers in "Audience Gender" mean?**  
+A: Percentages (e.g. `Female: 79.47%`), not counts. TikTok's API returns "share × 100" values and the app converts them back to percentages automatically.
 
-开发环境、测试命令、打包要求和双语规范见 [开发文档](docs/development.md)。维护、贡献、安全和测试规范见 [CONTRIBUTING.md](CONTRIBUTING.md)、[SECURITY.md](SECURITY.md) 与 [测试规范](docs/testing.md)。
+**Q: MCN agency is empty?**  
+A: Most creators aren't bound to an MCN — TikTok returns "not authorized", which is normal, not a scraping failure.
 
-## 📤 发布新版
+## 💻 Development
 
-发布流程、增量更新、兼容性检查和 Release 资产要求见[发布清单](docs/release-checklist.md)。
+See the [development guide](docs/development.en.md) for source setup, test commands, packaging requirements and bilingual UI rules. Maintainer, contribution, security and testing rules are documented in [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md) and [the testing guide](docs/testing.en.md).
 
-<details><summary>查看完整发布命令</summary>
+## 📤 Release / Update
 
-现有更新链路是：**检查版本 → 用户确认 → 差分下载并重建 → 校验 → 空闲时静默安装 / 退出时安装**。不是让每位旧用户重新下载安装向导。发布方仍须提供完整安装包：更新器从该文件分段下载，也用它做首次安装或差分失败回退。
+Release flow, differential updates, compatibility checks and asset requirements are documented in the [release checklist](docs/release-checklist.en.md).
 
-参见 [1.4.0 依赖与兼容说明](docs/release-readiness-1.4.0.md)及[真实增量验证与回退测试](docs/incremental-update-verification-2026-09-09.md)。以下 **1.5.1 只是下一版示例**，不是已发布版本；发布时统一替换版本号并提前撰写对应的中英 Release notes 文件：
+<details><summary>Show full release commands</summary>
+
+The existing path is **version check → user consent → differential download/reconstruction → verification → silent installation when idle or on exit**. Existing users do not need to repeat a manual installer wizard. Publishers still provide a complete installer: the updater downloads ranges from it, and it also serves first installs and full-download fallback.
+
+See [1.4.0 dependencies and compatibility](docs/release-readiness-1.4.0.en.md) and [real differential/fallback verification](docs/incremental-update-verification-2026-09-09.en.md). **1.5.1 below is only a next-release example**, not a published version. Replace it consistently and author the corresponding bilingual release-notes file first:
 
 ```bash
-# 1. bump 版本号（本例 1.5.0 → 1.5.1）
+# 1. Bump version (example: 1.5.0 → 1.5.1)
 npm version patch --no-git-tag-version
 
-# 2. 打包
+# 2. Build installer
 npm test
 npm audit --audit-level=low
 npm run build -- --publish never
 
-# 3. 检查打包代码与运行时；builder 已生成 latest.yml、ASCII 安装包和 blockmap
+# 3. Verify packaged source/runtime; builder generates latest.yml, ASCII installer and blockmap
 node scripts/verify-release-package.js dist/win-unpacked
 node scripts/verify-electron-startup.js dist/win-unpacked
 node scripts/verify-update-artifacts.js dist
-# 1.4.0 起不要再运行旧的 prepare-release.js（只适用于旧中文名构建产物）。
+# From 1.4.0, do not run legacy prepare-release.js (old Chinese-named artifacts only).
 
-# 4. 提交并打 tag
-# 先审查并仅暂存源码/文档变更，不暂存 Cookie、数据库或真实测试产物
+# 4. Commit and tag
+# Review and stage only source/docs; never credentials, databases or live-test artifacts
 git commit -m "release 1.5.1"
 git push origin main
 git tag v1.5.1
 git push origin v1.5.1
 
-# 5. 创建草稿 Release 并上传 3 个资产（先传小文件，避免超时）
-#    ⚠️ Release notes 固定格式：英文在前（"What's new in vX.Y.Z"），中文在后（"更新内容"）。
-#    更新弹窗会展示所有跳过的版本，每个版本都要双语。
+# 5. Create a draft Release and upload all 3 assets (small files first)
+#    ⚠️ Release notes use a FIXED format: English first ("What's new in vX.Y.Z"),
+#    then Chinese ("更新内容"). The update dialog lists every skipped version,
+#    so each version needs both languages.
 gh release create v1.5.1 --draft --title "v1.5.1" --notes-file docs/release-notes-1.5.1.md
 gh release upload v1.5.1 dist/latest.yml dist/tiktok-shop-creator-scraper-setup-1.5.1.exe.blockmap
 gh release upload v1.5.1 dist/tiktok-shop-creator-scraper-setup-1.5.1.exe
-# 核对资产大小、SHA-512 与 latest.yml 后发布草稿
+# Verify uploaded sizes, SHA-512 and latest.yml, then publish the draft
 gh release edit v1.5.1 --draft=false --latest
 
-# 6. 公开发布后的差分下载验证（联网，隔离目录，不执行安装）
+# 6. Post-publication differential verification (network, isolated directory, NO installation)
 node scripts/verify-incremental-update.js --live 1.5.0 1.5.1
-# 旧用户收到应用内提示 → 确认增量下载 → 静默安装 / 退出时安装
+# Existing users: in-app prompt → consent to incremental download → silent install / install on exit
 ```
 
-> 1.4.0 起上传 3 个更新资产：ASCII 名 exe、对应 .blockmap、latest.yml；不需要重复上传中文名安装包。
-> 保留旧 Release 的 **ASCII exe 和 .blockmap**：既用于回退，也供旧版更新器取得基准块表。不要重命名历史资产，不覆盖已发布版本的 exe / blockmap / latest.yml，不移动已发布 tag；代码更新应使用新版本号。仅更新 README / 验证脚本时无需重发同版本安装包。
-> `npm test` 包含本地差分/回退回归；`--live` 明确联网下载两个公开版本的必要资产，用独立测试缓存重建，结果保存在忽略提交的 `test-results/incremental-update-*`。不要把安装步骤也算作已测试。
+> From 1.4.0, upload 3 update assets: ASCII installer, matching .blockmap and latest.yml. A duplicate Chinese-named installer is unnecessary.
+> Keep historical **ASCII exe and .blockmap** assets for rollback and old-version blockmap lookup. Do not rename historical assets, overwrite published exe/blockmap/latest.yml files, or move published tags. Runtime changes require a new version. README/test-only changes do not require republishing an installer under the same version.
+> `npm test` includes local differential/fallback regressions. `--live` explicitly downloads required public release assets and reconstructs in an isolated cache; reports remain in git-ignored `test-results/incremental-update-*`. This does not test installation.
 
 </details>
 
-## 📄 许可证
+## 📄 License
 
-本项目采用 **GPL-3.0** 许可证，详见 [LICENSE](LICENSE) 文件。
+This project is licensed under the **GPL-3.0** License — see the [LICENSE](LICENSE) file.
 
 ---
 
-*关键词 Keywords：TikTok Shop 达人抓取 TikTok Shop creator scraper、TikTok联盟达人 TikTok affiliate creator、达人数据采集 creator data collection、TikTok 卖家工具 TikTok seller tool、达人导出 CSV Excel creator export、TikTok 网红数据分析 TikTok influencer analytics、达人筛选 creator discovery、MCN 机构查询 MCN lookup、合作邮箱提取 contact email extractor、TikTok Shop 选品 TikTok Shop product research*
+*Keywords: TikTok Shop affiliate creator scraper TikTok Shop 达人抓取, TikTok creator data TikTok 达人数据采集, TikTok Shop seller tool TikTok 卖家工具, creator export CSV Excel 达人导出 CSV Excel, TikTok influencer analytics TikTok 网红数据分析, creator discovery 达人筛选, MCN lookup MCN 机构查询, contact email extractor 合作邮箱提取, TikTok Shop product research TikTok Shop 选品*
