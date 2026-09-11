@@ -210,7 +210,7 @@ A: Most creators aren't bound to an MCN — TikTok returns "not authorized", whi
 
 ## 💻 Development
 
-See the [development guide](docs/development.en.md) for source setup, test commands, packaging requirements and bilingual UI rules. Maintainer, contribution, security and testing rules are documented in [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md) and [docs/testing.md](docs/testing.md).
+See the [development guide](docs/development.en.md) for source setup, test commands, packaging requirements and bilingual UI rules. Maintainer, contribution, security and testing rules are documented in [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md) and [the testing guide](docs/testing.en.md).
 
 ## 📤 Release / Update
 
