@@ -1,0 +1,32 @@
+'use strict';
+// Read-only check. Do not execute an installer as part of metadata verification.
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const crypto = require('node:crypto');
+const zlib = require('node:zlib');
+const yaml = require('js-yaml');
+const dir = path.resolve(process.argv[2] || 'dist');
+const version = require('../package.json').version;
+const name = `tiktok-shop-creator-scraper-setup-${version}.exe`;
+const manifest = yaml.load(fs.readFileSync(path.join(dir, 'latest.yml'), 'utf8'));
+assert.equal(manifest.version, version);
+assert.equal(manifest.path, name);
+assert.equal(manifest.files.length, 1);
+assert.equal(manifest.files[0].url, name);
+const installer = fs.readFileSync(path.join(dir, name));
+const sha512 = crypto.createHash('sha512').update(installer).digest('base64');
+assert.equal(manifest.sha512, sha512);
+assert.equal(manifest.files[0].sha512, sha512);
+assert.equal(manifest.files[0].size, installer.length);
+const map = JSON.parse(zlib.gunzipSync(fs.readFileSync(path.join(dir, name + '.blockmap'))));
+assert.equal(map.version, '2');
+assert.equal(map.files.length, 1);
+assert.equal(map.files[0].offset, 0);
+assert.equal(map.files[0].sizes.length, map.files[0].checksums.length);
+assert.equal(map.files[0].sizes.reduce((a, b) => a + b, 0), installer.length);
+const assets = [name, name + '.blockmap', 'latest.yml'].map(file => {
+  const bytes = fs.readFileSync(path.join(dir, file));
+  return { name: file, size: bytes.length, sha256: crypto.createHash('sha256').update(bytes).digest('hex') };
+});
+console.log(JSON.stringify({ version, sha512Matches: true, blockmapCoverage: true, assets }));

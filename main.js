@@ -2,53 +2,58 @@
 // main.js — Electron main process: native window, native folder picker, scrape orchestration
 'use strict';
 
-const { app, BrowserWindow, ipcMain, dialog, shell, clipboard, safeStorage, powerMonitor } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, clipboard } = require('electron');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
-const product = require('./product.config');
-process.env.CREATOR_SINGLE_PLATFORM = product.platformId;
-app.setName(product.productName);
 const { MultiRunner } = require('./lib/multirunner');
-const { createTikTokShopAdapter, PLATFORM_CATALOG, isPlatformId } = require('./lib/platforms');
-const { TaskSupervisor } = require('./lib/tasks/supervisor');
-const { runYouTubeFixtureCollection } = require('./lib/tasks/youtube-fixture-collector');
-const { runLocalPythonCollection } = require('./lib/tasks/local-python-collector');
-const { runDefaultYouTubeDiscovery } = require('./lib/tasks/default-youtube-discovery');
-const { runDefaultInstagramDiscovery } = require('./lib/tasks/default-instagram-discovery');
-const { runInstagramPublicDiscovery } = require('./lib/tasks/instagram-public-discovery');
-const { runInstagramHeadlessDiscovery } = require('./lib/tasks/instagram-headless-discovery');
-const { runInstagramBrowserProfileCollection } = require('./lib/tasks/instagram-browser-profile-collector');
-const { runHikerInstagramProfileEnrichment } = require('./lib/tasks/hiker-instagram-collector');
-const { assertInstagramAvailable, nextInstagramCooldown } = require('./lib/tasks/instagram-cooldown');
-const { InstagramIdleCoverageScheduler } = require('./lib/tasks/instagram-idle-coverage-scheduler');
-const { InstagramCollectionLane } = require('./lib/tasks/instagram-collection-lane');
-const { discoveryMetadata } = require('./lib/discovery/ecommerce-defaults');
-const { PlatformDatabaseManager } = require('./lib/database');
-const { CredentialBroker, SecretStore, EncryptedAppDataStorage, resolvePlatformStateDirectory } = require('./lib/credentials');
-const { convertInstagramCookieExport, InstagramCookieImportError } = require('./lib/credentials/instagram-cookie-import');
-const { WORKSPACE_PLATFORM_IDS, buildWorkspaceOverview } = require('./lib/workspace/overview-summary');
+const { CreatorDatabase } = require('./lib/database');
+const { PartnerContactClient, ContactJob, ContactError, MARKETS } = require('./lib/partner-contacts');
+const {CollectionContacts, serializeCreatorWrites, contactDatabase} = require('./lib/collection-contacts');
+let partnerContactClient = null;
+let partnerAccount = null; // display-only metadata; credential remains in memory
+const AccountCookies = require('./lib/account-cookies');
+let contactPreparing = false;
+let contactPreparationVersion = 0;
+let automaticContacts = {outcome:'idle'};
+let collectionContacts = null;
+const writeDatabase = serializeCreatorWrites(operation => operation());
+const contactJob = new ContactJob();
+const contactsBusy = () => contactPreparing || contactJob.state.running;
 
 let mainWindow = null;
 let creatorDb = null;
-let creatorDbManager = null;
-let credentialBroker = null;
-let instagramIdleScheduler = null;
-const instagramCollectionLane = new InstagramCollectionLane();
 const runner = new MultiRunner();
-// Keep the established runner instance (and its UI/database hooks) while all
-// lifecycle entry points pass through the platform-neutral supervisor.
-const taskSupervisor = new TaskSupervisor({
-  adapters: { tiktok_shop: createTikTokShopAdapter({ runnerFactory: () => runner }) },
-});
 runner.onFileLog = (line) => writeLog(line);
-runner.onDataReady = async (rows, config) => {
+runner.onPartnerRaw = (region,id) => creatorDb?.partnerProfileRaw(region,id);
+runner.onPartnerProfile = (region,id,patch) => writeDatabase(() => creatorDb.updatePartnerProfile(region,id,patch));
+runner.onDataReady = (rows, config) => writeDatabase(async () => {
   if (!creatorDb) return { saved: 0, disabled: true };
-  return creatorDb.upsertCreators(rows, {
+  const result = await creatorDb.upsertCreators(rows, {
     region: config.shopRegion || 'US',
     jobId: config.databaseJobId || null,
     updateFields: config.updateFields || null,
+    preserveContacts: true,
   });
+  // Only committed base rows can enter the concurrent contact consumer.
+  if (!result.disabled && result.saved === rows.length) await collectionContacts?.saved(rows, config);
+  return result;
+});
+
+// Called after the runner resets its previous stop/pause flags, before discovery.
+runner.onStart = config => {
+  collectionContacts = new CollectionContacts({config,
+    db:creatorDb ? contactDatabase(creatorDb, writeDatabase) : null,
+    client:runner.activePartnerClient || partnerContactClient, job:contactJob,
+    isPaused:() => runner.running && (runner.paused || !!runner.verificationGate?.snapshot().waiting),
+    isCanceled:() => runner.stopped || runner.storageError || runner.collectionIncomplete});
+  automaticContacts = collectionContacts.snapshot();
+  const messages = {
+    streaming:'已开启边采集边补全：资料与联系方式并行读取、逐位入库；无联系方式的达人同样保留。',
+    needs_auth:'未导入团长授权，本轮仍采集并保存达人；联系方式保留待补全，请导入授权后从达人库继续。',
+    unsupported:'此地区暂不支持团长联系方式接口，仍采集并保存达人资料。',
+  };
+  if (messages[automaticContacts.outcome]) runner.log(messages[automaticContacts.outcome]);
 };
 // record history immediately when a run finishes (reliable, no polling)
 runner.onDone = (result) => {
@@ -58,23 +63,7 @@ runner.onDone = (result) => {
     if (creatorDb && jobId) {
       creatorDb.finishScrapeJob(jobId, result).catch(e => writeLog('任务状态写入数据库失败: ' + e.message));
     }
-    // Auto-remove cookies that were CONFIRMED invalid during this run (landed
-    // on the login/blank page). Cookies merely "expired by date" but still
-    // working are NOT removed — the UI keeps them.
-    if (result && result.ok) {
-      const invalid = Array.isArray(result.invalidCookieIndexes) ? result.invalidCookieIndexes : [];
-      if (invalid.length && Array.isArray(appData.cookies) && appData.cookies.length) {
-        // remove from the highest index first so earlier indexes stay valid
-        const removed = [];
-        [...invalid].sort((a, b) => b - a).forEach(i => {
-          if (i >= 0 && i < appData.cookies.length) { removed.push(appData.cookies.splice(i, 1)[0]); }
-        });
-        if (removed.length) {
-          saveAppData();
-          writeLog(`已自动移除 ${removed.length} 个确认失效的账号 Cookie`);
-        }
-      }
-    }
+    // Authentication failures are task state, never permission to delete accounts.
     if (result && result.ok && !result.testMode) {
       runner._historyRecorded = true;
       // attach the run config so history entries can continue/refresh
@@ -83,17 +72,9 @@ runner.onDone = (result) => {
     }
     runner._currentJobId = null;
   } catch (e) { }
+  if (runner.stopped || runner.storageError || runner.collectionIncomplete) collectionContacts?.stop();
+  else collectionContacts?.finish(result);
 };
-
-// Keep the existing TikTok Shop database as the default, while every IPC
-// caller can explicitly select one isolated platform repository.
-function selectedPlatformId(value) {
-  return isPlatformId(value) ? value : product.platformId;
-}
-async function creatorRepository(platformId) {
-  if (!creatorDbManager) throw new Error('本地达人库未初始化');
-  return creatorDbManager.getRepository(selectedPlatformId(platformId));
-}
 
 // ---- app folders: logs/ and output/ next to the executable ----
 const APP_DIR = path.dirname(process.execPath);
@@ -173,7 +154,7 @@ function writeLog(msg) {
 }
 
 // ---- persistent app data: remember last cookies + history ----
-let appData = { cookies: [], history: [], socialAccounts: [], shortcutAsked: false, outDir: OUT_DIR };
+let appData = { cookies: [], history: [], shortcutAsked: false, outDir: OUT_DIR };
 function dataFile() { return path.join(app.getPath('userData'), 'app-data.json'); }
 
 function loadAppData() {
@@ -181,7 +162,6 @@ function loadAppData() {
     if (fs.existsSync(dataFile())) {
       appData = JSON.parse(fs.readFileSync(dataFile(), 'utf8'));
       if (!Array.isArray(appData.cookies)) appData.cookies = [];
-      if (!Array.isArray(appData.socialAccounts)) appData.socialAccounts = [];
       if (!Array.isArray(appData.history)) appData.history = [];
       if (!appData.outDir) appData.outDir = OUT_DIR;
       // validate remembered outDir: if it no longer exists (e.g. leftover path
@@ -197,120 +177,6 @@ function loadAppData() {
 }
 function saveAppData() {
   try { fs.writeFileSync(dataFile(), JSON.stringify(appData)); } catch (e) { }
-}
-
-function initializeCredentialBroker() {
-  try {
-    const storage = new EncryptedAppDataStorage({ appData, save: saveAppData, safeStorage });
-    credentialBroker = new CredentialBroker({ secretStore: new SecretStore({
-      storage,
-      encrypt: value => value,
-      decrypt: value => value,
-    }) });
-    writeLog('本地加密凭据存储就绪');
-  } catch (e) {
-    // The app remains usable for unauthenticated sources.  Never fall back to
-    // plaintext storage when OS encryption is unavailable.
-    credentialBroker = null;
-    writeLog('本地加密凭据存储不可用');
-  }
-}
-
-function instagramIdleCoverageConfig() {
-  const saved = appData.instagramIdleCoverage && typeof appData.instagramIdleCoverage === 'object' ? appData.instagramIdleCoverage : {};
-  return {
-    enabled: saved.enabled === true,
-    minIdleMinutes: Math.min(120, Math.max(5, Number(saved.minIdleMinutes) || 15)),
-    scheduler: saved.scheduler && typeof saved.scheduler === 'object' ? saved.scheduler : null,
-  };
-}
-
-function setupInstagramIdleCoverage() {
-  if (!creatorDbManager) return;
-  const config = instagramIdleCoverageConfig();
-  instagramIdleScheduler?.stop();
-  instagramIdleScheduler = new InstagramIdleCoverageScheduler({
-    intervalMs: 5 * 60_000,
-    isIdle: () => powerMonitor.getSystemIdleTime() >= instagramIdleCoverageConfig().minIdleMinutes * 60,
-    isManualTaskRunning: () => instagramCollectionLane.isActive() || taskSupervisor.status().active,
-    store: {
-      load: () => instagramIdleCoverageConfig().scheduler,
-      save: scheduler => {
-        appData.instagramIdleCoverage = { ...instagramIdleCoverageConfig(), scheduler };
-        saveAppData();
-      },
-    },
-    onProgress: progress => {
-      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('collection-progress', { platform: 'instagram', ...progress });
-    },
-    runSeed: async ({ seed }) => {
-      if (!instagramCollectionLane.tryAcquire()) {
-        const error = new Error('Instagram collection lane is busy');
-        error.code = 'INSTAGRAM_COLLECTION_BUSY';
-        throw error;
-      }
-      let usedLocalInstagramSession = false;
-      try {
-        const account = (appData.socialAccounts || []).filter(entry => entry.platform === 'instagram').at(-1);
-        if (account && credentialBroker) {
-          credentialBroker.read('instagram', account.accountRef);
-          const { state, file } = socialStateFile('instagram', account.accountRef);
-          if (fs.existsSync(file)) {
-            usedLocalInstagramSession = true;
-            const result = await runInstagramHeadlessDiscovery({
-              databaseManager: creatorDbManager, region: 'GLOBAL', seeds: [seed], maxResultsPerSeed: 10,
-              sessionStatePath: file, stateRoot: state.root,
-              onProgress: progress => {
-                if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('collection-progress', { platform: 'instagram', idleCoverage: true, keyword: seed.keyword, category: seed.category, ...progress });
-              },
-            });
-            setSocialAccountSessionStatus('instagram', account.accountRef, 'ready');
-            return result;
-          }
-        }
-        return await runInstagramPublicDiscovery({
-          databaseManager: creatorDbManager, region: 'GLOBAL', seeds: [seed], maxResultsPerSeed: 10, seedGapMs: 15 * 60_000,
-          onProgress: progress => {
-            if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('collection-progress', { platform: 'instagram', idleCoverage: true, keyword: seed.keyword, category: seed.category, ...progress });
-          },
-        });
-      } catch (error) {
-        if (error?.code === 'INSTAGRAM_SESSION_ATTENTION_REQUIRED') {
-          if (account) setSocialAccountSessionStatus('instagram', account.accountRef, 'needs_reimport');
-          // Candidate discovery can continue from the public route while the
-          // user repairs their local session. Profile enrichment remains
-          // paused because it needs the authenticated browser session.
-          if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('collection-progress', {
-            platform: 'instagram', idleCoverage: true, state: 'fallback_public_discovery', keyword: seed.keyword, category: seed.category,
-          });
-          return await runInstagramPublicDiscovery({
-            databaseManager: creatorDbManager, region: 'GLOBAL', seeds: [seed], maxResultsPerSeed: 10, seedGapMs: 15 * 60_000,
-            onProgress: progress => {
-              if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('collection-progress', { platform: 'instagram', idleCoverage: true, keyword: seed.keyword, category: seed.category, ...progress });
-            },
-          });
-        }
-        if (error?.code === 'PUBLIC_DISCOVERY_THROTTLED' || error?.code === 'PUBLIC_DISCOVERY_VERIFICATION_REQUIRED') {
-          const verificationPage = error.code === 'PUBLIC_DISCOVERY_VERIFICATION_REQUIRED';
-          error.code = 'THROTTLED';
-          error.retryAt = Date.now() + (verificationPage ? 2 * 60 * 60_000 : 30 * 60_000);
-        }
-        // One local session backs both manual and idle collection. Share a
-        // confirmed throttle window so a manual click cannot immediately
-        // restart the same session while the idle queue is cooling down.
-        if (error?.code === 'THROTTLED' && usedLocalInstagramSession) {
-          const cooldown = nextInstagramCooldown(error);
-          if (cooldown) {
-            appData.instagramCooldown = cooldown;
-            saveAppData();
-            error.retryAt = cooldown.retryAt;
-          }
-        }
-        throw error;
-      } finally { instagramCollectionLane.release(); }
-    },
-  });
-  if (config.enabled) instagramIdleScheduler.start();
 }
 function recordHistory(entry) {
   if (!entry || !entry.outPath) return;
@@ -347,122 +213,80 @@ function recordHistory(entry) {
 }
 
 // IPC: remembered cookies + history + default out dir
-ipcMain.handle('get-app-data', () => ({ cookies: appData.cookies || [], history: appData.history || [], defaultOutDir: appData.outDir || OUT_DIR }));
+ipcMain.handle('get-app-data', () => ({ cookies: appData.cookies || [], accountEntries:(appData.cookies || []).map((data,i) => ({data,...(appData.cookieMetadata?.[i] || {})})), history: appData.history || [], defaultOutDir: appData.outDir || OUT_DIR }));
+function storeAccounts(entries) {
+  const normalized = AccountCookies.normalize(entries);
+  const next = {...appData, cookies:normalized.map(c => c.data), cookieMetadata:normalized.map(({name,region}) => ({name,region}))};
+  // Report failed saves; never claim an account was saved only in the renderer.
+  fs.writeFileSync(dataFile(), JSON.stringify(next));
+  appData = next;
+}
+
+// Local development/live-test override. It is inactive in normal launches and
+// never persists, logs, or sends the credential anywhere except the selected
+// TikTok Partner Center task. This keeps release behavior unchanged while an
+// actual Electron run can use a freshly exported local Cookie file.
+function loadDevelopmentCookieOverride() {
+  const file = process.env.TIKTOK_CREATOR_TEST_INPUT_FILE;
+  if (!file) return;
+  try {
+    if (fs.statSync(file).size > 1024 * 1024) throw new Error('too-large');
+    const raw = fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, '');
+    const cookies = AccountCookies.parse(raw);
+    const client = new PartnerContactClient(cookies);
+    appData.cookies = [raw];
+    appData.cookieMetadata = [{name:'实际软件测试账号', region:''}];
+    partnerContactClient = client;
+    runner.partnerCredential = client;
+    partnerAccount = {region:'', name:'实际软件测试账号'};
+  } catch (_) {
+    throw new Error('实际软件测试 Cookie 文件无效或不可读取。');
+  }
+}
+ipcMain.handle('save-accounts', (_event, entries) => {
+  if (runner.running) return {ok:false,error:'采集正在运行，请停止后再修改账号。'};
+  try { storeAccounts(entries); return {ok:true}; }
+  catch (_) { return {ok:false,error:'账号保存失败，请检查 Cookie 格式、国家代码及本地目录权限。'}; }
+});
 ipcMain.handle('get-last-scrape-config', () => appData.lastScrapeConfig || null);
-ipcMain.handle('clear-cookies', () => { appData.cookies = []; saveAppData(); return { ok: true }; });
-ipcMain.handle('platform-catalog', () => PLATFORM_CATALOG.map(platform => ({ ...platform })));
-ipcMain.handle('product-config', () => ({ platformId: product.platformId, productName: product.productName, maturity: product.maturity }));
-// Offline integration hook only. It is deliberately unavailable to the
-// renderer/preload bridge and remains gated unless an automated test launches
-// Electron with ALLOW_FIXTURE_COLLECTORS=1. This proves the main-process
-// worker->repository path without exposing a fake collection feature.
-ipcMain.handle('creator-db-run-youtube-fixture', async (event, payload) => {
-  if (product.platformId !== 'youtube') return { ok: false, error: 'WRONG_PRODUCT_PLATFORM' };
-  if (process.env.ALLOW_FIXTURE_COLLECTORS !== '1') {
-    return { ok: false, error: 'FIXTURE_COLLECTOR_DISABLED' };
-  }
-  try {
-    return await runYouTubeFixtureCollection({
-      databaseManager: creatorDbManager,
-      scenario: payload?.scenario,
-      region: payload?.region,
-    });
-  } catch (error) {
-    return { ok: false, error: error.code || 'YOUTUBE_FIXTURE_COLLECTION_FAILED' };
-  }
-});
-// The renderer may initiate only the credential-free YouTube discovery path.
-// Other local workers stay behind their dedicated account/adapter flows until
-// those flows are implemented and independently reviewed.
-ipcMain.handle('creator-db-run-youtube-collection', async (event, payload) => {
-  if (product.platformId !== 'youtube') return { ok: false, error: 'WRONG_PRODUCT_PLATFORM' };
-  try {
-    const reportProgress = progress => {
-      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('collection-progress', { platform: 'youtube', ...progress });
-    };
-    if (payload?.mode === 'default') {
-      return await runDefaultYouTubeDiscovery({
-        databaseManager: creatorDbManager,
-        region: payload?.region || 'GLOBAL', sourceRegion: payload?.sourceRegion || 'US', language: payload?.language || 'en',
-        maxResultsPerSeed: payload?.maxResultsPerSeed || 50,
-        onProgress: reportProgress,
-        runtimeOptions: { isPackaged: app.isPackaged, resourcesPath: process.resourcesPath },
-      });
-    }
-    return await runLocalPythonCollection({
-      platformId: 'youtube',
-      databaseManager: creatorDbManager,
-      region: payload?.region,
-      payload: {
-        query: payload?.query,
-        maxResults: payload?.maxResults,
-        language: payload?.language,
-        region: payload?.sourceRegion,
-        resumeAfter: payload?.resumeAfter,
-      },
-      discoveryMetadata: discoveryMetadata({
-        mode: 'custom', keyword: payload?.query, category: payload?.keywordCategory || '', source: 'user',
-      }),
-      onProgress: reportProgress,
-      runtimeOptions: { isPackaged: app.isPackaged, resourcesPath: process.resourcesPath },
-    });
-  } catch (error) {
-    return { ok: false, error: error.code || 'YOUTUBE_COLLECTION_FAILED' };
-  }
-});
-ipcMain.handle('creator-db-stats', async (event, platformId) => {
-  try { return { ok: true, ...(await (await creatorRepository(platformId)).getStats()) }; }
+ipcMain.handle('clear-cookies', () => { appData.cookies = []; appData.cookieMetadata = []; saveAppData(); return { ok: true }; });
+ipcMain.handle('creator-db-stats', async () => {
+  if (!creatorDb) return { error: '本地达人库未初始化' };
+  try { return { ok: true, ...(await creatorDb.getStats()) }; }
   catch (e) { return { error: e.message }; }
 });
-ipcMain.handle('workspace-overview', async () => {
-  try {
-    const results = await Promise.all(WORKSPACE_PLATFORM_IDS.map(async platformId => {
-      const repository = await creatorRepository(platformId);
-      const [stats, jobs] = await Promise.all([repository.getStats(), repository.listScrapeJobs({ limit: 5 })]);
-      return { platformId, stats, jobs: jobs.rows || [] };
-    }));
-    const platformStats = Object.fromEntries(results.map(result => [result.platformId, result.stats]));
-    const recentJobs = results.flatMap(result => result.jobs.map(job => ({
-      id: job.id, platformId: result.platformId, status: job.status, startedAt: job.started_at,
-      finishedAt: job.finished_at, rowsSaved: job.rows_saved, creatorsFound: job.creators_found, error: job.error,
-      config: { region: job.config?.shopRegion || job.config?.region || null },
-    }))).sort((a, b) => String(b.startedAt || '').localeCompare(String(a.startedAt || ''))).slice(0, 5);
-    return {
-      ok: true,
-      ...buildWorkspaceOverview({
-        platformStats, cookieCount: appData.cookies?.length || 0, socialAccounts: appData.socialAccounts || [],
-        activeTask: { ...taskSupervisor.status(), progress: runner.updateRateInfo() }, recentJobs,
-      }),
-    };
-  } catch (error) { return { ok: false, error: 'WORKSPACE_OVERVIEW_UNAVAILABLE' }; }
-});
 ipcMain.handle('creator-db-list', async (event, filters) => {
-  try { return { ok: true, ...(await (await creatorRepository(filters?.platformId)).listCreators(filters || {})) }; }
+  if (!creatorDb) return { error: '本地达人库未初始化', rows: [], total: 0 };
+  try { return { ok: true, ...(await creatorDb.listCreators(filters || {})) }; }
   catch (e) { return { error: e.message, rows: [], total: 0 }; }
 });
 ipcMain.handle('creator-db-ids', async (event, filters) => {
-  try { return { ok: true, ids: await (await creatorRepository(filters?.platformId)).listCreatorIds(filters || {}) }; }
+  if (!creatorDb) return { error: '本地达人库未初始化', ids: [] };
+  try { return { ok: true, ids: await creatorDb.listCreatorIds(filters || {}) }; }
   catch (e) { return { error: e.message, ids: [] }; }
 });
-ipcMain.handle('creator-db-options', async (event, key, platformId) => {
-  try { return { ok: true, options: await (await creatorRepository(platformId)).getFilterOptions(String(key || '')) }; }
+ipcMain.handle('creator-db-options', async (event, key) => {
+  if (!creatorDb) return { error: '本地达人库未初始化', options: [] };
+  try { return { ok: true, options: await creatorDb.getFilterOptions(String(key || '')) }; }
   catch (e) { return { error: e.message, options: [] }; }
 });
 
-ipcMain.handle('creator-db-category-tree', async (event, platformId) => {
-  try { return { ok: true, tree: await (await creatorRepository(platformId)).getCategoryTree() }; }
+ipcMain.handle('creator-db-category-tree', async () => {
+  if (!creatorDb) return { error: '本地达人库未初始化', tree: [] };
+  try { return { ok: true, tree: await creatorDb.getCategoryTree() }; }
   catch (e) { return { error: e.message, tree: [] }; }
 });
 ipcMain.handle('creator-db-jobs', async (event, filters) => {
-  try { return { ok: true, ...(await creatorRepository(filters?.platformId)).listScrapeJobs(filters || {}) }; }
+  if (!creatorDb) return { error: '本地达人库未初始化', rows: [], total: 0 };
+  try { return { ok: true, ...(await creatorDb.listScrapeJobs(filters || {})) }; }
   catch (e) { return { error: e.message, rows: [], total: 0 }; }
 });
 
 // Export the creator library (filtered) to CSV / XLSX. Returns the written file path.
 ipcMain.handle('creator-db-export', async (event, payload) => {
   try {
-    const { filters = {}, format = 'csv', fields = null, headerLang = 'zh', outPath, platformId } = payload || {};
-    const repository = await creatorRepository(platformId || filters.platformId);
+    if (!creatorDb) return { ok: false, error: '本地达人库未初始化' };
+    const { filters = {}, format = 'csv', fields = null, headerLang = 'zh', outPath } = payload || {};
     if (!outPath) return { ok: false, error: '缺少输出路径' };
     const { exportCsv, exportXlsx, createCsvStream, ensureDir } = require('./lib/exporter');
     const FIELD_LABELS = {
@@ -477,10 +301,11 @@ ipcMain.handle('creator-db-export', async (event, payload) => {
       top_follower_ages: { zh: '粉丝年龄段', en: 'Audience Ages' }, top_follower_gender: { zh: '粉丝性别分布', en: 'Audience Gender' },
       pps_score: { zh: 'PPS评分', en: 'PPS Score' }, is_fast_growing: { zh: '快速增长', en: 'Fast Growing' }, has_collaborated: { zh: '已合作', en: 'Collaborated' },
       creator_permission_tag: { zh: '达人类目权限', en: 'Category Permission' }, is_live_auction: { zh: '直播拍卖', en: 'Live Auction' },
-      '简介': { zh: '简介', en: 'Bio' }, '合作邮箱': { zh: '合作邮箱', en: 'Contact Email' }, 'MCN机构': { zh: 'MCN机构', en: 'MCN Agency' }, '垂直类目': { zh: '垂直类目', en: 'Vertical Category' },
-      collection_mode: { zh: '采集方式', en: 'Collection Mode' }, discovery_source: { zh: '采集来源', en: 'Discovery Source' }, source_keyword: { zh: '来源关键词', en: 'Source Keyword' }, keyword_category: { zh: '关键词所属类目', en: 'Keyword Category' },
+      '简介': { zh: '简介', en: 'Bio' }, '合作邮箱': { zh: '合作邮箱', en: 'Contact Email' }, 'mcn': { zh: 'MCN机构', en: 'MCN Agency' }, 'MCN机构': { zh: 'MCN机构', en: 'MCN Agency' }, '垂直类目': { zh: '垂直类目', en: 'Vertical Category' },
       last_publish_time: { zh: '最后发布时间', en: 'Last Published' }, activity_status: { zh: '活跃状态', en: 'Activity Status' }, activity_reason: { zh: '判断原因', en: 'Activity Reason' },
       last_refreshed_at: { zh: '最近更新', en: 'Last Updated' },
+      ...require('./lib/contact-fields').LABELS,
+      ...require('./lib/partner-profile-fields').LABELS,
     };
     const label = k => (FIELD_LABELS[k] && FIELD_LABELS[k][headerLang]) || k;
     // export strategy:
@@ -510,7 +335,7 @@ ipcMain.handle('creator-db-export', async (event, payload) => {
       batchRows = [];
     };
     for (;;) {
-      const page = await repository.listCreators({ ...filters, limit: pageSize, offset, sortBy: filters.sortBy || 'last_refreshed_at', sortDirection: filters.sortDirection || 'desc' });
+      const page = await creatorDb.listCreators({ ...filters, limit: pageSize, offset, sortBy: filters.sortBy || 'last_refreshed_at', sortDirection: filters.sortDirection || 'desc' });
       const rows = page.rows || [];
       if (!rows.length && offset === 0) return { ok: false, error: '筛选条件下没有数据可导出', rows: 0 };
       if (rows.length === 0) break;
@@ -546,7 +371,6 @@ ipcMain.handle('creator-db-export', async (event, payload) => {
         config: {
           exportFilters: filters || {}, exportFormat: String(format).toLowerCase(),
           exportFields: Array.isArray(fields) ? fields : null, exportHeaderLang: String(headerLang || 'zh'),
-          platformId: selectedPlatformId(platformId || filters.platformId),
         },
       });
     } catch (e) { }
@@ -565,10 +389,11 @@ ipcMain.handle('update-export-file', async (event, filePath) => {
     const format = cfg.exportFormat || 'csv';
     const fields = cfg.exportFields || null;
     const headerLang = cfg.exportHeaderLang || 'zh';
-    const repository = await creatorRepository(cfg.platformId);
     // reuse the export handler logic against the same output path
     const { exportCsv, exportXlsx, createCsvStream, ensureDir } = require('./lib/exporter');
     const FIELD_LABELS = {
+      ...require('./lib/contact-fields').LABELS,
+      ...require('./lib/partner-profile-fields').LABELS,
       handle: { zh: '达人主页', en: 'Creator Page' }, nickname: { zh: '昵称', en: 'Nickname' }, creator_oecuid: { zh: '达人ID', en: 'Creator ID' },
       avatar: { zh: '头像', en: 'Avatar' }, selection_region: { zh: '地区', en: 'Region' }, follower_cnt: { zh: '粉丝数', en: 'Followers' },
       category: { zh: '类目', en: 'Category' }, med_gmv_revenue: { zh: '总GMV', en: 'Total GMV' }, med_gmv_revenue_range: { zh: 'GMV区间', en: 'GMV Range' },
@@ -580,8 +405,7 @@ ipcMain.handle('update-export-file', async (event, filePath) => {
       top_follower_ages: { zh: '粉丝年龄段', en: 'Audience Ages' }, top_follower_gender: { zh: '粉丝性别分布', en: 'Audience Gender' },
       pps_score: { zh: 'PPS评分', en: 'PPS Score' }, is_fast_growing: { zh: '快速增长', en: 'Fast Growing' }, has_collaborated: { zh: '已合作', en: 'Collaborated' },
       creator_permission_tag: { zh: '达人类目权限', en: 'Category Permission' }, is_live_auction: { zh: '直播拍卖', en: 'Live Auction' },
-      '简介': { zh: '简介', en: 'Bio' }, '合作邮箱': { zh: '合作邮箱', en: 'Contact Email' }, 'MCN机构': { zh: 'MCN机构', en: 'MCN Agency' }, '垂直类目': { zh: '垂直类目', en: 'Vertical Category' },
-      collection_mode: { zh: '采集方式', en: 'Collection Mode' }, discovery_source: { zh: '采集来源', en: 'Discovery Source' }, source_keyword: { zh: '来源关键词', en: 'Source Keyword' }, keyword_category: { zh: '关键词所属类目', en: 'Keyword Category' },
+      '简介': { zh: '简介', en: 'Bio' }, '合作邮箱': { zh: '合作邮箱', en: 'Contact Email' }, 'mcn': { zh: 'MCN机构', en: 'MCN Agency' }, 'MCN机构': { zh: 'MCN机构', en: 'MCN Agency' }, '垂直类目': { zh: '垂直类目', en: 'Vertical Category' },
       last_publish_time: { zh: '最后发布时间', en: 'Last Published' }, activity_status: { zh: '活跃状态', en: 'Activity Status' }, activity_reason: { zh: '判断原因', en: 'Activity Reason' },
       last_refreshed_at: { zh: '最近更新', en: 'Last Updated' },
     };
@@ -621,7 +445,7 @@ ipcMain.handle('update-export-file', async (event, filePath) => {
       batchRows = [];
     };
     for (;;) {
-      const page = await repository.listCreators({ ...filters, limit: pageSize, offset, sortBy: filters.sortBy || 'last_refreshed_at', sortDirection: filters.sortDirection || 'desc' });
+      const page = await creatorDb.listCreators({ ...filters, limit: pageSize, offset, sortBy: filters.sortBy || 'last_refreshed_at', sortDirection: filters.sortDirection || 'desc' });
       const rows = page.rows || [];
       if (!rows.length && offset === 0) return { ok: false, error: '筛选条件下没有数据可更新', rows: 0 };
       if (rows.length === 0) break;
@@ -715,7 +539,7 @@ const IMPORT_FIELD_ALIASES = {
   top_follower_gender: ['粉丝性别', 'gender', 'top_follower_gender', '粉丝性别分布'],
   '简介': ['简介', 'bio', 'description'],
   '合作邮箱': ['合作邮箱', 'contact email', 'email', '邮箱', '合作邮箱email'],
-  'MCN机构': ['MCN机构', 'mcn', 'mcn agency', 'mcn机构', '达人机构'],
+  'mcn': ['MCN机构', 'mcn', 'mcn agency', 'mcn机构', '达人机构'],
   '垂直类目': ['垂直类目', 'vertical category', 'vertical', '二级类目'],
   last_publish_time: ['最后发布时间', 'last published', 'last_publish_time', '最近发布'],
   activity_status: ['活跃状态', 'activity status', 'activity', '活跃度'],
@@ -723,6 +547,9 @@ const IMPORT_FIELD_ALIASES = {
 // build a lookup: normalized label -> internal field
 const IMPORT_LABEL_MAP = (() => {
   const m = new Map();
+  for (const f of [...require('./lib/contact-fields').FIELDS,...require('./lib/partner-profile-fields').FIELDS]) {
+    for (const alias of [f.k, f.n, f.e]) m.set(alias.toLowerCase().trim(), f.k);
+  }
   for (const [field, aliases] of Object.entries(IMPORT_FIELD_ALIASES)) {
     for (const a of aliases) m.set(a.toLowerCase().trim(), field);
   }
@@ -842,7 +669,7 @@ async function openImportSource(filePath) {
 }
 ipcMain.handle('creator-db-import', async (event, payload) => {
   try {
-    const repository = await creatorRepository(payload?.platformId);
+    if (!creatorDb) return { ok: false, error: '本地达人库未初始化' };
     const filePath = payload && payload.filePath;
     if (!filePath) return { ok: false, error: '缺少文件路径' };
     const region = String((payload && payload.region) || 'US').toUpperCase();
@@ -871,7 +698,7 @@ ipcMain.handle('creator-db-import', async (event, payload) => {
         }
         return o;
       });
-      const dbRes = await repository.upsertCreators(mapped, { region });
+      const dbRes = await writeDatabase(() => creatorDb.upsertCreators(mapped, { region }));
       inserted += dbRes.inserted || 0;
       updated += dbRes.updated || 0;
       totalRows += mapped.length;
@@ -882,6 +709,7 @@ ipcMain.handle('creator-db-import', async (event, payload) => {
 
 // IPC: continue scraping based on a history entry (incremental, skips saved IDs)
 ipcMain.handle('continue-history', async (event, filePath) => {
+  if (contactsBusy()) return {ok:false,error:'联系方式补全进行中，请稍后再试。'};
   try {
     const entry = (appData.history || []).find(h => path.resolve(h.outPath || '') === path.resolve(filePath || ''));
     if (!entry || !entry.config) return { ok: false, error: '该历史记录缺少抓取配置，无法继续（旧版本生成）' };
@@ -903,20 +731,22 @@ ipcMain.handle('continue-history', async (event, filePath) => {
     };
     // use remembered cookies if available
     if (appData.cookies && appData.cookies.length) {
-      const { cookieFiles, error } = saveCookiesToFiles(appData.cookies);
+      const entries = appData.cookies.map((data,i) => ({data,...(appData.cookieMetadata?.[i] || {})}));
+      const { cookieFiles, error } = saveCookiesToFiles(AccountCookies.select(entries,cfg.shopRegion).map(c=>c.data));
       if (error) return { ok: false, error };
       cfg.cookieFiles = cookieFiles;
     }
     if (!cfg.cookieFiles.length) return { ok: false, error: '没有可用 Cookie，请先导入 Cookie' };
     const prevResult = runner.result;
     runner._lastConfig = cfg;
-    taskSupervisor.start('tiktok_shop', cfg).catch(e => runner.log('继续抓取错误: ' + e.message));
+    runner.start(cfg).catch(e => runner.log('继续抓取错误: ' + e.message));
     return { ok: true };
   } catch (e) { return { ok: false, error: e.message }; }
 });
 
 // IPC: refresh a history entry (re-scrape all, overwrite the file)
 ipcMain.handle('refresh-history', async (event, filePath) => {
+  if (contactsBusy()) return {ok:false,error:'联系方式补全进行中，请稍后再试。'};
   try {
     const entry = (appData.history || []).find(h => path.resolve(h.outPath || '') === path.resolve(filePath || ''));
     if (!entry || !entry.config) return { ok: false, error: '该历史记录缺少抓取配置，无法刷新（旧版本生成）' };
@@ -935,14 +765,15 @@ ipcMain.handle('refresh-history', async (event, filePath) => {
       fields: entry.config.fields || null,
     };
     if (appData.cookies && appData.cookies.length) {
-      const { cookieFiles, error } = saveCookiesToFiles(appData.cookies);
+      const entries = appData.cookies.map((data,i) => ({data,...(appData.cookieMetadata?.[i] || {})}));
+      const { cookieFiles, error } = saveCookiesToFiles(AccountCookies.select(entries,cfg.shopRegion).map(c=>c.data));
       if (error) return { ok: false, error };
       cfg.cookieFiles = cookieFiles;
     }
     if (!cfg.cookieFiles.length) return { ok: false, error: '没有可用 Cookie，请先导入 Cookie' };
     const prevResult = runner.result;
     runner._lastConfig = cfg;
-    taskSupervisor.start('tiktok_shop', cfg).catch(e => runner.log('刷新抓取错误: ' + e.message));
+    runner.start(cfg).catch(e => runner.log('刷新抓取错误: ' + e.message));
     return { ok: true };
   } catch (e) { return { ok: false, error: e.message }; }
 });
@@ -1028,6 +859,25 @@ function createWindow() {
   let allowClose = false;
   mainWindow.on('close', (e) => {
     if (allowClose) return;
+    if (contactsBusy()) {
+      e.preventDefault();
+      dialog.showMessageBox(mainWindow, {type:'question',title:'采集任务进行中',message:'停止资料采集和联系方式补全并退出？',detail:'两条采集流程都会停止，等待当前入库完成。已保存的达人和联系方式保留，下次可继续未完成部分。',buttons:['停止并退出','取消'],defaultId:1,cancelId:1}).then(async ({response}) => {
+        if (response !== 0) return;
+        contactPreparationVersion++;
+        collectionContacts?.stop(); contactJob.stop(); runner.stop();
+        while (contactPreparing) await new Promise(resolve => setTimeout(resolve,50));
+        await contactJob.done;
+        const deadline = Date.now() + 180000;
+        while (runner.running && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve,250));
+        if (runner.running) {
+          await dialog.showMessageBox(mainWindow,{type:'info',message:'仍在保存采集进度，请稍后再退出。'});
+          return;
+        }
+        await writeDatabase(async () => {});
+        allowClose = true; mainWindow?.close();
+      });
+      return;
+    }
     const busy = !!(runner && runner.running);
     if (!busy) return; // nothing in progress → close freely
     e.preventDefault();
@@ -1078,6 +928,10 @@ function isNewer(latest, cur) {
 
 // ---- auto-update: electron-updater downloads & installs the new build in-app ----
 const { autoUpdater } = require('electron-updater');
+// Local preview suffixes (e.g. -contacts.2) must not strand users on a private
+// prerelease channel with no published releases. Always offer stable upgrades.
+autoUpdater.allowPrerelease = false;
+autoUpdater.allowDowngrade = false;
 autoUpdater.autoDownload = false; // ask the user first, then download
 autoUpdater.autoInstallOnAppQuit = true;
 
@@ -1254,7 +1108,7 @@ function setupAutoUpdaterEvents() {
       cancelId: 1,
       icon: path.join(__dirname, 'icon-256.png'),
     });
-    if (response === 0 && !runner.running) {
+    if (response === 0 && !runner.running && !contactsBusy()) {
       // user chose immediate restart (and no scrape is running)
       setUpdateState({ phase: 'installing', percent: 100, message: '正在静默安装更新…' });
       // Stop any running scrape + close browsers first so the app can exit cleanly
@@ -1314,6 +1168,68 @@ ipcMain.handle('choose-dir', async () => {
 });
 
 // IPC: pick an import file (CSV/XLSX)
+ipcMain.handle('partner-contacts-import', async (_event, metadata = {}) => {
+  if (contactsBusy() || runner.running) return {ok:false, error:'请先停止采集与联系方式任务，再更换团长账号。'};
+  const region = AccountCookies.region(metadata.region);
+  if (!Object.hasOwn(MARKETS,region)) return {ok:false,error:'请先选择团长账号的国家。'};
+  const selected = await dialog.showOpenDialog(mainWindow, {title:'导入团长 Partner Center Cookie JSON', properties:['openFile'], filters:[{name:'Cookie JSON / TXT', extensions:['json','txt']}]});
+  if (selected.canceled || !selected.filePaths.length) return {ok:false, canceled:true};
+  if (contactsBusy() || runner.running) return {ok:false, error:'任务正在运行，请稍后再导入。'};
+  try {
+    const file = selected.filePaths[0];
+    if (fs.statSync(file).size > 1024 * 1024) return {ok:false,error:'Cookie 文件过大，请选择 JSON 导出文件。'};
+    const cookies = JSON.parse(fs.readFileSync(file,'utf8').replace(/^\uFEFF/,''));
+    partnerContactClient = new PartnerContactClient(cookies);
+    runner.partnerCredential = partnerContactClient;
+    partnerAccount = {region, name:String(metadata.name || path.basename(file)).slice(0,80)};
+    // Credentials stay in main-process memory, not renderer/logs/exports/history.
+    return {ok:true};
+  } catch (error) { return {ok:false,error:error instanceof ContactError ? error.message : '无法读取有效 Cookie JSON，请重新导出文件。'}; }
+});
+ipcMain.handle('partner-contacts-metadata', (_event, metadata = {}) => {
+  if (contactsBusy() || runner.running) return {ok:false,error:'请先停止正在运行的任务。'};
+  const region = AccountCookies.region(metadata.region);
+  if (!partnerContactClient || !Object.hasOwn(MARKETS,region)) return {ok:false,error:'请导入团长账号并选择国家。'};
+  partnerAccount = {region, name:String(metadata.name || '团长账号').slice(0,80)};
+  return {ok:true};
+});
+ipcMain.handle('partner-contacts-clear', () => {
+  if (contactsBusy() || runner.running) return {ok:false,error:'请先停止采集与联系方式任务。'};
+  partnerContactClient = null; runner.partnerCredential = null; partnerAccount = null; return {ok:true};
+});
+ipcMain.handle('partner-contacts-status', () => ({...contactJob.snapshot(), connected:!!partnerContactClient, account:partnerAccount, preparing:contactPreparing, automatic:automaticContacts, collecting:runner.running, collectionPaused:runner.paused}));
+ipcMain.handle('partner-contacts-preview', async (event, payload = {}) => {
+  try {
+    const region = String(payload.region || '').toUpperCase();
+    if (!creatorDb || !Object.hasOwn(MARKETS,region)) return {ok:false,error:'请选择已适配的地区。'};
+    const query = payload.mode === 'full' ? 'partnerProfileTargets' : 'contactTargets';
+    const ids = await creatorDb[query](payload.filters, region, payload.onlyUnchecked !== false);
+    return {ok:true,total:ids.length};
+  } catch (_) { return {ok:false,error:'无法读取当前筛选范围，请重试。'}; }
+});
+ipcMain.handle('partner-contacts-start', async (event, payload = {}) => {
+  if (contactsBusy() || runner.running) return {ok:false,error:'已有抓取或联系方式补全任务在运行，请先停止。'};
+  if (!creatorDb || !partnerContactClient) return {ok:false,error:'请先导入团长 Partner Center Cookie。'};
+  contactPreparing = true;
+  const preparationVersion = ++contactPreparationVersion;
+  try {
+    const region = String(payload.region || '').toUpperCase();
+    if (!Object.hasOwn(MARKETS,region)) return {ok:false,error:'请选择已适配的地区。'};
+    const mode = payload.mode === 'full' ? 'full' : 'contacts';
+    const query = mode === 'full' ? 'partnerProfileTargets' : 'contactTargets';
+    const targets = await creatorDb[query](payload.filters, region, payload.onlyUnchecked !== false);
+    if (preparationVersion !== contactPreparationVersion) return {ok:false,error:'已取消补全，达人数据保留。'};
+    if (!targets.length) return {ok:false,error:'当前地区和筛选条件下没有待补全的达人。'};
+    if (targets.length !== payload.expectedTotal) return {ok:false,error:'筛选范围已变化，请刷新范围后重新开始。'};
+    collectionContacts = null;
+    contactJob.start({client:partnerContactClient, db:contactDatabase(creatorDb, writeDatabase), region, targets, mode, resume:payload.onlyUnchecked !== false});
+    automaticContacts = {outcome:'manual'};
+    return {ok:true};
+  } catch (_) { return {ok:false,error:'无法启动联系方式补全，请刷新范围后重试。'}; }
+  finally { contactPreparing = false; }
+});
+ipcMain.handle('partner-contacts-stop', () => { contactPreparationVersion++; contactJob.stop(); return {ok:true}; });
+
 ipcMain.handle('choose-file', async (event, exts) => {
   const filters = Array.isArray(exts) && exts.length
     ? exts.map(e => ({ name: e.toUpperCase(), extensions: [e.replace(/^\./, '')] }))
@@ -1351,27 +1267,39 @@ function saveCookiesToFiles(pasted) {
 }
 
 // IPC: test scrape with isolated environment (1 keyword, 1 page) to verify everything works
+function taskCookieData(config) {
+  if (config.accountEntries) {
+    if (!config.accountEntries.length && partnerContactClient) return [];
+    return AccountCookies.select(config.accountEntries,config.shopRegion).map(c=>c.data);
+  }
+  return config.pastedCookies || [];
+}
 ipcMain.handle('test-scrape', async (event, config) => {
+  if (contactsBusy()) return {error:'联系方式补全进行中，请稍后再试。'};
   if (runner.running) return { error: '抓取进行中，请稍后再试' };
   try {
-    const pasted = config.pastedCookies || [];
+    const pasted = taskCookieData(config);
     const { cookieFiles, error } = saveCookiesToFiles(pasted);
     if (error) return { error };
-    if (!cookieFiles.length) return { error: '未收到 Cookie' };
+    if (!cookieFiles.length && !partnerContactClient) return { error: '未收到 Cookie' };
     // isolated test: 1 cookie session, 1 keyword, page 0 only
     const cfg = {
       cookieFiles: cookieFiles.slice(0, 1),
+      discoverySource: config.discoverySource || 'auto',
       mode: config.mode || 'auto',
       format: config.format || 'csv',
       outPath: config.outPath || OUT_DIR,
       detail: false,
-      shopRegion: config.shopRegion || 'US',
+      // Partner discovery must use the verified page session so an API
+      // challenge can surface the official control and resume in place.
+      partnerBrowserSession: config.partnerBrowserSession !== false,
+      shopRegion: AccountCookies.region(config.shopRegion || 'US'),
       keywords: ['phone case'],
       fields: ['handle', 'nickname'],
       testMode: true, // multirunner will stop after 1 page
     };
     const prevResult = runner.result;
-    taskSupervisor.start('tiktok_shop', cfg).catch(e => runner.log('测试错误: ' + e.message));
+    runner.start(cfg).catch(e => runner.log('测试错误: ' + e.message));
     // wait for result
     for (let i = 0; i < 40; i++) { // up to ~3 min
       await new Promise(r => setTimeout(r, 5000));
@@ -1388,20 +1316,31 @@ ipcMain.handle('test-scrape', async (event, config) => {
 
 // IPC: start scrape (cookies as array of JSON strings)
 ipcMain.handle('start-scrape', async (event, config) => {
+  if (contactsBusy()) return {error:'联系方式补全进行中，请稍后再试。'};
   if (runner.running) return { error: '已在运行中' };
   try {
-    const pasted = config.pastedCookies || [];
+    const pasted = taskCookieData(config);
+    if (config.accountEntries) storeAccounts(config.accountEntries);
     const { cookieFiles, error } = saveCookiesToFiles(pasted);
     if (error) return { error };
-    if (!cookieFiles.length) return { error: '未收到 Cookie' };
+    if (!cookieFiles.length && !partnerContactClient) return { error: '未收到 Cookie' };
     const cfg = {
       cookieFiles,
+      discoverySource: config.discoverySource || 'auto',
       mode: config.mode || 'auto',
       format: config.format || 'csv',
       outPath: path.isAbsolute(config.outPath || '') ? config.outPath : path.join(APP_DIR, config.outPath || 'output'),
       detail: !!config.detail,
+      enrichContacts: config.enrichContacts === true,
+      // Preserve the renderer's page-session choice. Dropping this flag made
+      // Partner discovery fall back to raw requests and terminate on captcha.
+      partnerBrowserSession: config.partnerBrowserSession !== false,
       headerLang: config.headerLang === 'en' ? 'en' : 'zh',
-      shopRegion: config.shopRegion || 'US',
+      shopRegion: AccountCookies.region(config.shopRegion || 'US'),
+      // Development live-test hook only. Packaged users have no fixed limit.
+      testStopAfter: /^\d+$/.test(process.env.TIKTOK_CREATOR_TEST_STOP_AFTER || '')
+        ? Math.max(1, Math.trunc(Number(process.env.TIKTOK_CREATOR_TEST_STOP_AFTER)))
+        : Number.isInteger(config.testStopAfter) && config.testStopAfter > 0 ? config.testStopAfter : null,
       dedupe: !!config.dedupe,
       creatorInput: Array.isArray(config.creatorInput) ? config.creatorInput : null,
       keywords: config.keywords && config.keywords.length ? config.keywords : require('./lib/exporter').DEFAULT_KEYWORDS,
@@ -1423,19 +1362,25 @@ ipcMain.handle('start-scrape', async (event, config) => {
     // "Continue scraping" with the same keywords/region later
     appData.lastScrapeConfig = {
       keywords: cfg.keywords || [],
+      discoverySource: cfg.discoverySource,
       shopRegion: cfg.shopRegion || 'US',
       detail: !!cfg.detail,
+      enrichContacts: cfg.enrichContacts,
       mode: cfg.mode || 'auto',
       format: cfg.format || 'csv',
     };
     saveAppData();
     // remember cookies for next launch
-    appData.cookies = pasted.slice();
-    saveAppData();
+    // Keep the entire account pool, including other countries, and its notes.
+    if (!config.accountEntries) {
+      const known = appData.cookies || [];
+      for (const data of pasted) if (!known.includes(data)) known.push(data);
+      appData.cookies = known; saveAppData();
+    }
     const prevResult = runner.result;
     // attach the run config to the result so history can offer continue/refresh
     runner._lastConfig = cfg;
-    taskSupervisor.start('tiktok_shop', cfg).catch(e => runner.log('内部错误: ' + e.message));
+    runner.start(cfg).catch(e => { collectionContacts?.stop(); runner.log('内部错误: ' + e.message); });
     // history is recorded via runner.onDone (reliable); this polling loop only
     // acts as a fallback trigger if onDone somehow didn't fire
     (async () => {
@@ -1460,11 +1405,16 @@ ipcMain.handle('scrape-status', () => {
   return {
     running: runner.running,
     paused: runner.paused,
+    verification: runner.verificationGate?.snapshot() || null,
     stopping: !!(runner.running && runner.stopped),
     status: runner.status,
     currentInfo: ci,
     logs: runner.logs,
     result: runner.result,
+    contacts: automaticContacts.outcome === 'streaming' ? {
+      outcome:contactJob.state.outcome, running:contactJob.state.running,
+      completed:contactJob.state.completed, total:contactJob.state.total,
+    } : ['needs_auth','unsupported','skipped'].includes(automaticContacts.outcome) ? {outcome:automaticContacts.outcome,running:false} : null,
     rateLimit: runner.rateLimit,
     autoResumeAt: runner.autoResumeAt || null, // for the auto-continue countdown UI
     update: updateState,
@@ -1472,296 +1422,17 @@ ipcMain.handle('scrape-status', () => {
 });
 
 // IPC: pause
-ipcMain.handle('pause-scrape', () => {
-  // The legacy IPC contract treats controls issued while idle as harmless.
-  try { taskSupervisor.pause(); } catch (e) { if (e.code !== 'NO_ACTIVE_TASK') throw e; }
-  return { ok: true };
-});
-
-function socialStateFile(platform, accountRef) {
-  const state = resolvePlatformStateDirectory({
-    stateRoot: path.join(app.getPath('userData'), 'collector-state'), platform, accountRef,
-  });
-  return { state, file: path.join(state.directory, platform === 'instagram' ? 'session.json' : 'accounts.sqlite') };
-}
-
-// Keep only a small, non-sensitive health signal next to a locally imported
-// account. The renderer never receives cookie values, browser state, or a
-// challenge URL; it only needs to tell the user whether an import must be
-// refreshed before authenticated enrichment can continue.
-function setSocialAccountSessionStatus(platform, accountRef, sessionStatus) {
-  if (!platform || !accountRef || !sessionStatus) return;
-  const account = (appData.socialAccounts || []).find(entry => entry.platform === platform && entry.accountRef === accountRef);
-  if (!account) return;
-  account.sessionStatus = sessionStatus;
-  account.sessionStatusAt = new Date().toISOString();
-  saveAppData();
-}
-
-function instagramCookieImportSummary(sourceText) {
-  try {
-    const parsed = JSON.parse(String(sourceText || '').replace(/^\uFEFF/, ''));
-    const cookies = Array.isArray(parsed) ? parsed : parsed?.cookies;
-    if (!Array.isArray(cookies)) return { cookieCount: 0, expiresAt: null };
-    const expiries = cookies
-      .map(cookie => Number(cookie?.expirationDate || cookie?.expires || 0))
-      .filter(value => Number.isFinite(value) && value > 0);
-    return { cookieCount: cookies.length, expiresAt: expiries.length ? new Date(Math.min(...expiries) * 1000).toISOString() : null };
-  } catch (_) { return { cookieCount: 0, expiresAt: null }; }
-}
-
-ipcMain.handle('social-import-state', async (event, payload) => {
-  const platform = payload?.platform;
-  const source = typeof payload?.filePath === 'string' ? payload.filePath : '';
-  if (!['instagram', 'x'].includes(platform) || !source || !credentialBroker) return { ok: false, error: 'SOCIAL_ACCOUNT_IMPORT_UNAVAILABLE' };
-  try {
-    const stat = fs.statSync(source);
-    if (!stat.isFile() || stat.size > 100 * 1024 * 1024) return { ok: false, error: 'SOCIAL_ACCOUNT_FILE_INVALID' };
-    const reference = credentialBroker.write(platform, { importedState: true, importedAt: new Date().toISOString() });
-    const { state, file } = socialStateFile(platform, reference.accountRef);
-    fs.mkdirSync(state.directory, { recursive: true, mode: 0o700 });
-    fs.copyFileSync(source, file);
-    appData.socialAccounts = (appData.socialAccounts || []).filter(entry => entry.platform !== platform || entry.accountRef !== reference.accountRef);
-    appData.socialAccounts.push({ platform, accountRef: reference.accountRef, importedAt: new Date().toISOString(), sessionStatus: 'untested', sessionStatusAt: new Date().toISOString() });
-    saveAppData();
-    return { ok: true, platform, accountRef: reference.accountRef };
-  } catch (_) { return { ok: false, error: 'SOCIAL_ACCOUNT_IMPORT_FAILED' }; }
-});
-
-// Browser Cookie exports are converted locally into the exact settings shape
-// expected by instagrapi.  Raw cookies are never returned to the renderer,
-// logged, or stored in appData.
-ipcMain.handle('instagram-import-cookie-json', async (event, payload) => {
-  const source = typeof payload?.filePath === 'string' ? payload.filePath : '';
-  const pasted = typeof payload?.cookieText === 'string' ? payload.cookieText : '';
-  if ((!source && !pasted) || !credentialBroker) return { ok: false, error: 'INSTAGRAM_COOKIE_IMPORT_UNAVAILABLE' };
-  try {
-    if (source && pasted) return { ok: false, error: 'INSTAGRAM_COOKIE_IMPORT_AMBIGUOUS' };
-    let sourceText = pasted;
-    if (source) {
-      const stat = fs.statSync(source);
-      if (!stat.isFile() || stat.size > 2 * 1024 * 1024) return { ok: false, error: 'INSTAGRAM_COOKIE_FILE_INVALID' };
-      sourceText = fs.readFileSync(source, 'utf8');
-    }
-    const settings = convertInstagramCookieExport(sourceText);
-    const reference = credentialBroker.write('instagram', { importedState: true, importedFrom: 'cookie-json', importedAt: new Date().toISOString() });
-    const { state, file } = socialStateFile('instagram', reference.accountRef);
-    fs.mkdirSync(state.directory, { recursive: true, mode: 0o700 });
-    fs.writeFileSync(file, JSON.stringify(settings), { encoding: 'utf8', mode: 0o600 });
-    appData.socialAccounts = (appData.socialAccounts || []).filter(entry => entry.platform !== 'instagram' || entry.accountRef !== reference.accountRef);
-    appData.socialAccounts.push({ platform: 'instagram', accountRef: reference.accountRef, importedAt: new Date().toISOString(), sessionStatus: 'untested', sessionStatusAt: new Date().toISOString(), ...instagramCookieImportSummary(sourceText) });
-    saveAppData();
-    return { ok: true, platform: 'instagram', accountRef: reference.accountRef };
-  } catch (error) {
-    if (error instanceof InstagramCookieImportError) return { ok: false, error: error.code };
-    return { ok: false, error: 'INSTAGRAM_COOKIE_IMPORT_FAILED' };
-  }
-});
-
-ipcMain.handle('social-accounts', () => ({
-  ok: true,
-  accounts: (appData.socialAccounts || []).map(({ platform, accountRef, importedAt, cookieCount, expiresAt, sessionStatus, sessionStatusAt }) => {
-    // A known past expiry is actionable even before the next browser request.
-    // Do not overwrite persisted history here; just present the safer state.
-    const expiryMs = expiresAt ? Date.parse(expiresAt) : NaN;
-    const effectiveStatus = platform === 'instagram' && Number.isFinite(expiryMs) && expiryMs <= Date.now()
-      ? 'needs_reimport'
-      : (sessionStatus || 'untested');
-    return { platform, accountRef, importedAt, cookieCount, expiresAt, sessionStatus: effectiveStatus, sessionStatusAt };
-  }),
-}));
-
-ipcMain.handle('social-remove-account', async (event, payload) => {
-  const platform = payload?.platform;
-  const accountRef = typeof payload?.accountRef === 'string' ? payload.accountRef : '';
-  if (!['instagram', 'x'].includes(platform) || !accountRef) return { ok: false, error: 'SOCIAL_ACCOUNT_REMOVE_INVALID' };
-  try {
-    const { state } = socialStateFile(platform, accountRef);
-    fs.rmSync(state.directory, { recursive: true, force: true });
-    appData.socialAccounts = (appData.socialAccounts || []).filter(entry => entry.platform !== platform || entry.accountRef !== accountRef);
-    saveAppData();
-    return { ok: true };
-  } catch (_) { return { ok: false, error: 'SOCIAL_ACCOUNT_REMOVE_FAILED' }; }
-});
-
-// Hiker is an optional paid enrichment provider. Its API key is stored only
-// through the encrypted credential broker; renderer processes receive the
-// configured flag and never the key itself.
-ipcMain.handle('instagram-hiker-status', () => ({ ok: true, configured: Boolean(appData.instagramHiker?.accountRef && credentialBroker) }));
-ipcMain.handle('instagram-hiker-configure', async (event, payload) => {
-  const apiKey = typeof payload?.apiKey === 'string' ? payload.apiKey.trim() : '';
-  if (!credentialBroker || apiKey.length < 8 || apiKey.length > 512) return { ok: false, error: 'HIKER_API_KEY_INVALID' };
-  try {
-    const previous = appData.instagramHiker?.accountRef;
-    const reference = credentialBroker.write('hiker_api', { apiKey, configuredAt: new Date().toISOString() });
-    appData.instagramHiker = { accountRef: reference.accountRef, configuredAt: new Date().toISOString() };
-    if (previous) credentialBroker.delete('hiker_api', previous);
-    saveAppData();
-    return { ok: true, configured: true };
-  } catch (_) { return { ok: false, error: 'HIKER_CONFIGURATION_FAILED' }; }
-});
-ipcMain.handle('instagram-hiker-clear', async () => {
-  try {
-    const reference = appData.instagramHiker?.accountRef;
-    if (reference && credentialBroker) credentialBroker.delete('hiker_api', reference);
-    delete appData.instagramHiker;
-    saveAppData();
-    return { ok: true };
-  } catch (_) { return { ok: false, error: 'HIKER_CONFIGURATION_CLEAR_FAILED' }; }
-});
-
-ipcMain.handle('instagram-idle-coverage-status', () => {
-  const config = instagramIdleCoverageConfig();
-  return { ok: true, enabled: config.enabled, minIdleMinutes: config.minIdleMinutes, scheduler: instagramIdleScheduler?.getState() || config.scheduler };
-});
-ipcMain.handle('instagram-idle-coverage-configure', (event, payload) => {
-  const enabled = payload?.enabled === true;
-  const minIdleMinutes = Math.min(120, Math.max(5, Number(payload?.minIdleMinutes) || 15));
-  const previous = instagramIdleCoverageConfig();
-  appData.instagramIdleCoverage = { ...previous, enabled, minIdleMinutes };
-  saveAppData();
-  setupInstagramIdleCoverage();
-  return { ok: true, enabled, minIdleMinutes };
-});
-
-ipcMain.handle('creator-db-run-social-collection', async (event, payload) => {
-  const platform = payload?.platform;
-  if (platform !== product.platformId) return { ok: false, error: 'WRONG_PRODUCT_PLATFORM' };
-  const accountRef = typeof payload?.accountRef === 'string' ? payload.accountRef : '';
-  const useHiker = platform === 'instagram' && payload?.provider === 'hiker';
-  const useAnonymousInstagramBrowser = platform === 'instagram' && payload?.provider === 'public_browser';
-  const isInstagramAutomatic = platform === 'instagram' && payload?.mode === 'automatic';
-  const usePublicInstagramDiscovery = platform === 'instagram' && payload?.mode === 'public_discovery';
-  const useLocalInstagramSession = platform === 'instagram' && Boolean(accountRef) && !useHiker && !useAnonymousInstagramBrowser;
-  // Public discovery and anonymous public-profile collection deliberately do
-  // not use any credential/session state.  They must keep working even when
-  // secure credential storage is unavailable or an imported session expired.
-  const needsCredentialBroker = useLocalInstagramSession || useHiker || platform === 'x';
-  if (!['instagram', 'x'].includes(platform) || (!accountRef && !useHiker && !useAnonymousInstagramBrowser && !isInstagramAutomatic && !usePublicInstagramDiscovery) || (needsCredentialBroker && !credentialBroker)) return { ok: false, error: 'SOCIAL_ACCOUNT_REQUIRED' };
-  // A single imported Instagram session has one strictly serial browser lane.
-  // Running two browser tasks against it does not increase reliable output and
-  // makes throttling/session challenges substantially more likely. Other
-  // platforms remain independently runnable.
-  if (platform === 'instagram' && !instagramCollectionLane.tryAcquire()) return { ok: false, error: 'INSTAGRAM_COLLECTION_BUSY' };
-  try {
-    if (useLocalInstagramSession) assertInstagramAvailable(appData.instagramCooldown);
-    const reportProgress = progress => {
-      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('collection-progress', { platform, ...progress });
-    };
-    if (useHiker) {
-      const hikerRef = appData.instagramHiker?.accountRef;
-      if (!hikerRef) return { ok: false, error: 'HIKER_NOT_CONFIGURED' };
-      const credentials = credentialBroker.read('hiker_api', hikerRef);
-      const result = await runHikerInstagramProfileEnrichment({
-        apiKey: credentials.apiKey, handles: payload?.handles, databaseManager: creatorDbManager,
-        onProgress: reportProgress,
-        discoveryMetadata: discoveryMetadata({ mode: 'custom', keyword: '', category: payload?.keywordCategory || '', source: 'hiker_profile_enrichment' }),
-      });
-      delete appData.instagramCooldown;
-      saveAppData();
-      return result;
-    }
-    if (usePublicInstagramDiscovery || (isInstagramAutomatic && !accountRef)) {
-      return await runInstagramPublicDiscovery({
-        databaseManager: creatorDbManager, region: 'GLOBAL', maxResultsPerSeed: payload?.maxResultsPerSeed || 10, seedGapMs: 15 * 60_000,
-        onProgress: reportProgress,
-      });
-    }
-    if (useAnonymousInstagramBrowser) {
-      return await runInstagramBrowserProfileCollection({
-        databaseManager: creatorDbManager, region: 'GLOBAL', handles: payload?.handles,
-        browserMode: payload?.browserMode,
-        // An explicit empty Cookie array keeps this path independent from any
-        // imported account. It reads only what a public browser page exposes.
-        cookies: [],
-        collectionSource: 'instagram_anonymous_browser_profile',
-        onProgress: reportProgress,
-        discoveryMetadata: discoveryMetadata({ mode: 'custom', keyword: '', category: payload?.keywordCategory || '', source: 'instagram_anonymous_browser_profile' }),
-      });
-    }
-    credentialBroker.read(platform, accountRef);
-    const { state, file } = socialStateFile(platform, accountRef);
-    if (!fs.existsSync(file)) return { ok: false, error: 'SOCIAL_ACCOUNT_STATE_MISSING' };
-    if (platform === 'instagram' && payload?.mode === 'automatic' && accountRef) {
-      try {
-        const result = await runInstagramHeadlessDiscovery({
-          databaseManager: creatorDbManager, region: 'GLOBAL', sessionStatePath: file, stateRoot: state.root,
-          maxResultsPerSeed: payload?.maxResultsPerSeed || 10,
-          onProgress: reportProgress,
-        });
-        setSocialAccountSessionStatus('instagram', accountRef, 'ready');
-        delete appData.instagramCooldown;
-        saveAppData();
-        return result;
-      } catch (error) {
-        if (error?.code !== 'INSTAGRAM_SESSION_ATTENTION_REQUIRED') throw error;
-        // A login/checkpoint page means the local session needs user action,
-        // but it does not prevent the candidate-only public discovery route
-        // from continuing this task safely.
-        setSocialAccountSessionStatus('instagram', accountRef, 'needs_reimport');
-        reportProgress({ state: 'fallback_public_discovery', phase: 'session_attention', totalSeeds: 0, completedSeeds: 0 });
-        const fallback = await runInstagramPublicDiscovery({
-          databaseManager: creatorDbManager, region: 'GLOBAL', maxResultsPerSeed: payload?.maxResultsPerSeed || 10, seedGapMs: 15 * 60_000,
-          onProgress: reportProgress,
-        });
-        return { ...fallback, sessionNeedsReimport: true, recoveryMode: 'public_candidate_discovery' };
-      }
-    }
-    if (platform === 'instagram' && payload?.provider === 'browser') {
-      const result = await runInstagramBrowserProfileCollection({
-        databaseManager: creatorDbManager, region: 'GLOBAL', handles: payload?.handles,
-        browserMode: payload?.browserMode, sessionStatePath: file, stateRoot: state.root,
-        onProgress: reportProgress,
-        discoveryMetadata: discoveryMetadata({ mode: 'custom', keyword: '', category: payload?.keywordCategory || '', source: 'instagram_browser_profile' }),
-      });
-      setSocialAccountSessionStatus('instagram', accountRef, 'ready');
-      delete appData.instagramCooldown;
-      saveAppData();
-      return result;
-    }
-    const taskPayload = platform === 'instagram'
-      ? { handles: payload?.handles, sessionStatePath: file, requestDelaySeconds: 4 }
-      : { query: payload?.query, maxResults: payload?.maxResults };
-    const result = await runLocalPythonCollection({
-      platformId: platform, databaseManager: creatorDbManager, region: 'GLOBAL', payload: taskPayload,
-      discoveryMetadata: discoveryMetadata({
-        mode: 'custom', keyword: platform === 'instagram' ? '' : payload?.query,
-        category: payload?.keywordCategory || '', source: platform === 'instagram' ? 'user_handle_list' : 'user',
-      }),
-      brokerRef: platform === 'x' ? file : undefined,
-      env: { ...process.env, COLLECTOR_STATE_ROOT: state.root, TWS_TELEMETRY: '0' },
-      runtimeOptions: { isPackaged: app.isPackaged, resourcesPath: process.resourcesPath },
-      onProgress: reportProgress,
-    });
-    if (platform === 'instagram') { delete appData.instagramCooldown; saveAppData(); }
-    if (platform === 'instagram') setSocialAccountSessionStatus('instagram', accountRef, 'ready');
-    return result;
-  } catch (error) {
-    if (platform === 'instagram') {
-      if (error?.code === 'INSTAGRAM_SESSION_ATTENTION_REQUIRED') setSocialAccountSessionStatus('instagram', accountRef, 'needs_reimport');
-      // Public no-Cookie discovery has no local session to repair. A search
-      // verification page is surfaced to the UI with a safe cooldown instead
-      // of inviting the user to repeatedly start the same task.
-      if (error?.code === 'PUBLIC_DISCOVERY_VERIFICATION_REQUIRED') error.retryAt = Date.now() + 2 * 60 * 60_000;
-      const cooldown = useLocalInstagramSession ? nextInstagramCooldown(error) : null;
-      if (cooldown) { appData.instagramCooldown = cooldown; saveAppData(); }
-      return { ok: false, error: error.code || 'SOCIAL_COLLECTION_FAILED', retryAt: cooldown?.retryAt || error.retryAt || null, stage: error.stage || null };
-    }
-    return { ok: false, error: error.code || 'SOCIAL_COLLECTION_FAILED' };
-  } finally { if (platform === 'instagram') instagramCollectionLane.release(); }
-});
+ipcMain.handle('pause-scrape', () => { runner.pause(); return { ok: true }; });
+ipcMain.handle('confirm-verification', () => runner.verificationGate?.confirm() || {ok:false,error:'当前没有等待人工验证的任务。'});
 
 // IPC: resume (refresh session pages first so any captcha/error page is cleared)
 ipcMain.handle('resume-scrape', async () => {
-  try { await taskSupervisor.resumeWithRefresh(); } catch (e) { if (e.code !== 'NO_ACTIVE_TASK' && e.code !== 'TASK_NOT_PAUSED') throw e; }
+  await runner.resumeWithRefresh();
   return { ok: true };
 });
 
 // IPC: stop
-ipcMain.handle('stop-scrape', () => {
-  try { taskSupervisor.stop(); } catch (e) { if (e.code !== 'NO_ACTIVE_TASK') throw e; }
-  return { ok: true };
-});
+ipcMain.handle('stop-scrape', () => { collectionContacts?.stop(); runner.stop(); return { ok: true }; });
 
 // IPC: exit app
 ipcMain.handle('exit-app', () => {
@@ -1785,28 +1456,27 @@ if (!gotLock) {
   });
   app.whenReady().then(async () => {
     loadAppData();
+    loadDevelopmentCookieOverride();
     // always ensure dirs + shortcut on every launch (idempotent)
     ensureDirs();
     openLogStream();
-    initializeCredentialBroker();
     writeLog('应用启动: ' + APP_DIR);
     try {
-      creatorDbManager = new PlatformDatabaseManager(path.join(app.getPath('userData'), 'data'));
-      creatorDb = await creatorDbManager.getDatabase('tiktok_shop');
+      creatorDb = new CreatorDatabase(path.join(app.getPath('userData'), 'data', 'creators.db'));
+      await creatorDb.open();
       writeLog('本地达人库就绪: ' + creatorDb.filePath);
     } catch (e) {
       creatorDb = null;
-      creatorDbManager = null;
       writeLog('本地达人库初始化失败，继续使用文件模式: ' + e.message);
     }
     createWindow();
-    setupInstagramIdleCoverage();
     createDesktopShortcut(); // skips if shortcut already exists
     // auto-update: wire events once, then check after window is ready
     setupAutoUpdaterEvents();
     setTimeout(() => checkForUpdates(), 5000);
   });
-  app.on('window-all-closed', () => {
+  app.on('window-all-closed', async () => {
+    contactJob.stop(); await contactJob.done;
     // clean up scrape browsers so the on-quit auto-update install never hits
     // "app cannot be closed" (files would be locked by the running Chrome)
     try {
@@ -1814,8 +1484,7 @@ if (!gotLock) {
         if (s.browser) { try { Promise.race([s.browser.close(), new Promise(r => setTimeout(r, 2000))]).catch(() => { }); } catch (e) { } }
       }
     } catch (e) { }
-    instagramIdleScheduler?.stop();
-    if (creatorDbManager) creatorDbManager.closeAll().catch(() => { });
+    if (creatorDb) await creatorDb.close().catch(() => { });
     app.quit();
   });
 }

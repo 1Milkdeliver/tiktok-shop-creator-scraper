@@ -3,6 +3,19 @@ dist/
 *.log
 debug-shot.png
 .DS_Store
-__pycache__/
-*.pyc
-*.pyo
+
+# Local credentials, runtime data and private verification artifacts
+.env
+.env.*
+*.pem
+*.key
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.har
+app-data.json
+json.txt
+cookies*.json
+cookie*.json
+test-results/

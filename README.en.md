@@ -1,5 +1,5 @@
 <p align='center'>
-<img src='./build/icon.ico' width="150" height="150" alt="TikTokShop Creator Scraper Icon" />
+<img src='./icon-256.png' width="150" height="150" alt="TikTokShop Creator Scraper Icon" />
 </p>
 
 <h1 align="center">TikTokShop Creator Scraper</h1>
@@ -42,7 +42,7 @@
 - **Local creator library (SQLite)**: scraped creators are stored, deduplicated, browsable, sortable and filterable — builds up as you scrape
 - **Activity classification**: creators are automatically tagged active / inactive / unknown with explainable signals (last publish, growth, GMV trend)
 - Analyze creator performance (GMV, sales, engagement, follower demographics, PPS score)
-- Extract creator contact info (bio, collaboration email, MCN agency)
+- Extract bio, collaboration email and MCN agency; optionally authorize your Partner Center session to enrich existing records with WhatsApp, LINE and other contacts provided by the platform
 - Export everything to **CSV / Excel** with selectable fields — headers follow the UI language (CN/EN one-click switch)
 - Output history with one-click **Continue / Refresh / Open / Delete**, resume from breakpoints, automatic deduplication
 
@@ -58,48 +58,42 @@
 
 | Feature | Description |
 |---|---|
-| 🎨 3-workspace UI | Sidebar navigation: **Scrape / Creator Library / History**, teal-glass theme, bilingual |
+| 🎨 Workspaces | Sidebar: **Overview / Task Center / Creator Library / Export Center**, bilingual |
 | 💾 Creator library | SQLite storage: auto-dedupe, browse / sort / filter / refresh |
-| 📊 Activity status | Auto-tags creators active / inactive / unknown with explainable signals |
-| ⏱️ Refresh progress | Live progress bar + estimated remaining time while updating the library |
 | 🔍 Creator scraping | Batch keyword search, or import ID / @handle / TikTok links directly |
 | 🌍 Multi-region | Choose US / UK / Southeast Asia / LATAM shop regions |
-| 📧 Contact info | Bio, collaboration email (auto-extracted), MCN agency |
+| 📧 Contact info | Bio, email, MCN; optional Partner Center authorization for available WhatsApp, LINE, Zalo, Viber, Facebook and other contacts |
 | 📁 Export | CSV / Excel with customizable fields; headers follow UI language |
-| 🚀 Dual speed modes | Fast mode (list only) vs Full mode (list + details), Full by default |
 | 🔁 Resume history | One-click **Continue** (new creators only) or **Refresh** (re-scrape all, overwrite) |
-| 🧹 Deduplication | List + detail double dedupe — the same creator is never collected twice |
-| 👥 Multi-account | Keyword sharding / same-keyword split — several cookies in parallel, 3×+ faster in tests |
-| 🛡️ Risk-control self-heal | Auto-switches to backup cookies + auto-resumes after cool-down — no babysitting |
-| 🔄 Cookie auto-replace | Same-account cookies auto-replace old entries; confirmed-invalid cookies are cleaned up after a run |
-| 🗂️ Two-level category filter | TikTok-backend-style category picker: top-level category + vertical (2nd-level) category |
-| ✅ Quick filters | One-click "Email only" / "Active only" checkboxes, multi-field filters with removable chips |
-| ⏯️ Tri-state control | Pause / Resume / one-click **Finish & Export** (seconds-fast wind-down) |
-| 🛡️ Quit protection | Exiting during a scrape asks: Save & Export / Discard / Cancel |
+| 🧹 Deduplication & resume | Deduplicates by region and creator ID; supports pause, resume and breakpoint recovery |
+| ✅ Filters & fields | Filter by category, region, email or WhatsApp; choose fields to display and export |
+| 🛡️ Safe pause | Pauses and preserves progress on verification, throttling, login or permission errors |
 | 🌐 Bilingual UI | Chinese / English interface, field list and headers with one-click switch |
 | 🔄 Auto-update | Checks for new versions on startup, one-click update (differential download) |
-| 💾 Data memory | Remembers cookies, output history, resumes from breakpoints |
-| 🖥️ Desktop integration | Desktop shortcut, custom icon, auto output/log folders |
 
 ## 📊 Data You Can Collect
 
 | Category | Fields |
 |---|---|
-| Basic Info | creator page, nickname, creator ID, avatar, region, follower count |
+| Basic Info | creator page, nickname, creator ID, region, follower count |
 | Sales Data | total GMV, GMV range, video GMV, live GMV, units sold, units sold range, category |
 | Content Performance | avg/median video views, engagement, e-comm engagement, e-comm GPM, live GPM, e-comm avg UV |
 | Follower Profile | age distribution, gender split (%), PPS score, fast growing, collaborated, category permission, live auction |
 | Details (optional) | bio, collaboration email (auto-extracted), MCN agency, **vertical (2nd-level) category** |
+| Partner contact enrichment | email, WhatsApp, LINE, Zalo, Viber, Facebook, other contacts, separate dialing codes, source and checked status/time |
+
+Availability depends on the platform response and account permissions. Missing contacts stay empty; numbers and country codes are not guessed. Avatars are not stored in the current local library. Partner **Full profile + contacts** passed a real cross-page Malaysia sample; this does not imply that every creator supplies every field or that other markets have identical coverage.
 
 ## 📦 Install
 
-⬇️ [**Download Latest Installer (Windows)**](https://github.com/1Milkdeliver/tiktok-shop-creator-scraper/releases/latest)
+⬇️ [**Download the latest Windows installer**](https://github.com/1Milkdeliver/tiktok-shop-creator-scraper/releases/latest)
 
-- Run the installer wizard, accept the license agreement
-- Desktop shortcut created automatically
-- Output files go to `output/` folder, logs to `logs/` folder in the install directory
+- Run the installer wizard and accept the license
+- A desktop shortcut is created automatically
+- Output defaults to `output/`; logs are written to `logs/`
+- Existing installations are detected and offered overwrite instead of duplicate installation
 
-> If Windows SmartScreen warns, click "More info → Run anyway" (normal for unsigned open-source apps).
+> The unsigned installer may trigger Windows SmartScreen. Click “More info → Run anyway” only after confirming the Release source and checksums. The installer bundles its runtime; browser collection requires local Google Chrome.
 
 ## 🚀 Quick Start
 
@@ -120,7 +114,7 @@ The app needs your TikTok Shop Affiliate **login cookie** to access creator data
    - **Option A (paste)**: open the app, click in the cookie box, paste (Ctrl+V) — done
    - **Option B (file)**: paste into a text file, save as `cookies.json`, then drag it into the app or click "Browse…"
 
-> 💡 **What is a cookie?** It's a small token your browser stores after login. The app uses it only to view data under your own account — it never uploads or shares it.
+> 💡 **What is a cookie?** A login credential sent to the corresponding TikTok platform for authorized requests, not telemetry sent to the project author. Seller sessions are saved in local settings; imported Partner enrichment sessions stay in app-process memory and must be reimported after exit. Never upload session files or local data backups to GitHub.
 
 ### Step 2 — Configure & Start
 
@@ -128,7 +122,7 @@ The app needs your TikTok Shop Affiliate **login cookie** to access creator data
 2. **Scrape target**:
    - **Keyword search**: check creator categories / enter keywords to scrape marketplace results
    - **Import list**: paste creator IDs, @handles or TikTok links (one per line) to scrape only those
-3. **Scrape mode**: **Full mode** is default (list + details: bio/email/MCN, slower); switch to **Fast mode** (list only, 2-3× faster) if you don't need details
+3. **Scrape mode**: **Full mode** is default (seller list + details: bio/email/MCN); **Fast mode** skips details and is usually faster, depending on platform responses
 4. **Scrape scope**:
    - **New only (default)**: automatically skips already-scraped creators
    - **Re-scrape all**: re-scrapes everything and overwrites to refresh data
@@ -140,11 +134,11 @@ The app needs your TikTok Shop Affiliate **login cookie** to access creator data
 
 > 🔁 **Want to continue a previous scrape?** In "History", find the file and click **🔼 Continue** to scrape only new creators and write back to the same file, or **🔄 Refresh** to re-scrape all and overwrite.
 
-### Step 3 — Creator Library (new in v1.2.0)
+### Step 3 — Creator Library
 
 - Switch to **📚 Creator Library** in the sidebar: every scraped creator is automatically stored in a local SQLite database (deduplicated)
 - Sort / filter by nickname, followers, GMV, sales, activity status; **TikTok-backend-style filter bar**: region, category (two-level: top + vertical), audience ages/gender, PPS score, units sold, avg views, followers, GMV, activity — multi-select with removable chips
-- One-click **Email only** / **Active only** checkboxes to shortlist partners
+- Use **Has email / Has WhatsApp / Active only** to shortlist partners; the display-field drawer supports **Show all / Deselect all**, retaining the creator-page column
 - **➕ Continue scraping**: reuses the last keywords to collect NEW creators, skipping ones already in the library, merging results in
 - **Update creators**: re-scrapes the current filtered scope and refreshes the library (progress bar + remaining time + new/updated counts)
 - **Activity**: the app uses last-publish time, growth trend and GMV changes to flag creators that may have stopped or slowed down — quickly screen out "zombie creators" before outreach
@@ -152,13 +146,34 @@ The app needs your TikTok Shop Affiliate **login cookie** to access creator data
 
 > 💡 **Vertical category**: the 2nd-level category comes from each creator's `vertical_pro_category` tag and is only returned for some creators. Run "Update creators" (Full mode) to backfill it.
 
+### Step 4 — Enrich WhatsApp, LINE and other contacts (optional)
+
+Import a Seller or Partner session from account management and select the target market. New tasks can read platform-provided contacts while creator profiles are collected. Base profiles are committed first, and creators without contacts are still retained.
+
+```text
+Discover page -> Commit base rows -> Continue discovery / profiles -> Incremental profile updates
+                                 -> Contact queue -> API reads -> Merge email, WhatsApp, LINE, etc.
+```
+
+- Supports email, WhatsApp, LINE, Zalo, Viber, Facebook, other contacts and separate country codes; unavailable fields remain empty.
+- Deduplicates by creator ID and saves each result incrementally. Stop with progress preserved, then resume from the same market and filters.
+- There is no fixed app row cap, but only the account-visible, platform-returned scope is processed. Throttling, verification, expired sessions or denied access pause with checkpoints preserved.
+- Contact reads do not send messages or invitations. The imported country is an account-management label; actual target-market access is checked when a task starts.
+- The real Partner Center browser session runs minimized in the background by default and appears only for login or manual verification. Contact data is read through the authorized endpoint without opening each chat page.
+
+See the [v1.5.0 release notes](docs/release-notes-1.5.0.md) for detailed boundaries, recovery behavior and version changes.
+
 ## ❓ FAQ
 
+**Q: `1.3.2-contacts.2` reports `No published versions on GitHub` when checking for updates?**
+
+A: The old preview omitted an explicit stable-channel policy. The updater infers a custom `contacts` channel from its suffix and ignores stable releases when no matching preview is published. This is not an empty repository or a damaged library. Version 1.5.0 explicitly selects stable releases and prohibits downgrades, but a preview unable to discover updates cannot download this fix itself. Stop tasks, exit and back up local data, then perform one manual upgrade with the official installer without uninstalling/clearing data. Continue using in-app updates afterward. Normal stable installations still use in-app differential updates first.
+
 **Q: "Page did not load properly"?**  
-A: Your cookie may have expired (TikTok sessions last ~3 days). Re-export a fresh cookie.
+A: Check session validity, account permissions, networking and platform verification in the corresponding backend. Re-export the session if necessary; validity is not a fixed three days.
 
 **Q: Scraping is slow?**  
-A: Request intervals are randomized (~6-15s) for stability. Full mode (details) is slower as each creator is queried individually; switch to **Fast mode** if you don't need email/bio (2-3× faster).
+A: Intervals, detail-request count, permissions and platform responses affect speed. Full mode queries individual profiles and is usually slower than list-only collection. Partner contact enrichment is serial with a safety interval; no fixed multiplier or hourly yield is promised.
 
 **Q: How do I use multiple accounts?**  
 A: Click "＋ Add Account" in the cookie area and paste multiple account cookies. The app scrapes concurrently with staggered starts.
@@ -170,7 +185,7 @@ A: No. Pasting a cookie that matches an existing account (same sessionid / sid_g
 A: v1.2.10 and earlier had a false-alarm bug: a "timeout" line was printed 90s after every successful detail fetch (nothing was actually lost). Fixed in v1.2.11 — the log only fires on a real timeout (and includes the creator ID).
 
 **Q: Interrupted mid-scrape?**  
-A: Restart the app and scrape again — it resumes automatically from the last checkpoint. If risk-control triggers, the app auto-switches to a backup cookie and auto-resumes after the cool-down — no babysitting.
+A: Use Continue in history or the library to skip saved records by region and creator ID; explicitly refresh when updating old profiles. Partner enrichment can skip checked creators and continue the remainder. Expired sessions and verification may require your intervention; recovery is not always unattended.
 
 **Q: Will already-scraped creators be scraped again?**  
 A: No, by default. "New only" mode skips creators already saved (dedup by creator ID); choose "Re-scrape all" to refresh data.
@@ -195,58 +210,54 @@ A: Most creators aren't bound to an MCN — TikTok returns "not authorized", whi
 
 ## 💻 Development
 
-```bash
-npm install
-npm start          # run in dev mode (runs source directly)
-npm run build      # build installer → dist/TikTokShop达人抓取安装程序-<version>.exe
-```
-
-> - Requires Google Chrome installed locally (the app connects via puppeteer-core).
-> - Set `CSC_IDENTITY_AUTO_DISCOVERY=false` when packaging to skip code signing (known Windows symlink permission issue).
-> - The installer icon is injected via the `afterPack.js` hook + rcedit; `rebuild-icons.js` regenerates the icon assets.
-
-> 🌐 **Bilingual convention (mandatory)**: every new UI label, button, dialog, tooltip, field name and prompt must ship in BOTH Chinese and English (use the existing `I18N` dictionary + `uiLang` mechanism). A feature that lacks an English version is not done. Release notes must also be bilingual (English first — `What's new in vX.Y.Z` — then Chinese — `更新内容`).
+See the [development guide](docs/development.en.md) for source setup, test commands, packaging requirements and bilingual UI rules. Maintainer, contribution, security and testing rules are documented in [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md) and [docs/testing.md](docs/testing.md).
 
 ## 📤 Release / Update
 
-The app checks GitHub for new versions on startup (differential download). To publish a new version:
+The existing path is **version check → user consent → differential download/reconstruction → verification → silent installation when idle or on exit**. Existing users do not need to repeat a manual installer wizard. Publishers still provide a complete installer: the updater downloads ranges from it, and it also serves first installs and full-download fallback.
+
+See [1.4.0 dependencies and compatibility](docs/release-readiness-1.4.0.md) and [real differential/fallback verification](docs/incremental-update-verification-2026-09-09.md). **1.5.1 below is only a next-release example**, not a published version. Replace it consistently and author the corresponding bilingual release-notes file first:
 
 ```bash
-# 1. Bump version (e.g. 1.1.1 → 1.2.0)
+# 1. Bump version (example: 1.5.0 → 1.5.1)
 npm version patch --no-git-tag-version
 
 # 2. Build installer
-$env:CSC_IDENTITY_AUTO_DISCOVERY='false'
-npm run build
+npm test
+npm audit --audit-level=low
+npm run build -- --publish never
 
-# 3. Generate differential-update metadata (latest.yml + ASCII-named assets)
-node prepare-release.js 1.2.0
+# 3. Verify packaged source/runtime; builder generates latest.yml, ASCII installer and blockmap
+node scripts/verify-release-package.js dist/win-unpacked
+node scripts/verify-electron-startup.js dist/win-unpacked
+node scripts/verify-update-artifacts.js dist
+# From 1.4.0, do not run legacy prepare-release.js (old Chinese-named artifacts only).
 
 # 4. Commit and tag
-git add -A && git commit -m "release 1.2.0"
+# Review and stage only source/docs; never credentials, databases or live-test artifacts
+git commit -m "release 1.5.1"
 git push origin main
-git tag v1.2.0 && git push origin v1.2.0
+git tag v1.5.1
+git push origin v1.5.1
 
-# 5. Create the Release and upload all 4 assets (small files first to avoid timeouts)
+# 5. Create a draft Release and upload all 3 assets (small files first)
 #    ⚠️ Release notes use a FIXED format: English first ("What's new in vX.Y.Z"),
 #    then Chinese ("更新内容"). The update dialog lists every skipped version,
 #    so each version needs both languages.
-gh release create v1.2.0 --title "v1.2.0" --notes "What's new in v1.2.0
-- change 1
-- change 2
+gh release create v1.5.1 --draft --title "v1.5.1" --notes-file docs/release-notes-1.5.1.md
+gh release upload v1.5.1 dist/latest.yml dist/tiktok-shop-creator-scraper-setup-1.5.1.exe.blockmap
+gh release upload v1.5.1 dist/tiktok-shop-creator-scraper-setup-1.5.1.exe
+# Verify uploaded sizes, SHA-512 and latest.yml, then publish the draft
+gh release edit v1.5.1 --draft=false --latest
 
-更新内容
-- 改动 1
-- 改动 2"
-gh release upload v1.2.0 dist/latest.yml dist/tiktok-shop-creator-scraper-setup-1.2.0.exe.blockmap
-gh release upload v1.2.0 dist/tiktok-shop-creator-scraper-setup-1.2.0.exe
-gh release upload v1.2.0 "dist/TikTokShop达人抓取安装程序-1.2.0.exe"
-
-# 6. Old-version users get an update prompt on startup → install over same directory (data preserved)
+# 6. Post-publication differential verification (network, isolated directory, NO installation)
+node scripts/verify-incremental-update.js --live 1.5.0 1.5.1
+# Existing users: in-app prompt → consent to incremental download → silent install / install on exit
 ```
 
-> All 4 assets are required (Chinese-named installer, ASCII-named exe, .blockmap, latest.yml) — missing any one breaks the update.
-> Version comparison: three-part version (major.minor.patch), any part higher triggers the update prompt. Keep only the latest release — the README download link auto-points to `/releases/latest`.
+> From 1.4.0, upload 3 update assets: ASCII installer, matching .blockmap and latest.yml. A duplicate Chinese-named installer is unnecessary.
+> Keep historical **ASCII exe and .blockmap** assets for rollback and old-version blockmap lookup. Do not rename historical assets, overwrite published exe/blockmap/latest.yml files, or move published tags. Runtime changes require a new version. README/test-only changes do not require republishing an installer under the same version.
+> `npm test` includes local differential/fallback regressions. `--live` explicitly downloads required public release assets and reconstructs in an isolated cache; reports remain in git-ignored `test-results/incremental-update-*`. This does not test installation.
 
 ## 📄 License
 

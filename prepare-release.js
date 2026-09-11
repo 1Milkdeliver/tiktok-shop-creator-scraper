@@ -1,74 +1,50 @@
-// Generate update metadata and stage the ASCII-named assets required by electron-updater.
-// Usage: node prepare-release.js <version> [--dist <directory>]
+// prepare-release.js — generate latest.yml with blockMapSize + stage assets for release
+// Usage: node prepare-release.js <version>   (e.g. node prepare-release.js 1.1.12)
 'use strict';
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-function parseArguments(args) {
-  const positional = [];
-  let dist = path.join(__dirname, 'dist');
-  for (let index = 0; index < args.length; index += 1) {
-    if (args[index] === '--dist') {
-      const supplied = args[++index];
-      if (!supplied) throw new Error('missing directory after --dist');
-      dist = path.resolve(supplied);
-    } else positional.push(args[index]);
-  }
-  if (positional.length !== 1) throw new Error('usage: node prepare-release.js <version> [--dist <directory>]');
-  return { version: positional[0], dist };
-}
+const version = process.argv[2];
+if (!version) { console.error('usage: node prepare-release.js <version>'); process.exit(1); }
 
-function requireRegularFile(filePath, description) {
-  let stats;
-  try { stats = fs.statSync(filePath); } catch (_) { throw new Error(`${description} is missing: ${filePath}`); }
-  if (!stats.isFile()) throw new Error(`${description} is not a file: ${filePath}`);
-  if (stats.size === 0) throw new Error(`${description} is empty: ${filePath}`);
-  return stats;
-}
+const dist = path.join(__dirname, 'dist');
+// installer produced by electron-builder (Chinese artifact name)
+const zhName = `TikTokShop达人抓取安装程序-${version}.exe`;
+const zhPath = path.join(dist, zhName);
+if (!fs.existsSync(zhPath)) { console.error('not found:', zhPath); process.exit(1); }
 
-function getPackageVersion() {
-  const packagePath = path.join(__dirname, 'package.json');
-  try {
-    const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
-    if (typeof packageJson.version !== 'string' || !packageJson.version.trim()) throw new Error('package.json has no non-empty version');
-    return packageJson.version;
-  } catch (error) { throw new Error(`cannot read package metadata (${packagePath}): ${error.message}`); }
-}
+// canonical ASCII name used by electron-updater (must match latest.yml "url")
+const asciiName = `tiktok-shop-creator-scraper-setup-${version}.exe`;
+const asciiPath = path.join(dist, asciiName);
+const blockmapPath = asciiPath + '.blockmap';
 
-function main() {
-  const { version, dist } = parseArguments(process.argv.slice(2));
-  const packageVersion = getPackageVersion();
-  if (version !== packageVersion) throw new Error(`version argument ${JSON.stringify(version)} does not match package.json version ${JSON.stringify(packageVersion)}`);
-  if (!fs.existsSync(dist) || !fs.statSync(dist).isDirectory()) throw new Error(`distribution directory is missing or not a directory: ${dist}`);
+// 1) copy installer to the ASCII name the updater expects
+fs.copyFileSync(zhPath, asciiPath);
+console.log('staged', asciiName, fs.statSync(asciiPath).size, 'bytes');
 
-  const zhName = `TikTokShop达人抓取安装程序-${version}.exe`;
-  const zhPath = path.join(dist, zhName);
-  const zhBlockmap = `${zhPath}.blockmap`;
-  const asciiName = `tiktok-shop-creator-scraper-setup-${version}.exe`;
-  const asciiPath = path.join(dist, asciiName);
-  const blockmapPath = `${asciiPath}.blockmap`;
-  requireRegularFile(zhPath, 'installer input');
-  requireRegularFile(zhBlockmap, 'blockmap input');
+// 2) copy the blockmap that electron-builder generated for the zh installer
+const zhBlockmap = path.join(dist, zhName + '.blockmap');
+if (!fs.existsSync(zhBlockmap)) { console.error('missing blockmap:', zhBlockmap); process.exit(1); }
+fs.copyFileSync(zhBlockmap, blockmapPath);
+console.log('staged', path.basename(blockmapPath), fs.statSync(blockmapPath).size, 'bytes');
 
-  fs.copyFileSync(zhPath, asciiPath);
-  const installerStats = requireRegularFile(asciiPath, 'staged installer');
-  fs.copyFileSync(zhBlockmap, blockmapPath);
-  const blockmapStats = requireRegularFile(blockmapPath, 'staged blockmap');
-  const sha512 = crypto.createHash('sha512').update(fs.readFileSync(asciiPath)).digest('base64');
-  const latest = `version: ${version}
+// 3) compute sha512 (base64) of the installer
+const sha512 = crypto.createHash('sha512').update(fs.readFileSync(asciiPath)).digest('base64');
+
+// 4) write latest.yml with blockMapSize so electron-updater can do differential updates
+const latest = `version: ${version}
 files:
   - url: ${asciiName}
     sha512: ${sha512}
-    size: ${installerStats.size}
-    blockMapSize: ${blockmapStats.size}
+    size: ${fs.statSync(asciiPath).size}
+    blockMapSize: ${fs.statSync(blockmapPath).size}
 path: ${asciiName}
 sha512: ${sha512}
 releaseDate: '${new Date().toISOString()}'
 `;
-  fs.writeFileSync(path.join(dist, 'latest.yml'), latest, 'utf8');
-  console.log(`prepare-release: staged ${asciiName} and ${path.basename(blockmapPath)}`);
-  console.log('prepare-release: wrote latest.yml; run "npm run verify-release -- --dist <directory>" before publishing.');
-}
-
-try { main(); } catch (error) { console.error(`prepare-release: ${error.message}`); process.exitCode = 1; }
+fs.writeFileSync(path.join(dist, 'latest.yml'), latest, 'utf8');
+console.log('wrote latest.yml (with blockMapSize)');
+console.log('---');
+console.log(latest);
+console.log('Release assets ready: ', [asciiName, path.basename(blockmapPath), 'latest.yml'].join(' + '));

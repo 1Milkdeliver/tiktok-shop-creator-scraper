@@ -1,5 +1,62 @@
 # Changelog
 
+## [Unreleased]
+
+## [1.5.0] - 2026-09-09
+
+Release scope, upgrade method and validation boundaries: [release notes](docs/release-notes-1.5.0.md).
+
+### Changed / 更新内容
+
+- Contact-only enrichment explicitly processes the full starting filter/market scope without a software-imposed creator limit. Deduplicate and snapshot IDs so table pagination, changing results and caller mutations do not truncate or duplicate work.
+- Retry transient contact reads after 30 / 60 / 120 seconds, then every 5 minutes until recovery or user cancellation. Actual throttling, verification, authentication/access failures, invalid responses and failed database writes still pause safely; full-profile retry policy and seller browser/authentication/pacing settings are unchanged.
+- Display completed, paused, stopped and recovering states, with remaining counts and a retry countdown. Saved creators, including confirmed empty contact responses, remain resumable checkpoints after restart.
+- 不设软件固定条数上限，按启动时筛选与地区的交集去重、逐位入库并持续处理。短暂网络异常自动退避重试，实际限流/验证/登录异常不重试；写库失败或返回结构异常也保留进度暂停。卖家登录、浏览器与请求间隔设置保留。
+- Stream each committed discovery page into a job/market-scoped contact queue alongside seller list/profile collection, rather than starting contacts after the whole run. One paced contact consumer persists checks incrementally, deduplicates late/repeated pages, waits for new creators when empty, and drains on normal producer completion. New task UI enables the option by default; old configurations remain disabled.
+- Missing contacts do not gate library admission. Preserve creators with found, absent or failed contact reads; failed refreshes retain existing values and remain pending. Email/WhatsApp availability filters affect viewing/export, not contacts-only enrichment. Serialize concurrent seller writes and keep final new-creator counts accurate after early saves.
+- Remove the 500-input truncation and sparse-page termination heuristic. Unchanged pagination or failed persistence reports an incomplete run and retains checkpoints; no claim of entire-platform coverage. Keep the seller detail callback's runner context so progress/resume recording can complete.
+- Share a write gate across seller/import transactions and contact patches, preserving verified contacts against late, stale or blank seller flushes. Task Stop/close stops both stages; contact-only Stop or errors never silently restart on later pages. Pause holds new contact reads; completed responses still save. UI distinguishes waiting, draining and contacts pending from full completion.
+- 新增“边采集边补全联系方式（并行）”：每页达人入库即加入联系方式队列，与列表/详情同时读取，不等整轮结束。联系方式继续单队列、安全间隔请求；网络并行、入库排队，防止相互覆盖。有无联系方式都保留；未提供与读取失败分开标记。空队列等待新达人不假报完成，资料结束后继续处理剩余联系方式。任务结束/退出停止两条流程，单独停止联系方式不会停止资料采集，也不会被新页面自动重启。保留查重、逐位入库和手动断点续抓，不删除用户数据库、不发送消息。
+- Accept confirmed successful empty contact envelopes as “not provided”, rather than treating an omitted contact list as a fatal response. Authentication, verification and malformed responses still pause safely.
+- Select stable GitHub releases explicitly, including when upgrading from a local preview build, and prohibit downgrades. Keep differential download/reconstruction, hash verification, full-download fallback and idle/on-exit installation; retain the same application identity and data directory.
+- Dependencies and database schema are unchanged from 1.4.0. No uninstall, database reset or production installation is required by the release tests.
+- 修复成功响应未附联系方式列表时误报异常的问题；确认为未提供时正常保存并继续。明确使用正式更新通道，保留原有增量下载、校验与应用内安装流程，不改变本地库目录。
+- Verification coverage includes 1,005 synthetic creators across Stop-and-reopen continuation, page-before-detail persistence, 501-ID input, sparse pagination, failed-save handling, streaming overlap through real main-process hooks, pacing/late arrivals, pause/stop races, region/job isolation, concurrent SQLite patches, truthful task UI and empty responses. Offline fixtures do not establish live accuracy or unlimited capacity; bounded live contact results and remaining limitations are documented in the release notes.
+
+## [1.4.0] - 2026-09-09
+
+Dependency upgrade and compatibility details: [release verification](docs/release-readiness-1.4.0.md).
+
+### Security and compatibility
+
+- Upgrade Electron 33.4.11 → 43.6.0, electron-builder 25.1.8 → 26.15.3, puppeteer-core 24.43.1 → 25.10.0 and sqlite3 5.1.7 → 6.0.1; update vulnerable transitive dependencies. The release audit reports no known vulnerabilities at verification time, not a guarantee of vulnerability-free software.
+- Adopt BrowserContext cookie import and boolean headless options; require Node.js 22.12+ for source development. End users receive the bundled runtime.
+- Keep Windows executable version/icon metadata while explicitly disabling unsigned-release code signing; use one canonical ASCII installer filename for updates.
+- Pass 34 offline regression tests, loopback-only Chrome/CDP checks, synthetic cross-driver SQLite read/write/readback, CSV/XLSX round trips and isolated packaged-source startup/IPC checks. Platform collection and installation over a running production app are not part of these checks.
+
+### Added
+
+- Enrich existing library records with available Partner Center WhatsApp, LINE, email, Zalo, Viber, Facebook and other contact fields. Country codes, provenance and collection status are kept separately.
+- Shared “Has email” and “Has WhatsApp” filters for library results, exports and enrichment scope; a “Deselect all” field action keeps the Creator Page column visible.
+- Serial enrichment with incremental saves, redacted progress logs, resume support and immediate stopping on verification, authentication, quota or rate-limit errors.
+- Experimental full-profile enrichment with module-level checkpoints and field-availability status. This remains opt-in and explicitly marked **pending live validation**.
+- Offline storage and readback verification for reviewed visible-page observations, preserving reporting periods, original displayed units and separate all-content/product-content metrics.
+
+### Privacy and validation
+
+- Partner credentials stay in main-process memory for the current run and are not added to logs or exports. Local credentials, databases and live-test artifacts are excluded from Git.
+- Contact API reads have passed bounded live tests; full-profile API requests still require platform verification. Reading a normal detail page is not proof that automatic full-profile collection works.
+- The installer includes contact enrichment and the opt-in experimental profile mode. Existing seller discovery remains unchanged; automatic full-profile collection is not claimed to be live-validated.
+
+### 更新内容
+
+- 新增团长后台联系方式补全，分别保存 WhatsApp、LINE、邮箱和其他联系方式、国家码、来源与检查状态。
+- 达人库新增“有邮箱 / 有 WhatsApp”筛选和“取消全选”字段操作；列表、导出、补全使用相同筛选范围。
+- 逐位或逐模块保存，遇到验证、会话异常或额度限制立即停止；完整资料模式仍为待实测的可选功能。
+- 正常网页可见数据支持分口径存储与回读核验，不将页面观察误记为完整自动采集成功。
+- 升级桌面运行时、打包工具、浏览器控制与数据库驱动，发布前安全扫描为 0 项已知漏洞；详见依赖升级与兼容说明。
+- 主分支与 Windows 安装包使用同一版本代码；完整资料自动采集仍保留“待实测”提示且默认不启用。不上传 Cookie、达人数据或数据库备份。
+
 ## [1.3.1] - 2026-08-25
 
 ### Changed
