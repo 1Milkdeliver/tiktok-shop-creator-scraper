@@ -210,6 +210,10 @@ A：多数达人没有绑定 MCN，TikTok 返回"无授权"属正常现象，不
 
 ## 📤 发布新版
 
+发布流程、增量更新、兼容性检查和 Release 资产要求见[发布清单](docs/release-checklist.md)。
+
+<details><summary>查看完整发布命令</summary>
+
 现有更新链路是：**检查版本 → 用户确认 → 差分下载并重建 → 校验 → 空闲时静默安装 / 退出时安装**。不是让每位旧用户重新下载安装向导。发布方仍须提供完整安装包：更新器从该文件分段下载，也用它做首次安装或差分失败回退。
 
 参见 [1.4.0 依赖与兼容说明](docs/release-readiness-1.4.0.md)及[真实增量验证与回退测试](docs/incremental-update-verification-2026-09-09.md)。以下 **1.5.1 只是下一版示例**，不是已发布版本；发布时统一替换版本号并提前撰写对应的中英 Release notes 文件：
@@ -253,6 +257,8 @@ node scripts/verify-incremental-update.js --live 1.5.0 1.5.1
 > 1.4.0 起上传 3 个更新资产：ASCII 名 exe、对应 .blockmap、latest.yml；不需要重复上传中文名安装包。
 > 保留旧 Release 的 **ASCII exe 和 .blockmap**：既用于回退，也供旧版更新器取得基准块表。不要重命名历史资产，不覆盖已发布版本的 exe / blockmap / latest.yml，不移动已发布 tag；代码更新应使用新版本号。仅更新 README / 验证脚本时无需重发同版本安装包。
 > `npm test` 包含本地差分/回退回归；`--live` 明确联网下载两个公开版本的必要资产，用独立测试缓存重建，结果保存在忽略提交的 `test-results/incremental-update-*`。不要把安装步骤也算作已测试。
+
+</details>
 
 ## 📄 许可证
 
