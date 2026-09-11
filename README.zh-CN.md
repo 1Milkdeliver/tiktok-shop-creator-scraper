@@ -1,6 +1,4 @@
-<p align='center'>
-<img src="https://raw.githubusercontent.com/1Milkdeliver/tiktok-shop-creator-scraper/main/icon-256.png" width="150" height="150" alt="TikTok Shop Creator Scraper icon" />
-</p>
+<p align="center"><img src="https://github.com/1Milkdeliver/tiktok-shop-creator-scraper/raw/refs/heads/main/images.png" width="150" height="150" alt="TikTokShop达人抓取 图标" /></p>
 
 <h1 align="center">TikTok Shop Creator Scraper · TikTokShop达人抓取</h1>
 
