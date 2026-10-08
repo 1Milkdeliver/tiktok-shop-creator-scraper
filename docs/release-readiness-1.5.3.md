@@ -18,6 +18,7 @@
 | Packaged startup smoke check | Passed: database ready, creator navigation and account/contact IPC present; no production user data accessed; no visible window opened |
 | Update manifest and blockmap | Passed: manifest SHA-512 matches installer; blockmap coverage verified |
 | Local differential update reconstruction | Passed: v1.5.2 → v1.5.3; 12,739,106 bytes transferred of 122,811,875 (89.63% reused), 85 range responses, zero full-installer fallback requests; reconstructed SHA-512 and SHA-256 match |
+| Public GitHub differential update test | Passed against the published v1.5.2 and v1.5.3 assets; 85 HTTP range responses, 12,739,106 bytes transferred, zero full-installer fallback; published SHA-256 verified; installers were not executed |
 | Authenticode signature | Not signed (no signing certificate configured) |
 | Live TikTok Shop scrape / contacts / multi-market behavior | Not tested in this release validation |
 
@@ -36,5 +37,5 @@ The full `npm audit --audit-level=low` reports 9 advisories in development/build
 - [x] Runtime audit passed; full-audit exception documented.
 - [x] Windows x64 package built and package/startup/update checks passed.
 - [x] Differential reconstruction verified against the existing public v1.5.2 artifacts without executing either installer or accessing production updater cache.
-- [ ] Review staged diff for secrets and user-local data; commit and push `main` and `v1.5.3` tag.
-- [ ] Publish GitHub Release with the installer, matching `.blockmap`, and `latest.yml`; verify public assets and updater metadata.
+- [x] Review staged diff for secrets and user-local data; commit and push `main` and `v1.5.3` tag.
+- [x] Publish GitHub Release with the installer, matching `.blockmap`, and `latest.yml`; verify public assets and updater metadata.
