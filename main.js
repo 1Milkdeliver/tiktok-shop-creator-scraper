@@ -2,7 +2,7 @@
 // main.js — Electron main process: native window, native folder picker, scrape orchestration
 'use strict';
 
-const { app, BrowserWindow, ipcMain, dialog, shell, clipboard } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, clipboard, safeStorage } = require('electron');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
@@ -13,6 +13,7 @@ const {CollectionContacts, serializeCreatorWrites, contactDatabase} = require('.
 let partnerContactClient = null;
 let partnerAccount = null; // display-only metadata; credential remains in memory
 const AccountCookies = require('./lib/account-cookies');
+const { EncryptedAppDataStorage } = require('./lib/credentials');
 let contactPreparing = false;
 let contactPreparationVersion = 0;
 let automaticContacts = {outcome:'idle'};
@@ -154,8 +155,37 @@ function writeLog(msg) {
 }
 
 // ---- persistent app data: remember last cookies + history ----
+const ACCOUNT_CREDENTIAL_KEY = 'credential:tiktok-shop-accounts';
 let appData = { cookies: [], history: [], shortcutAsked: false, outDir: OUT_DIR };
+let accountCredentialStorage = null;
+let secureAccountPersistence = false;
 function dataFile() { return path.join(app.getPath('userData'), 'app-data.json'); }
+
+function accountEntriesFromMemory() {
+  return AccountCookies.normalize((appData.cookies || []).map((data, i) => ({
+    data,
+    ...(appData.cookieMetadata?.[i] || {}),
+  })));
+}
+
+function setAccountEntriesInMemory(entries) {
+  const normalized = AccountCookies.normalize(entries);
+  appData.cookies = normalized.map(entry => entry.data);
+  appData.cookieMetadata = normalized.map(({ name, region }) => ({ name, region }));
+  return normalized;
+}
+
+function persistedAppData() {
+  const persisted = { ...appData };
+  // Once Windows encryption is available, credentials exist only in the
+  // encryptedCredentials blob.  The in-memory arrays remain for the existing
+  // renderer/runner API and are never serialized again.
+  if (secureAccountPersistence) {
+    delete persisted.cookies;
+    delete persisted.cookieMetadata;
+  }
+  return persisted;
+}
 
 function loadAppData() {
   try {
@@ -173,10 +203,29 @@ function loadAppData() {
         try { fs.mkdirSync(OUT_DIR, { recursive: true }); } catch (e2) { }
       }
     }
+    accountCredentialStorage = new EncryptedAppDataStorage({ appData, save: saveAppData, safeStorage });
+    if (safeStorage.isEncryptionAvailable()) {
+      const encrypted = accountCredentialStorage.get(ACCOUNT_CREDENTIAL_KEY);
+      if (encrypted !== undefined) {
+        setAccountEntriesInMemory(JSON.parse(encrypted));
+        secureAccountPersistence = true;
+      } else {
+        const legacy = accountEntriesFromMemory();
+        if (legacy.length) {
+          const previousPersistence = secureAccountPersistence;
+          secureAccountPersistence = true;
+          try { accountCredentialStorage.set(ACCOUNT_CREDENTIAL_KEY, JSON.stringify(legacy)); }
+          catch (error) { secureAccountPersistence = previousPersistence; throw error; }
+        } else {
+          secureAccountPersistence = true;
+          saveAppData();
+        }
+      }
+    }
   } catch (e) { }
 }
 function saveAppData() {
-  try { fs.writeFileSync(dataFile(), JSON.stringify(appData)); } catch (e) { }
+  try { fs.writeFileSync(dataFile(), JSON.stringify(persistedAppData())); } catch (e) { }
 }
 function recordHistory(entry) {
   if (!entry || !entry.outPath) return;
@@ -213,13 +262,19 @@ function recordHistory(entry) {
 }
 
 // IPC: remembered cookies + history + default out dir
-ipcMain.handle('get-app-data', () => ({ cookies: appData.cookies || [], accountEntries:(appData.cookies || []).map((data,i) => ({data,...(appData.cookieMetadata?.[i] || {})})), history: appData.history || [], defaultOutDir: appData.outDir || OUT_DIR }));
+ipcMain.handle('get-app-data', () => ({ cookies: appData.cookies || [], accountEntries:accountEntriesFromMemory(), history: appData.history || [], defaultOutDir: appData.outDir || OUT_DIR }));
 function storeAccounts(entries) {
   const normalized = AccountCookies.normalize(entries);
-  const next = {...appData, cookies:normalized.map(c => c.data), cookieMetadata:normalized.map(({name,region}) => ({name,region}))};
-  // Report failed saves; never claim an account was saved only in the renderer.
-  fs.writeFileSync(dataFile(), JSON.stringify(next));
-  appData = next;
+  if (!accountCredentialStorage || !safeStorage.isEncryptionAvailable()) {
+    throw new Error('Windows 安全存储不可用，未保存 Cookie。');
+  }
+  // Encrypt first.  Only after the durable write succeeds do we replace the
+  // live account pool, so a failed save cannot erase a working session.
+  const previousPersistence = secureAccountPersistence;
+  secureAccountPersistence = true;
+  try { accountCredentialStorage.set(ACCOUNT_CREDENTIAL_KEY, JSON.stringify(normalized)); }
+  catch (error) { secureAccountPersistence = previousPersistence; throw error; }
+  setAccountEntriesInMemory(normalized);
 }
 
 // Local development/live-test override. It is inactive in normal launches and
@@ -234,8 +289,7 @@ function loadDevelopmentCookieOverride() {
     const raw = fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, '');
     const cookies = AccountCookies.parse(raw);
     const client = new PartnerContactClient(cookies);
-    appData.cookies = [raw];
-    appData.cookieMetadata = [{name:'实际软件测试账号', region:''}];
+    setAccountEntriesInMemory([{data:raw, name:'实际软件测试账号', region:''}]);
     partnerContactClient = client;
     runner.partnerCredential = client;
     partnerAccount = {region:'', name:'实际软件测试账号'};
@@ -249,7 +303,15 @@ ipcMain.handle('save-accounts', (_event, entries) => {
   catch (_) { return {ok:false,error:'账号保存失败，请检查 Cookie 格式、国家代码及本地目录权限。'}; }
 });
 ipcMain.handle('get-last-scrape-config', () => appData.lastScrapeConfig || null);
-ipcMain.handle('clear-cookies', () => { appData.cookies = []; appData.cookieMetadata = []; saveAppData(); return { ok: true }; });
+ipcMain.handle('clear-cookies', () => {
+  try {
+    if (accountCredentialStorage && safeStorage.isEncryptionAvailable()) accountCredentialStorage.delete(ACCOUNT_CREDENTIAL_KEY);
+    setAccountEntriesInMemory([]);
+    secureAccountPersistence = true;
+    saveAppData();
+    return { ok: true };
+  } catch (_) { return { ok: false, error: 'Cookie 删除失败，请重试。' }; }
+});
 ipcMain.handle('creator-db-stats', async () => {
   if (!creatorDb) return { error: '本地达人库未初始化' };
   try { return { ok: true, ...(await creatorDb.getStats()) }; }
@@ -731,8 +793,7 @@ ipcMain.handle('continue-history', async (event, filePath) => {
     };
     // use remembered cookies if available
     if (appData.cookies && appData.cookies.length) {
-      const entries = appData.cookies.map((data,i) => ({data,...(appData.cookieMetadata?.[i] || {})}));
-      const { cookieFiles, error } = saveCookiesToFiles(AccountCookies.select(entries,cfg.shopRegion).map(c=>c.data));
+      const { cookieFiles, error } = saveCookiesToFiles(AccountCookies.select(accountEntriesFromMemory(),cfg.shopRegion).map(c=>c.data));
       if (error) return { ok: false, error };
       cfg.cookieFiles = cookieFiles;
     }
@@ -765,8 +826,7 @@ ipcMain.handle('refresh-history', async (event, filePath) => {
       fields: entry.config.fields || null,
     };
     if (appData.cookies && appData.cookies.length) {
-      const entries = appData.cookies.map((data,i) => ({data,...(appData.cookieMetadata?.[i] || {})}));
-      const { cookieFiles, error } = saveCookiesToFiles(AccountCookies.select(entries,cfg.shopRegion).map(c=>c.data));
+      const { cookieFiles, error } = saveCookiesToFiles(AccountCookies.select(accountEntriesFromMemory(),cfg.shopRegion).map(c=>c.data));
       if (error) return { ok: false, error };
       cfg.cookieFiles = cookieFiles;
     }
@@ -1373,9 +1433,9 @@ ipcMain.handle('start-scrape', async (event, config) => {
     // remember cookies for next launch
     // Keep the entire account pool, including other countries, and its notes.
     if (!config.accountEntries) {
-      const known = appData.cookies || [];
-      for (const data of pasted) if (!known.includes(data)) known.push(data);
-      appData.cookies = known; saveAppData();
+      const known = accountEntriesFromMemory();
+      for (const data of pasted) if (!known.some(entry => entry.data === data)) known.push({data,name:'',region:''});
+      storeAccounts(known);
     }
     const prevResult = runner.result;
     // attach the run config to the result so history can offer continue/refresh

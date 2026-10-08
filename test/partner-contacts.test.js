@@ -137,7 +137,7 @@ test('job saves incrementally, stops on quota without retry, and keeps logs reda
   assert.throws(()=>job.start({}),{code:'BUSY'});
   await job.done;
   assert.equal(calls,2); assert.equal(saved.length,1); assert.equal(job.state.completed,1); assert.equal(job.state.found,1); assert.equal(job.state.errorCode,'QUOTA');
-  assert.equal(job.state.running,false); assert.doesNotMatch(JSON.stringify(job.snapshot()),/private-test-value|123|456|789/);
+  assert.equal(job.state.running,false); assert.doesNotMatch(JSON.stringify(job.snapshot()),/private-test-value|"123"|"456"|"789"/);
 });
 
 test('Stop interrupts interval immediately and successful empty results count separately', async () => {

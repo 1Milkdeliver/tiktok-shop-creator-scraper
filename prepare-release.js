@@ -1,50 +1,52 @@
-// prepare-release.js — generate latest.yml with blockMapSize + stage assets for release
-// Usage: node prepare-release.js <version>   (e.g. node prepare-release.js 1.1.12)
+// Generate electron-updater metadata for the canonical installer produced by
+// electron-builder. Keeping artifact names unchanged enables differential updates.
 'use strict';
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
+const crypto = require('node:crypto');
+const fs = require('node:fs');
+const path = require('node:path');
 
-const version = process.argv[2];
-if (!version) { console.error('usage: node prepare-release.js <version>'); process.exit(1); }
+function fail(message) {
+  console.error(`prepare-release: ${message}`);
+  process.exit(1);
+}
 
-const dist = path.join(__dirname, 'dist');
-// installer produced by electron-builder (Chinese artifact name)
-const zhName = `TikTokShop达人抓取安装程序-${version}.exe`;
-const zhPath = path.join(dist, zhName);
-if (!fs.existsSync(zhPath)) { console.error('not found:', zhPath); process.exit(1); }
+const args = process.argv.slice(2);
+const version = args.shift();
+if (!version) fail('usage: node prepare-release.js <version> [--dist <directory>]');
 
-// canonical ASCII name used by electron-updater (must match latest.yml "url")
-const asciiName = `tiktok-shop-creator-scraper-setup-${version}.exe`;
-const asciiPath = path.join(dist, asciiName);
-const blockmapPath = asciiPath + '.blockmap';
+let dist = path.join(__dirname, 'dist');
+if (args.length) {
+  if (args.length !== 2 || args[0] !== '--dist' || !args[1]) {
+    fail('usage: node prepare-release.js <version> [--dist <directory>]');
+  }
+  dist = path.resolve(args[1]);
+}
 
-// 1) copy installer to the ASCII name the updater expects
-fs.copyFileSync(zhPath, asciiPath);
-console.log('staged', asciiName, fs.statSync(asciiPath).size, 'bytes');
+const packageVersion = require('./package.json').version;
+if (version !== packageVersion) {
+  fail(`requested version ${version} does not match package.json version ${packageVersion}`);
+}
 
-// 2) copy the blockmap that electron-builder generated for the zh installer
-const zhBlockmap = path.join(dist, zhName + '.blockmap');
-if (!fs.existsSync(zhBlockmap)) { console.error('missing blockmap:', zhBlockmap); process.exit(1); }
-fs.copyFileSync(zhBlockmap, blockmapPath);
-console.log('staged', path.basename(blockmapPath), fs.statSync(blockmapPath).size, 'bytes');
+const artifact = `tiktok-shop-creator-scraper-setup-${version}.exe`;
+const artifactPath = path.join(dist, artifact);
+const blockmapPath = `${artifactPath}.blockmap`;
+if (!fs.existsSync(artifactPath)) fail(`installer not found: ${artifactPath}`);
+if (!fs.existsSync(blockmapPath)) fail(`blockmap not found: ${blockmapPath}`);
 
-// 3) compute sha512 (base64) of the installer
-const sha512 = crypto.createHash('sha512').update(fs.readFileSync(asciiPath)).digest('base64');
-
-// 4) write latest.yml with blockMapSize so electron-updater can do differential updates
+const artifactSize = fs.statSync(artifactPath).size;
+const blockMapSize = fs.statSync(blockmapPath).size;
+const sha512 = crypto.createHash('sha512').update(fs.readFileSync(artifactPath)).digest('base64');
 const latest = `version: ${version}
 files:
-  - url: ${asciiName}
+  - url: ${artifact}
     sha512: ${sha512}
-    size: ${fs.statSync(asciiPath).size}
-    blockMapSize: ${fs.statSync(blockmapPath).size}
-path: ${asciiName}
+    size: ${artifactSize}
+    blockMapSize: ${blockMapSize}
+path: ${artifact}
 sha512: ${sha512}
 releaseDate: '${new Date().toISOString()}'
 `;
 fs.writeFileSync(path.join(dist, 'latest.yml'), latest, 'utf8');
-console.log('wrote latest.yml (with blockMapSize)');
-console.log('---');
-console.log(latest);
-console.log('Release assets ready: ', [asciiName, path.basename(blockmapPath), 'latest.yml'].join(' + '));
+console.log(`prepare-release: staged ${artifact} (${artifactSize} bytes)`);
+console.log(`prepare-release: staged ${path.basename(blockmapPath)} (${blockMapSize} bytes)`);
+console.log('prepare-release: wrote latest.yml with differential-update metadata');

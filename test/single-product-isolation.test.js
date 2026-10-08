@@ -15,8 +15,11 @@ test('the desktop product exposes only its configured platform and database', ()
   assert.deepEqual(PLATFORM_DATABASE_FILENAMES, { [product.platformId]: product.databaseFile });
 });
 
-test('the monitor is scoped to the configured platform instead of a multi-platform wall', () => {
+test('the renderer is scoped to TikTok Shop instead of a multi-platform workspace', () => {
   const renderer = fs.readFileSync(require.resolve('../index.html'), 'utf8');
-  assert.match(renderer, /availableCreatorPlatforms\.map\(platform => platform\.id\)\.slice\(0, 1\)/);
+  assert.match(renderer, /TikTokShop达人抓取工具/);
+  assert.match(renderer, /TikTok Shop 联盟达人数据/);
+  assert.doesNotMatch(renderer, /creatorPlatformTabs|taskPlatformTabs|connectionPlatformTabs/);
+  assert.doesNotMatch(renderer, /Instagram 达人采集|YouTube 达人采集|X 达人采集/);
   assert.doesNotMatch(renderer, /tasks\.push\(\{ id: 'next-slot'/);
 });

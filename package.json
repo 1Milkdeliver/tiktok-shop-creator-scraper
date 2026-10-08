@@ -1,6 +1,6 @@
 {
   "name": "tiktok-shop-creator-scraper",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "description": "TikTok Shop 达人抓取工具 - 专为 TikTok Shop 卖家打造的联盟达人数据采集桌面应用，一键抓取达人广场数据，支持多账号并发、CSV/Excel 导出、达人筛选、选品分析。TikTok Shop affiliate creator scraper desktop app for sellers.",
   "main": "main.js",
   "author": "1Milkdeliver <https://github.com/1Milkdeliver>",
@@ -59,6 +59,18 @@
       {
         "from": "README.en.md",
         "to": "README-en.md"
+      },
+      {
+        "from": "LICENSE",
+        "to": "LICENSE"
+      },
+      {
+        "from": "docs/THIRD_PARTY_NOTICES.md",
+        "to": "THIRD_PARTY_NOTICES.md"
+      },
+      {
+        "from": "third-party-inventory.json",
+        "to": "third-party-inventory.json"
       }
     ],
     "afterPack": "./afterPack.js",
@@ -75,8 +87,7 @@
         "nsis"
       ],
       "icon": "build/icon.ico",
-      "signAndEditExecutable": true,
-      "signExecutable": false
+      "signAndEditExecutable": true
     },
     "nsis": {
       "oneClick": false,
@@ -96,6 +107,6 @@
   "scripts": {
     "start": "electron .",
     "build": "electron-builder --win nsis",
-    "test": "node --test test/*.test.js"
+    "test": "node scripts/run-product-tests.js"
   }
 }

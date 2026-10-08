@@ -26,5 +26,5 @@ test('IPC scopes full mode separately and keeps contact-only as default; offline
   assert.match(ui,/mode:el\('contactMode'\)\.value/);
   assert.match(ui,/status\.sectionsSaved/);
   assert.match(ui,/尚未通过真实详情验证/);
-  assert.equal(JSON.parse(read('package.json')).scripts.test,'node --test test/*.test.js');
+  assert.equal(JSON.parse(read('package.json')).scripts.test,'node scripts/run-product-tests.js');
 });

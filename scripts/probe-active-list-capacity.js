@@ -8,15 +8,18 @@ const {permitted}=require('../lib/partner-profile');
 const {probeListCapacity}=require('../lib/collection-capacity-probe');
 const {visibleState,frontend,withActiveListPage}=require('../lib/partner-browser');
 const {codes}=require('../lib/partner-markets');
+const AccountCookies=require('../lib/account-cookies');
+const {toPuppeteerCookies}=require('../lib/cookies');
+const {launchRealWindow}=require('../lib/browser');
 const fail=code=>Object.assign(new Error(code),{code});
 async function main(){
   const [appPort,browserPort,dbPath,region,mode='fetch-descending']=process.argv.slice(2);
   if(!['fetch-descending','xhr-once100','xhr-once24'].includes(mode))throw fail('SETUP');
-  if(!/^\d+$/.test(appPort||'')||!/^\d+$/.test(browserPort||'')||!dbPath||!Object.hasOwn(codes,region))throw fail('SETUP');
-  let app,browser,page,db,listener,keepPage=false;
+  if(!/^\d+$/.test(appPort||'')||(!/^\d+$/.test(browserPort||'')&&browserPort!=='saved-session')||!dbPath||!Object.hasOwn(codes,region))throw fail('SETUP');
+  let app,browser,page,db,listener,keepPage=false,ownedBrowser=false,profileDir='',jobId='',baselineTimer,openedWindow;
   const once=mode.startsWith('xhr-once');
   const retainedIds=new Set();
-  const summary={region,mode,direction:'descending',sizes:once?[mode==='xhr-once24'?24:100]:[100,50,24,12],baselineRequests:0,retainedRows:0,newCreators:0,defaultsChanged:false};
+  const summary={region,mode,direction:'descending',sizes:once?[mode==='xhr-once24'?24:100]:[1000,750,500,300,200,100],baselineRequests:0,retainedRows:0,newCreators:0,defaultsChanged:false};
   try{
     summary.stage='connect-app';
     app=await puppeteer.connect({browserURL:'http://127.0.0.1:'+appPort});
@@ -37,28 +40,41 @@ async function main(){
     await gate();
     summary.stage='open-database';
     db=new CreatorDatabase(dbPath);await db.open();
-    const job=await db.get('SELECT id,region FROM scrape_jobs ORDER BY started_at DESC LIMIT 1');
-    if(job?.region!==region)throw fail('MARKET_AUTH');
+    jobId=await db.createScrapeJob({shopRegion:region,collectionMode:'list_capacity_probe',capacityProbe:true});
     const retainRows=async rows=>{
       for(const raw of rows){
         const mapped=listRow(raw,region),id=mapped.creator_oecuid;
         const old=await db.partnerProfileRaw(region,id);
         let saved;
         if(old)saved=await db.updatePartnerProfile(region,id,{partner_discovery_capacity_json:JSON.stringify(permitted(raw))});
-        else {saved=await db.upsertCreators([mapped],{region,jobId:job.id,preserveContacts:true});summary.newCreators++;}
+        else {saved=await db.upsertCreators([mapped],{region,jobId,preserveContacts:true});summary.newCreators++;}
         if(saved?.saved!==1)throw fail('SAVE');summary.retainedRows++;retainedIds.add(id);
       }
     };
     summary.stage='connect-browser';
-    browser=await puppeteer.connect({browserURL:'http://127.0.0.1:'+browserPort});
+    if(browserPort==='saved-session'){
+      const appData=await ui.evaluate(()=>window.api.getAppData());
+      const accounts=AccountCookies.select(appData?.accountEntries||[],region);
+      if(!accounts.length)throw fail('AUTH');
+      if(AccountCookies.summary(accounts[0].data).expired)throw fail('AUTH');
+      const cookies=toPuppeteerCookies(AccountCookies.parse(accounts[0].data));
+      if(!cookies.length)throw fail('AUTH');
+      summary.accountLabel=accounts[0].name||'';
+      summary.cookieCount=cookies.length;
+      summary.stage='launch-background-browser';
+      const opened=await launchRealWindow(null,false,{background:true});
+      browser=opened.browser;profileDir=opened.profileDir;openedWindow=opened;ownedBrowser=true;
+      await browser.defaultBrowserContext().setCookie(...cookies);
+    }else browser=await puppeteer.connect({browserURL:'http://127.0.0.1:'+browserPort});
     // Separate background target avoids changing the production list's position.
     summary.stage='create-background-page';
     const root=await browser.target().createCDPSession();
     const {targetId}=await root.send('Target.createTarget',{url:'about:blank',background:true});
     const target=await browser.waitForTarget(t=>t._targetId===targetId,{timeout:10000});
     page=await target.page();await root.detach();
-    let resolve,reject,timer;
-    const baseline=new Promise((res,rej)=>{resolve=res;reject=rej;timer=setTimeout(()=>rej(fail('TIMEOUT')),30000);});
+    let resolve,reject;
+    const baseline=new Promise((res,rej)=>{resolve=res;reject=rej;baselineTimer=setTimeout(()=>rej(fail('TIMEOUT')),30000);});
+    baseline.catch(()=>{});
     // Observe the actual main-list request body, not detail recommendations.
     listener=async response=>{
       let matched=false;
@@ -76,12 +92,17 @@ async function main(){
         const clean=new URL(u.origin+u.pathname);
         for(const key of ['partner_id','aid','app_name','device_platform'])if(u.searchParams.has(key))clean.searchParams.set(key,u.searchParams.get(key));
         resolve({url:clean.href,body,returned:data.creator_profile_list.length});
-      }catch(error){reject(error);}finally{if(matched)clearTimeout(timer);}
+      }catch(error){reject(error);}finally{if(matched)clearTimeout(baselineTimer);}
     };
     page.on('response',listener);
-    // Attach handlers before navigating; the promise is always observed.
+    // Attach handlers before navigating; fail promptly if the saved session
+    // lands on login or a visible verification page instead of the creator list.
     summary.stage='observe-baseline';
-    const [observed]=await Promise.all([baseline,page.goto(frontend(region)+'/affiliate-cmp/creator?market='+codes[region],{waitUntil:'domcontentloaded',timeout:30000})]);
+    await page.goto(frontend(region)+'/affiliate-cmp/creator?market='+codes[region],{waitUntil:'domcontentloaded',timeout:30000});
+    const initialState=await visibleState(page);
+    if(initialState.login)throw fail('AUTH');
+    if(initialState.challenge){keepPage=true;await openedWindow?.setWindowVisible?.(true,page);throw fail('CHALLENGE');}
+    const observed=await baseline;
     summary.baseline={requested:observed.body.pagination?.size,returned:observed.returned};
     console.log(JSON.stringify({phase:'baseline',...summary.baseline,region}));
     await new Promise(r=>setTimeout(r,15000));
@@ -146,11 +167,20 @@ async function main(){
         return {profiles:data.creator_profile_list,pagination:data.next_pagination};
       }});
     keepPage=['CHALLENGE','RATE_LIMIT','AUTH','QUOTA','MARKET_AUTH'].includes(summary.probe.stoppedReason);
+    if(keepPage&&ownedBrowser&&page)await browser.pages().then(async pages=>{
+      const active=pages.find(candidate=>candidate===page);
+      if(active)await active.bringToFront().catch(()=>{});
+    }).catch(()=>{});
   }catch(error){summary.errorCode=['BUSY','CHALLENGE','RATE_LIMIT','AUTH','QUOTA','MARKET_AUTH','TIMEOUT','SAVE','RESPONSE'].includes(error.code)?error.code:'PROBE_FAILED';keepPage=true;}
   finally{
+    if(baselineTimer)clearTimeout(baselineTimer);
     if(page&&listener)page.off('response',listener);
     if(page&&!keepPage)await page.close().catch(()=>{});
-    if(db)await db.close();if(browser)await browser.disconnect();if(app)await app.disconnect();
+    if(db&&jobId)await db.finishScrapeJob(jobId,{ok:!summary.errorCode&&!summary.probe?.stoppedReason,creators:summary.retainedUniqueCreators,database:{saved:summary.retainedRows},error:summary.errorCode||summary.probe?.stoppedReason||null}).catch(()=>{});
+    if(db)await db.close();
+    if(browser){if(ownedBrowser&&!keepPage)await browser.close().catch(()=>{});else await browser.disconnect().catch(()=>{});}
+    if(profileDir&&!keepPage)require('node:fs').rmSync(profileDir,{recursive:true,force:true});
+    if(app)await app.disconnect();
     summary.diagnosticPageKept=!!page&&keepPage;
     summary.retainedUniqueCreators=retainedIds.size;
     console.log(JSON.stringify(summary));

@@ -26,8 +26,13 @@ test('continue uses manually selected country, retains the whole account pool an
 });
 test('account IPC persists notes without removing other countries or unrelated app settings',()=>{
   const source=fs.readFileSync(path.join(root,'main.js'),'utf8');
-  const handlers={},writes=[];
+  const handlers={},writes=[],secrets={};
   const context={AccountCookies,OUT_DIR:'fixture',runner:{running:false},appData:{cookies:[],history:[{fixture:true}],otherSetting:42},
+    safeStorage:{isEncryptionAvailable:()=>true},secureAccountPersistence:true,
+    accountCredentialStorage:{set:(key,value)=>{secrets[key]=value;writes.push({otherSetting:42,history:[{fixture:true}]});}},
+    ACCOUNT_CREDENTIAL_KEY:'credential:tiktok-shop-accounts',
+    accountEntriesFromMemory(){return AccountCookies.normalize((context.appData.cookies||[]).map((data,i)=>({data,...(context.appData.cookieMetadata?.[i]||{})})));},
+    setAccountEntriesInMemory(entries){const normalized=AccountCookies.normalize(entries);context.appData.cookies=normalized.map(x=>x.data);context.appData.cookieMetadata=normalized.map(({name,region})=>({name,region}));return normalized;},
     fs:{writeFileSync:(_file,text)=>writes.push(JSON.parse(text))},dataFile:()=>'/synthetic/app-data.json',saveAppData(){},
     ipcMain:{handle:(name,fn)=>handlers[name]=fn}};
   vm.createContext(context);
@@ -35,6 +40,7 @@ test('account IPC persists notes without removing other countries or unrelated a
   const data=JSON.stringify([{name:'sessionid',value:'synthetic'}]);
   assert.equal(handlers['save-accounts'](null,[{data,name:'MY note',region:'MY'},{data,name:'TH note',region:'TH'}]).ok,true);
   const saved=handlers['get-app-data'](); assert.equal(saved.accountEntries[1].region,'TH');assert.equal(saved.accountEntries[0].name,'MY note');
+  assert.equal(JSON.parse(secrets['credential:tiktok-shop-accounts'])[0].name,'MY note');
   assert.equal(writes[0].otherSetting,42);assert.equal(writes[0].history.length,1);
   context.runner.running=true;assert.equal(handlers['save-accounts'](null,[]).ok,false);assert.equal(writes.length,1);
 });

@@ -1,23 +1,34 @@
 'use strict';
 
 const { spawnSync } = require('node:child_process');
+const fs = require('node:fs');
 const path = require('node:path');
 const product = require('../product.config');
 
-const common = [
-  'activity.test.js', 'collection-run-metrics.test.js', 'creator-persistence.test.js',
-  'credentials.test.js', 'database.test.js', 'electron-credential-storage.test.js',
-  'single-product-isolation.test.js', 'state-directory.test.js', 'worker-process-supervisor.test.js',
-  'worker-protocol.test.js',
-];
-const platform = {
-  tiktok_shop: ['task-supervisor.test.js'],
-  instagram: ['hiker-instagram-collector.test.js', 'instagram-browser-profile-collector.test.js', 'instagram-collection-lane.test.js', 'instagram-cookie-import.test.js', 'instagram-cooldown.test.js', 'instagram-fixture-collection.integration.test.js', 'instagram-headless-discovery.test.js', 'instagram-idle-coverage-scheduler.test.js', 'instagram-public-discovery.test.js', 'instagram-public-endurance.test.js', 'instagram-worker-fixture.test.js', 'instagram-worker-production.test.js'],
-  youtube: ['youtube-fixture-collection.integration.test.js', 'youtube-worker-fixture.test.js', 'youtube-worker-production.test.js'],
-  x: ['x-fixture-collection.integration.test.js', 'x-worker-fixture.test.js', 'x-worker-production.test.js'],
-  tiktok: ['tiktok-adapter.test.js', 'tiktok-fixture-collection.integration.test.js'],
-}[product.platformId] || [];
+const testDirectory = path.join(__dirname, '..', 'test');
+const allTests = fs.readdirSync(testDirectory).filter(file => file.endsWith('.test.js')).sort();
 
-const files = [...common, ...platform].map(file => path.join('test', file));
+// The original source project contained five products.  Standalone packages
+// deliberately keep their own release gate: a TikTok Shop release must not
+// start Instagram/YouTube/X workers or assert the retired five-tab UI.  Every
+// other Shop test remains included, so contacts, profiles, persistence,
+// updates and browser stability are still exercised by `npm test`.
+const exclusions = {
+  tiktok_shop: [
+    /^(?:hiker-|instagram-|youtube-|x-|tiktok-adapter|tiktok-fixture)/,
+    /^(?:local-python|python-runtime|python-worker|local-automated-gates)/,
+    /^(?:database-routing|platform-contract|platform-ui-contract)\.test\.js$/,
+  ],
+};
+const excluded = exclusions[product.platformId] || [];
+const files = allTests
+  .filter(file => !excluded.some(pattern => pattern.test(file)))
+  .map(file => path.join('test', file));
+
+if (!files.length) {
+  console.error(`No tests selected for ${product.platformId}`);
+  process.exit(1);
+}
+
 const result = spawnSync(process.execPath, ['--test', ...files], { stdio: 'inherit', shell: false });
 process.exit(result.status === null ? 1 : result.status);

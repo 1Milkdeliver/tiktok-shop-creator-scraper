@@ -226,10 +226,10 @@ Release flow, differential updates, compatibility checks and asset requirements 
 
 The existing path is **version check → user consent → differential download/reconstruction → verification → silent installation when idle or on exit**. Existing users do not need to repeat a manual installer wizard. Publishers still provide a complete installer: the updater downloads ranges from it, and it also serves first installs and full-download fallback.
 
-See [1.4.0 dependencies and compatibility](docs/release-readiness-1.4.0.en.md) and [real differential/fallback verification](docs/incremental-update-verification-2026-09-09.en.md). **1.5.1 below is only a next-release example**, not a published version. Replace it consistently and author the corresponding bilingual release-notes file first:
+See [v1.5.3 release notes](docs/release-notes-1.5.3.md), [release-readiness record](docs/release-readiness-1.5.3.md) and [real differential/fallback verification](docs/incremental-update-verification-2026-09-09.en.md). **1.5.4 below is only a next-release example**, not a published version. Replace it consistently and author the corresponding bilingual release-notes file first:
 
 ```bash
-# 1. Bump version (example: 1.5.0 → 1.5.1)
+# 1. Bump version (example: 1.5.3 → 1.5.4)
 npm version patch --no-git-tag-version
 
 # 2. Build installer
@@ -245,23 +245,23 @@ node scripts/verify-update-artifacts.js dist
 
 # 4. Commit and tag
 # Review and stage only source/docs; never credentials, databases or live-test artifacts
-git commit -m "release 1.5.1"
+git commit -m "release 1.5.4"
 git push origin main
-git tag v1.5.1
-git push origin v1.5.1
+git tag v1.5.4
+git push origin v1.5.4
 
 # 5. Create a draft Release and upload all 3 assets (small files first)
 #    ⚠️ Release notes use a FIXED format: English first ("What's new in vX.Y.Z"),
 #    then Chinese ("更新内容"). The update dialog lists every skipped version,
 #    so each version needs both languages.
-gh release create v1.5.1 --draft --title "v1.5.1" --notes-file docs/release-notes-1.5.1.md
-gh release upload v1.5.1 dist/latest.yml dist/tiktok-shop-creator-scraper-setup-1.5.1.exe.blockmap
-gh release upload v1.5.1 dist/tiktok-shop-creator-scraper-setup-1.5.1.exe
+gh release create v1.5.4 --draft --title "v1.5.4" --notes-file docs/release-notes-1.5.4.md
+gh release upload v1.5.4 dist/latest.yml dist/tiktok-shop-creator-scraper-setup-1.5.4.exe.blockmap
+gh release upload v1.5.4 dist/tiktok-shop-creator-scraper-setup-1.5.4.exe
 # Verify uploaded sizes, SHA-512 and latest.yml, then publish the draft
-gh release edit v1.5.1 --draft=false --latest
+gh release edit v1.5.4 --draft=false --latest
 
 # 6. Post-publication differential verification (network, isolated directory, NO installation)
-node scripts/verify-incremental-update.js --live 1.5.0 1.5.1
+node scripts/verify-incremental-update.js --live 1.5.3 1.5.4
 # Existing users: in-app prompt → consent to incremental download → silent install / install on exit
 ```
 

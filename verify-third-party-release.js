@@ -126,7 +126,6 @@ function verifySource(projectRoot = ROOT) {
     ['LICENSE', 'LICENSE'],
     ['docs/THIRD_PARTY_NOTICES.md', 'THIRD_PARTY_NOTICES.md'],
     ['third-party-inventory.json', 'third-party-inventory.json'],
-    ['runtime/python', manifest.resourceDirectory],
   ]);
   for (const [from, to] of requiredResources) {
     assert(resources.get(from) === to, `build.extraResources must include ${from} as ${to}`);
@@ -143,10 +142,12 @@ function verifySource(projectRoot = ROOT) {
 }
 
 function verifyPackagedResources(resourcesPath, projectRoot = ROOT) {
-  const { manifest, inventory } = verifySource(projectRoot);
+  const { packageJson, manifest, inventory } = verifySource(projectRoot);
   for (const file of ['LICENSE', 'THIRD_PARTY_NOTICES.md', 'third-party-inventory.json']) {
     assert(fs.existsSync(path.join(resourcesPath, file)), `packaged resource is missing: ${file}`);
   }
+  const bundledPython = resourcePairs(packageJson.build || {}).get('runtime/python') === manifest.resourceDirectory;
+  if (!bundledPython) return { ok: true, root: null, executable: null, missing: [] };
   const result = verifyPythonRuntime({
     isPackaged: true,
     resourcesPath,

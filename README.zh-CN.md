@@ -165,7 +165,7 @@
 - 联系方式读取不发送消息或邀请。账号国家是便于管理的备注，启动任务时仍以目标市场和实际权限检查为准。
 - Partner Center 真实浏览器会话默认最小化在后台运行；只有需要重新登录或人工验证时才显示窗口。联系方式通过授权接口读取，不逐个打开聊天页。
 
-详细边界、故障恢复和版本变更见 [v1.5.0 更新说明](docs/release-notes-1.5.0.md)。
+详细边界、故障恢复和版本变更见 [v1.5.3 更新说明](docs/release-notes-1.5.3.md)。
 
 ## ❓ 常见问题
 
@@ -220,10 +220,10 @@ A：多数达人没有绑定 MCN，TikTok 返回"无授权"属正常现象，不
 
 现有更新链路是：**检查版本 → 用户确认 → 差分下载并重建 → 校验 → 空闲时静默安装 / 退出时安装**。不是让每位旧用户重新下载安装向导。发布方仍须提供完整安装包：更新器从该文件分段下载，也用它做首次安装或差分失败回退。
 
-参见 [1.4.0 依赖与兼容说明](docs/release-readiness-1.4.0.md)及[真实增量验证与回退测试](docs/incremental-update-verification-2026-09-09.md)。以下 **1.5.1 只是下一版示例**，不是已发布版本；发布时统一替换版本号并提前撰写对应的中英 Release notes 文件：
+参见 [v1.5.3 发布复核](docs/release-readiness-1.5.3.md)及[真实增量验证与回退测试](docs/incremental-update-verification-2026-09-09.md)。以下 **1.5.4 只是下一版示例**，不是已发布版本；发布时统一替换版本号并提前撰写对应的中英 Release notes 文件：
 
 ```bash
-# 1. bump 版本号（本例 1.5.0 → 1.5.1）
+# 1. bump 版本号（本例 1.5.3 → 1.5.4）
 npm version patch --no-git-tag-version
 
 # 2. 打包
@@ -239,22 +239,22 @@ node scripts/verify-update-artifacts.js dist
 
 # 4. 提交并打 tag
 # 先审查并仅暂存源码/文档变更，不暂存 Cookie、数据库或真实测试产物
-git commit -m "release 1.5.1"
+git commit -m "release 1.5.4"
 git push origin main
-git tag v1.5.1
-git push origin v1.5.1
+git tag v1.5.4
+git push origin v1.5.4
 
 # 5. 创建草稿 Release 并上传 3 个资产（先传小文件，避免超时）
 #    ⚠️ Release notes 固定格式：英文在前（"What's new in vX.Y.Z"），中文在后（"更新内容"）。
 #    更新弹窗会展示所有跳过的版本，每个版本都要双语。
-gh release create v1.5.1 --draft --title "v1.5.1" --notes-file docs/release-notes-1.5.1.md
-gh release upload v1.5.1 dist/latest.yml dist/tiktok-shop-creator-scraper-setup-1.5.1.exe.blockmap
-gh release upload v1.5.1 dist/tiktok-shop-creator-scraper-setup-1.5.1.exe
+gh release create v1.5.4 --draft --title "v1.5.4" --notes-file docs/release-notes-1.5.4.md
+gh release upload v1.5.4 dist/latest.yml dist/tiktok-shop-creator-scraper-setup-1.5.4.exe.blockmap
+gh release upload v1.5.4 dist/tiktok-shop-creator-scraper-setup-1.5.4.exe
 # 核对资产大小、SHA-512 与 latest.yml 后发布草稿
-gh release edit v1.5.1 --draft=false --latest
+gh release edit v1.5.4 --draft=false --latest
 
 # 6. 公开发布后的差分下载验证（联网，隔离目录，不执行安装）
-node scripts/verify-incremental-update.js --live 1.5.0 1.5.1
+node scripts/verify-incremental-update.js --live 1.5.3 1.5.4
 # 旧用户收到应用内提示 → 确认增量下载 → 静默安装 / 退出时安装
 ```
 

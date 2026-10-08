@@ -12,6 +12,11 @@ test('one-request approval does not paginate or claim verified capacity',async()
   assert.equal(r.requests,1);assert.equal(saved,100);assert.equal(r.largestVerifiedSize,null);
   assert.equal(r.samples[0].pages[0].returned,100);assert.equal(r.serverMaximumProven,false);
 });
+test('accepts high-to-low diagnostic sizes above the old 100-row guardrail',async()=>{
+  const r=await probeListCapacity({...base,direction:'descending',sizes:[500,250,100],pagesPerSize:1,readPage:async p=>response(p,Math.min(p.size,12))});
+  assert.equal(r.requests,3);assert.equal(r.samples[0].requestedSize,500);
+  await assert.rejects(()=>probeListCapacity({...base,sizes:[1001],readPage:async p=>response(p)}),/ordered sample sizes/);
+});
 
 test('descending tests clamped sizes then verifies real capacity, never retries a challenge',async()=>{
   const calls=[];

@@ -38,12 +38,10 @@ test('v1.3.1 compatibility: default Creator Library path remains under userData/
   const mainSource = fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8');
   assert.match(
     mainSource,
-    /new PlatformDatabaseManager\(path\.join\(app\.getPath\('userData'\), 'data'\)\)/,
+    /new CreatorDatabase\(path\.join\(app\.getPath\('userData'\), 'data', 'creators\.db'\)\)/,
     'the application must continue opening the existing per-user Creator Library database'
   );
-  assert.match(mainSource, /getDatabase\('tiktok_shop'\)/);
-  const { resolvePlatformDatabasePath } = require('../lib/database');
-  assert.equal(resolvePlatformDatabasePath(path.join('userData', 'data'), 'tiktok_shop'), path.join('userData', 'data', 'creators.db'));
+  assert.equal(require('../product.config').databaseFile, 'creators.db');
 });
 
 test('v1.3.1 compatibility: a v1 database migrates without losing creator or job data', async (t) => {

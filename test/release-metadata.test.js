@@ -14,7 +14,7 @@ const version = require(path.join(root, 'package.json')).version;
 
 function fixture() {
   const dist = fs.mkdtempSync(path.join(os.tmpdir(), 'release-metadata-'));
-  const installer = `TikTokShop达人抓取安装程序-${version}.exe`;
+  const installer = `tiktok-shop-creator-scraper-setup-${version}.exe`;
   fs.writeFileSync(path.join(dist, installer), 'fixture installer bytes');
   fs.writeFileSync(path.join(dist, `${installer}.blockmap`), 'fixture blockmap bytes');
   return dist;

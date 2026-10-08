@@ -3,7 +3,7 @@
   "generatedFrom": {
     "packageLock": {
       "path": "package-lock.json",
-      "sha256": "ac423ef58f3ddf28b1d3689f99835f3110d218113b54ebf2e013c0b8c5a8f782"
+      "sha256": "85089f617f98766439e77db94e38966dfc4331e5b553621eb2aff45be6a36c05"
     },
     "pythonRequirements": {
       "path": "runtime/python/requirements.lock",
@@ -63,11 +63,11 @@
     { "name": "exceljs", "requestedVersion": "^4.4.0", "lockedVersion": "4.4.0", "license": "MIT" },
     { "name": "png2icons", "requestedVersion": "^2.0.1", "lockedVersion": "2.0.1", "license": "MIT" },
     { "name": "pngjs", "requestedVersion": "^7.0.0", "lockedVersion": "7.0.0", "license": "MIT" },
-    { "name": "puppeteer-core", "requestedVersion": "^24.0.0", "lockedVersion": "24.43.1", "license": "Apache-2.0" },
-    { "name": "sqlite3", "requestedVersion": "^5.1.7", "lockedVersion": "5.1.7", "license": "BSD-3-Clause" }
+    { "name": "puppeteer-core", "requestedVersion": "25.10.0", "lockedVersion": "25.10.0", "license": "Apache-2.0" },
+    { "name": "sqlite3", "requestedVersion": "6.0.1", "lockedVersion": "6.0.1", "license": "BSD-3-Clause" }
   ],
   "buildAndRuntimeTools": [
-    { "name": "electron", "lockedVersion": "33.4.11", "license": "MIT", "reason": "Packaged Electron runtime" },
-    { "name": "electron-builder", "lockedVersion": "25.1.8", "license": "MIT", "reason": "Release assembly tool; not bundled with the application" }
+    { "name": "electron", "lockedVersion": "43.6.0", "license": "MIT", "reason": "Packaged Electron runtime" },
+    { "name": "electron-builder", "lockedVersion": "26.15.3", "license": "MIT", "reason": "Release assembly tool; not bundled with the application" }
   ]
 }

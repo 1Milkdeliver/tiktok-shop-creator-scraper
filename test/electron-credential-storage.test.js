@@ -39,5 +39,8 @@ test('main process initializes the broker with Electron safeStorage and has no p
   const main = fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8');
   assert.match(main, /safeStorage/);
   assert.match(main, /new EncryptedAppDataStorage\(\{ appData, save: saveAppData, safeStorage \}\)/);
+  assert.match(main, /delete persisted\.cookies/);
+  assert.match(main, /delete persisted\.cookieMetadata/);
+  assert.match(main, /ACCOUNT_CREDENTIAL_KEY/);
   assert.doesNotMatch(main, /new MemoryStorage/);
 });

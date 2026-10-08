@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.5.3] - 2026-10-08
+
+Release scope, data migration and validation limits: [release notes](docs/release-notes-1.5.3.md).
+
+### Security and compatibility
+
+- Encrypt persisted seller Cookie accounts with Windows OS-backed secure storage; migrate existing local accounts on startup when secure storage is available. Never fall back to writing new credentials in plaintext.
+- Restore the established `creators.db` filename so upgrades continue using the existing local Creator Library instead of appearing empty.
+- Keep the app's update channel and differential-update asset names unchanged. Partner Center authorization remains session-only and must be re-imported after restarting/updating.
+- `npm test`: 179 tests pass. Runtime dependency audit (`npm audit --omit=dev --audit-level=low`) reports 0 known vulnerabilities. Full audit retains findings in transitive development/build tooling; see the release notes and verification record.
+
+### 安全与兼容
+
+- 卖家 Cookie 账号持久化改用 Windows 系统安全存储加密；安全存储可用时启动自动迁移已有本地账号，不再明文保存新凭据。
+- 恢复沿用 `creators.db` 数据库文件名，升级后继续使用原有本地达人库，避免看起来像空库。
+- 保持原应用内更新通道及差分更新资产命名；团长授权仍仅存在当前会话中，软件重启或更新后需重新导入。
+- `npm test`：179 项通过。运行时依赖审计 `npm audit --omit=dev --audit-level=low` 为 0 项已知漏洞。完整审计仍有传递性开发/打包依赖告警，详见更新说明与复核记录。
+
 ## [Unreleased]
 
 ## [1.5.0] - 2026-09-09
